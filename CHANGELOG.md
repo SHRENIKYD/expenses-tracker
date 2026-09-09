@@ -11,6 +11,9 @@ npm version 1.1.0 --prefix client && npm version 1.1.0 --no-git-tag-version
 git commit -am 'Release 1.1.0' && git tag v1.1.0 && git push --follow-tags
 ```
 
+Or from the Releases page on GitHub: draft a release, give it the tag, publish.
+The workflow rewrites its notes from the section below either way.
+
 The tag builds the client with its own number stamped in, publishes it to
 Pages, and opens a GitHub release with the section below. A tag that disagrees
 with `client/package.json`, or has no section here, fails rather than ships.

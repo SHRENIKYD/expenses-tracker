@@ -38,4 +38,11 @@ jobs:
             printing && /^## / { exit }
             printing { print }
           ' CHANGELOG.md > /tmp/notes.md
-          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file /tmp/notes.md
+          # A tag can arrive from a push or from the Releases page, which
+          # creates the release itself. Either way the notes end up being the
+          # changelog's.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --notes-file /tmp/notes.md
+          else
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file /tmp/notes.md
+          fi
