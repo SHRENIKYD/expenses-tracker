@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import BrandMark from './BrandMark.jsx';
+import AnimatedBrand from './AnimatedBrand.jsx';
 import RecoveryKey from './RecoveryKey.jsx';
 import { requestPasswordReset } from '../data/index.js';
 
@@ -62,9 +63,9 @@ export default function SignIn({ onAuthenticated, onSubmit }) {
   }
 
   return (
-    <div className="signin">
+    <div className="signin signin-landing">
+      <AnimatedBrand />
       <div className="signin-card">
-        <BrandMark size={44} />
         <h1>
           {isRegister ? 'Start tracking' : isRecover ? 'Reset your password' : 'Welcome back'}
         </h1>
