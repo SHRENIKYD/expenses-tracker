@@ -167,6 +167,17 @@ app shell loads offline. Nothing from Supabase is cached — account data always
 comes from the network — so an offline launch shows the shell and reports the
 missing connection rather than stale figures.
 
+## Releases
+
+Versions are semantic and live in `client/package.json`; `CHANGELOG.md` is the
+record. Tagging `v<version>` builds the client with that number stamped into it,
+deploys it, and opens a GitHub release from the changelog's own section. A tag
+that disagrees with `package.json`, or has no section in the changelog, fails
+rather than ships.
+
+Every other build carries `<version>+<short sha>`, which is what the diagnostics
+report, so a screenshot of a problem names the code that produced it.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs the client tests and build, and the Supabase
