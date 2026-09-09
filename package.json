@@ -2,7 +2,7 @@
   "name": "expenses-tracker",
   "version": "0.1.0",
   "private": true,
-  "description": "Personal expenses tracker (React on GitHub Pages, Supabase behind it)",
+  "description": "Tessera \u2014 personal expenses tracker (React on GitHub Pages, Supabase behind it)",
   "scripts": {
     "install:all": "npm install && npm --prefix client install && npm --prefix supabase install",
     "dev": "npm --prefix client run dev",

@@ -3,6 +3,7 @@ import { budgetAlert, money } from '../dashboard.js';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import ForestArt from './ForestArt.jsx';
+import BrandMark from './BrandMark.jsx';
 import RangePicker from './RangePicker.jsx';
 import GlobalSearch from './GlobalSearch.jsx';
 import { formatToday } from '../format.js';
@@ -81,9 +82,9 @@ export default function AppShell({ context }) {
       <aside className={collapsed ? 'sidebar collapsed' : 'sidebar'}>
         <div className="brand">
           <span className="brand-mark">
-            <Icon name="wallet" size={30} strokeWidth={2.4} />
+            <BrandMark size={30} />
           </span>
-          <span className="brand-name">Expense Tracker</span>
+          <span className="brand-name">Tessera</span>
         </div>
 
         <div className="sidebar-toggle-row">

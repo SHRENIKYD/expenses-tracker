@@ -1,8 +1,13 @@
-# Expenses Tracker
+# Tessera
+
+A tessera is a single tile of a mosaic — in Rome, also the token you carried to
+be counted. Every transaction is one: on its own it is a coffee or a bus fare,
+and together they are the picture of a year.
 
 Personal expenses tracker in Indian rupees. A React (Vite) client on GitHub
 Pages, with Supabase behind it: PostgreSQL, its authentication, and its Storage.
-There is no application server.
+There is no application server, and transaction data is encrypted in the browser
+before it is stored.
 
 ## Features
 

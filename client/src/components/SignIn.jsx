@@ -62,7 +62,7 @@ export default function SignIn({ onAuthenticated, onSubmit }) {
   return (
     <div className="signin">
       <div className="card signin-card">
-        <h1>Expenses Tracker</h1>
+        <h1>Tessera</h1>
         <p className="hint">
           {isRegister && 'Create an account to start tracking.'}
           {isRecover && 'Give your email address and a reset link will be sent to it.'}

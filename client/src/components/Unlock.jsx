@@ -31,7 +31,7 @@ export default function Unlock({ email, onUnlock, onUnlockWithKey, onSignOut }) 
           <Icon name="settings" size={22} strokeWidth={2} /> Locked
         </h1>
         <p className="hint">
-          Your transactions are encrypted on this device before they are stored, so {email} needs
+          Tessera encrypts your transactions on this device before storing them, so {email} needs
           to unlock them here.
         </p>
 
