@@ -1,0 +1,13 @@
+{
+  "name": "expenses-tracker-supabase",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Schema, policies and their tests for the Supabase backend",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.23.0"
+  }
+}
