@@ -2,6 +2,7 @@ import { useOutletContext } from 'react-router-dom';
 import Filters from '../components/Filters.jsx';
 import ExpenseTable from '../components/ExpenseTable.jsx';
 import ImportExport from '../components/ImportExport.jsx';
+import StatementImport from '../components/StatementImport.jsx';
 import { emptyFilters } from '../useExpensesData.js';
 
 export default function Transactions() {
@@ -33,6 +34,8 @@ export default function Transactions() {
           />
         </div>
       </section>
+
+      <StatementImport onImported={handlers.refresh} />
 
       <ImportExport onExport={handlers.exportCsv} onImport={handlers.importCsv} />
     </>

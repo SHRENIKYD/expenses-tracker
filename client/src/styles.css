@@ -1428,3 +1428,25 @@ tfoot td {
 .icon-button:hover {
   background: #f3f6f4;
 }
+
+.password-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.password-row label {
+  flex: 1 1 220px;
+}
+
+tr.is-duplicate {
+  color: var(--muted);
+}
+
+.dup-flag {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--warning-text);
+}

@@ -119,6 +119,7 @@ export default function useExpensesData() {
   }
 
   const handlers = {
+    refresh,
     async create(form) {
       setSubmitting(true);
       const created = await guard(async () => {

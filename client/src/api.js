@@ -122,3 +122,22 @@ export async function uploadReceipt(file) {
 }
 
 export const receiptUsage = () => request('/receipts/usage');
+
+export async function previewStatement(file, password) {
+  const headers = authHeaders({ 'Content-Type': 'application/pdf' });
+  if (password) headers['X-Statement-Password'] = password;
+
+  const response = await fetch(`${BASE}/statements/preview`, { method: 'POST', headers, body: file });
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const error = new Error(payload?.error || payload?.errors?.join(', ') || `Failed (${response.status})`);
+    error.code = payload?.code;
+    error.details = payload;
+    throw error;
+  }
+  return payload;
+}
+
+export const importStatement = (transactions) =>
+  request('/statements/import', { method: 'POST', body: JSON.stringify({ transactions }) });

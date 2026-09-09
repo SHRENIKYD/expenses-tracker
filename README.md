@@ -11,6 +11,8 @@ on PostgreSQL.
 - Category breakdown and a twelve-month trend chart
 - Per-category monthly budgets with over-budget warnings
 - CSV import and export
+- Bank statement PDF import, with duplicate detection
+- Income as well as expenses, payment methods, receipts and accounts
 
 All amounts are formatted as INR with Indian digit grouping (`₹1,23,456.00`).
 
@@ -56,6 +58,24 @@ npm run dev
 | GET    | `/api/summary?month=`      | Month totals, category split, daily series, 12-month trend |
 
 CSV columns for import and export: `date,description,category,amount`.
+
+## Bank statement import
+
+Upload a PDF statement on the Transactions page. The server extracts the text,
+identifies the bank, and reads each transaction row. Rows already in your account
+are detected and left unticked, so importing the same statement twice adds nothing.
+
+Duplicates are found two ways: an exact match on the bank's reference number
+(UTR/RRN/IMPS), which is also enforced by a unique index in the database, and a
+near match on amount, direction, a date within three days and a similar narration.
+
+**What it can and cannot read.** Direction is taken from an explicit Dr/Cr marker,
+from the narration, or by comparing the running balance; the first row of a
+statement also needs an opening balance line, otherwise it is reported rather than
+guessed. Layouts differ per bank, so rows that cannot be read with confidence are
+listed instead of being imported with a wrong value. Password-protected statements
+are supported — you are prompted for the password. Scanned or image-only PDFs
+contain no extractable text and cannot be read at all.
 
 `sample-expenses.csv` in the repo root holds four months of demo data (89 rows,
 June–September 2026). Import it from the app's **Import CSV** button to populate an

@@ -10,6 +10,7 @@ const recurringRouter = require('./routes/recurring');
 const receiptsRouter = require('./routes/receipts');
 const settingsRouter = require('./routes/settings');
 const authRouter = require('./routes/auth');
+const statementsRouter = require('./routes/statements');
 const { requireUser } = require('./auth');
 
 const app = express();
@@ -20,6 +21,7 @@ app.use(
   '/api/receipts',
   express.raw({ type: ['image/*', 'application/pdf'], limit: '2mb' })
 );
+app.use('/api/statements/preview', express.raw({ type: 'application/pdf', limit: '5mb' }));
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
@@ -33,6 +35,7 @@ app.use('/api/summary', summaryRouter);
 app.use('/api/recurring', recurringRouter);
 app.use('/api/receipts', receiptsRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/statements', statementsRouter);
 
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 

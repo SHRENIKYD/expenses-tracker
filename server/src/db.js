@@ -98,6 +98,13 @@ const SCHEMA = [
   `ALTER TABLE settings  ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id) ON DELETE CASCADE`,
   `ALTER TABLE receipts  ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id) ON DELETE CASCADE`,
 
+  `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'manual'`,
+  `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS external_ref TEXT`,
+  // A bank reference identifies a transaction uniquely, so the database itself
+  // refuses a second import of the same statement row.
+  `CREATE UNIQUE INDEX IF NOT EXISTS expenses_user_ref_idx
+     ON expenses (user_id, external_ref) WHERE external_ref IS NOT NULL`,
+
   `CREATE INDEX IF NOT EXISTS expenses_user_idx ON expenses (user_id)`,
   `CREATE INDEX IF NOT EXISTS recurring_user_idx ON recurring (user_id)`,
 
@@ -140,6 +147,8 @@ function rowToExpense(row) {
     paymentMethod: row.payment_method || null,
     note: row.note || '',
     receiptId: row.receipt_id || null,
+    source: row.source || 'manual',
+    externalRef: row.external_ref || null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString()
   };
