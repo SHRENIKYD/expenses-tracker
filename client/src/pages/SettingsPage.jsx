@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Icon from '../components/Icon.jsx';
+import PasswordCard from '../components/PasswordCard.jsx';
 import { useOutletContext } from 'react-router-dom';
 import { formatMoney } from '../format.js';
 import { receiptUsage } from '../api.js';
@@ -66,6 +67,8 @@ export default function SettingsPage() {
           {saved && <p className="hint">{saved}</p>}
         </form>
       </section>
+
+      <PasswordCard />
 
       <section className="card">
         <h2>

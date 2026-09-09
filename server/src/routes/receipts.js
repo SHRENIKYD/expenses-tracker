@@ -61,4 +61,20 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
+// Deleting the file leaves the transaction: expenses.receipt_id is ON DELETE
+// SET NULL, so the row simply stops carrying an attachment.
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const { rowCount } = await pool.query('DELETE FROM receipts WHERE id = $1 AND user_id = $2', [
+      req.params.id,
+      req.user.id
+    ]);
+    if (rowCount === 0) return res.status(404).json({ error: 'Receipt not found' });
+    res.status(204).end();
+  } catch (err) {
+    if (err.code === '22P02') return res.status(404).json({ error: 'Receipt not found' });
+    next(err);
+  }
+});
+
 module.exports = router;

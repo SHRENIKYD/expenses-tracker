@@ -67,6 +67,74 @@ async function requireUser(req, res, next) {
   }
 }
 
+// Ten groups of four from an unambiguous alphabet: no O/0 or I/1 to mistype.
+const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const CODE_COUNT = 8;
+
+function newRecoveryCode() {
+  const bytes = randomBytes(12);
+  const chars = [...bytes].map((byte) => CODE_ALPHABET[byte % CODE_ALPHABET.length]);
+  return `${chars.slice(0, 4).join('')}-${chars.slice(4, 8).join('')}-${chars.slice(8, 12).join('')}`;
+}
+
+const normaliseCode = (code) => String(code).toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+// Codes are high-entropy, so a fast hash is enough and keeps recovery quick.
+const codeFingerprint = (code) => createHash('sha256').update(normaliseCode(code)).digest('hex');
+
+// Replaces any existing codes: a fresh set invalidates the old printout.
+async function issueRecoveryCodes(userId, count = CODE_COUNT) {
+  const codes = Array.from({ length: count }, newRecoveryCode);
+  await pool.query('DELETE FROM recovery_codes WHERE user_id = $1', [userId]);
+  for (const code of codes) {
+    await pool.query('INSERT INTO recovery_codes (user_id, code_hash) VALUES ($1, $2)', [
+      userId,
+      codeFingerprint(code)
+    ]);
+  }
+  return codes;
+}
+
+// Marks the code used inside the same statement, so a code cannot be spent twice.
+async function spendRecoveryCode(userId, code) {
+  const { rowCount } = await pool.query(
+    `UPDATE recovery_codes SET used_at = now()
+     WHERE id = (
+       SELECT id FROM recovery_codes
+       WHERE user_id = $1 AND code_hash = $2 AND used_at IS NULL
+       LIMIT 1
+     )`,
+    [userId, codeFingerprint(code)]
+  );
+  return rowCount === 1;
+}
+
+async function countRecoveryCodes(userId) {
+  const { rows } = await pool.query(
+    `SELECT COUNT(*) FILTER (WHERE used_at IS NULL) AS unused, COUNT(*) AS total
+     FROM recovery_codes WHERE user_id = $1`,
+    [userId]
+  );
+  return { unused: Number(rows[0].unused), total: Number(rows[0].total) };
+}
+
+// Signing out everywhere is what makes a password change meaningful after a
+// device is lost; the session doing the change is kept.
+async function destroyOtherSessions(userId, keepToken) {
+  await pool.query('DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2', [
+    userId,
+    fingerprint(keepToken)
+  ]);
+}
+
+function validatePassword(password) {
+  if (typeof password !== 'string' || password.length < 8) {
+    return 'password must be at least 8 characters';
+  }
+  if (password.length > 200) return 'password must be 200 characters or fewer';
+  return null;
+}
+
 function validateCredentials(body) {
   const errors = [];
   const value = {};
@@ -95,6 +163,13 @@ function validateCredentials(body) {
 module.exports = {
   hashPassword,
   verifyPassword,
+  newRecoveryCode,
+  normaliseCode,
+  issueRecoveryCodes,
+  spendRecoveryCode,
+  countRecoveryCodes,
+  destroyOtherSessions,
+  validatePassword,
   createSession,
   destroySession,
   requireUser,

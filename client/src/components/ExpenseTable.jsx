@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Icon, { CATEGORY_ICON } from './Icon.jsx';
+import ReceiptViewer from './ReceiptViewer.jsx';
 import { formatMoney, formatDayFull, titleCase } from '../format.js';
 
 const COLUMNS = [
@@ -24,6 +25,7 @@ export default function ExpenseTable({
   onDelete
 }) {
   const [page, setPage] = useState(1);
+  const [viewing, setViewing] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -70,6 +72,17 @@ export default function ExpenseTable({
 
   return (
     <div className="table-scroll">
+      {viewing && (
+        <ReceiptViewer
+          receiptId={viewing.receiptId}
+          name={viewing.description}
+          onClose={() => setViewing(null)}
+          onDeleted={() => {
+            setViewing(null);
+            onSave(viewing.id, { receiptId: null });
+          }}
+        />
+      )}
       <table className="txn-table">
         <thead>
           <tr>
@@ -174,6 +187,17 @@ export default function ExpenseTable({
                   <span className="with-icon">
                     <Icon name={CATEGORY_ICON[expense.category] || 'other'} size={19} strokeWidth={1.8} />
                     {expense.description}
+                    {expense.receiptId && (
+                      <button
+                        type="button"
+                        className="receipt-chip"
+                        onClick={() => setViewing(expense)}
+                        aria-label={`View the receipt for ${expense.description}`}
+                        title="View receipt"
+                      >
+                        <Icon name="camera" size={15} strokeWidth={1.9} />
+                      </button>
+                    )}
                   </span>
                 </td>
                 <td data-label="Category">

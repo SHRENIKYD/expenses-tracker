@@ -185,3 +185,30 @@ export const listContributions = (id) => request(`/goals/${id}/contributions`);
 export const deleteGoal = removeGoal;
 export const addToGoal = contributeGoal;
 export const updateGoal = (id, patch) => request(`/goals/${id}`, { method: 'PUT', body: JSON.stringify(patch) });
+
+export const changePassword = (currentPassword, newPassword) =>
+  request('/auth/password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword })
+  });
+
+export const recoveryCodeCount = () => request('/auth/recovery-codes');
+
+export const regenerateRecoveryCodes = (password) =>
+  request('/auth/recovery-codes', { method: 'POST', body: JSON.stringify({ password }) });
+
+export const recoverAccount = (payload) =>
+  request('/auth/recover', { method: 'POST', body: JSON.stringify(payload) });
+
+// Receipts are private, so they cannot be src="…" straight from the API: the
+// bytes are fetched with the session token and handed to the page as a blob.
+export async function fetchReceipt(id) {
+  const response = await fetch(`${BASE}/receipts/${id}`, { headers: authHeaders() });
+  if (!response.ok) {
+    throw new Error(response.status === 404 ? 'Receipt not found' : `Failed (${response.status})`);
+  }
+  const blob = await response.blob();
+  return { url: URL.createObjectURL(blob), type: blob.type, size: blob.size };
+}
+
+export const deleteReceipt = (id) => request(`/receipts/${id}`, { method: 'DELETE' });

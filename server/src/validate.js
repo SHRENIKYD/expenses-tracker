@@ -59,6 +59,8 @@ function isIsoMonth(value) {
   );
 }
 
+const UUID = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+
 function validateExpense(body, { partial = false, existingKind = 'expense' } = {}) {
   const errors = [];
   const value = {};
@@ -127,12 +129,18 @@ function validateExpense(body, { partial = false, existingKind = 'expense' } = {
 
   if (input.accountId !== undefined) {
     if (input.accountId === null || input.accountId === '') value.accountId = null;
-    else if (
-      typeof input.accountId === 'string' &&
-      /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(input.accountId)
-    )
+    else if (typeof input.accountId === 'string' && UUID.test(input.accountId))
       value.accountId = input.accountId;
     else errors.push('accountId must be a valid account');
+  }
+
+  // Without this the id was dropped on the way in: the file uploaded, the
+  // transaction saved, and the two were never linked.
+  if (input.receiptId !== undefined) {
+    if (input.receiptId === null || input.receiptId === '') value.receiptId = null;
+    else if (typeof input.receiptId === 'string' && UUID.test(input.receiptId))
+      value.receiptId = input.receiptId;
+    else errors.push('receiptId must be a valid receipt');
   }
 
   if (input.note !== undefined) {

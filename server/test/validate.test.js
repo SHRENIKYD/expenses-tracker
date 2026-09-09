@@ -186,3 +186,14 @@ test('the payment method filter only accepts known methods', () => {
   ]);
   assert.equal(parseFilters({}).filters.paymentMethod, undefined);
 });
+
+test('a receipt id is kept, cleared or rejected — never silently dropped', () => {
+  const id = '3d704f0a-c269-4047-a081-0609c5835f17';
+  assert.equal(validateExpense({ description: 'x', amount: 1, date: '2026-09-01', receiptId: id }).value.receiptId, id);
+  assert.equal(validateExpense({ receiptId: null }, { partial: true }).value.receiptId, null);
+  assert.equal(validateExpense({ receiptId: '' }, { partial: true }).value.receiptId, null);
+  assert.deepEqual(validateExpense({ receiptId: 'not-a-uuid' }, { partial: true }).errors, [
+    'receiptId must be a valid receipt'
+  ]);
+  assert.equal('receiptId' in validateExpense({ description: 'x' }, { partial: true }).value, false);
+});

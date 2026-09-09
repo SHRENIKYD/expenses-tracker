@@ -147,7 +147,18 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS goals_user_idx ON goals(user_id)`,
   `CREATE INDEX IF NOT EXISTS contributions_goal_idx ON goal_contributions(goal_id)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS budgets_user_category_idx ON budgets (user_id, category)`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS settings_user_key_idx ON settings (user_id, key)`
+  `CREATE UNIQUE INDEX IF NOT EXISTS settings_user_key_idx ON settings (user_id, key)`,
+
+  // Password recovery without an email server: codes are shown once at
+  // registration, stored only as hashes, and each one works a single time.
+  `CREATE TABLE IF NOT EXISTS recovery_codes (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     code_hash TEXT NOT NULL,
+     used_at TIMESTAMPTZ,
+     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+   )`,
+  `CREATE INDEX IF NOT EXISTS recovery_codes_user_idx ON recovery_codes (user_id)`
 ];
 
 async function init() {

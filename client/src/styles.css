@@ -2053,6 +2053,100 @@ button.mint:hover:not(:disabled) {
   padding: 14px;
 }
 
+/* ---------- receipts ---------- */
+.receipt-chip {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.receipt-chip:hover {
+  background: #d9ebe2;
+}
+
+.receipt-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(9, 42, 30, 0.42);
+}
+
+.receipt-modal {
+  width: min(680px, 100%);
+  max-height: 88vh;
+  overflow: auto;
+}
+
+.receipt-image,
+.receipt-frame {
+  display: block;
+  width: 100%;
+  max-height: 62vh;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.receipt-frame {
+  height: 62vh;
+  border: 1px solid var(--border);
+}
+
+.button-like {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+}
+
+/* ---------- password and recovery codes ---------- */
+.recovery-block {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.recovery-block h3 {
+  margin: 0 0 6px;
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
+.recovery-codes {
+  list-style: none;
+  margin: 12px 0;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px 16px;
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--accent-strong);
+  letter-spacing: 0.02em;
+}
+
+.signin-card .recovery-codes {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 /* ---------- forms and secondary pages ---------- */
 .card .form button[type='submit'] {
   align-self: flex-start;

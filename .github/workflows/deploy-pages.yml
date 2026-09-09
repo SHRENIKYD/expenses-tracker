@@ -52,6 +52,46 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # A green deploy says the files were published, not that the app works. This
+  # calls the deployed page and the API it was built against, so a sleeping or
+  # un-migrated API shows up here rather than on someone's phone.
+  smoke:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: The published page is served
+        run: |
+          url="${{ needs.deploy.outputs.page_url || 'https://shrenikyd.github.io/expenses-tracker/' }}"
+          code=$(curl -sS -o /tmp/page.html -w '%{http_code}' --retry 5 --retry-delay 5 --retry-all-errors "$url")
+          echo "GET $url -> $code"
+          test "$code" = "200"
+          grep -q '<div id="root">' /tmp/page.html
+
+      - name: Deep links fall back to the app
+        run: |
+          url="${{ needs.deploy.outputs.page_url || 'https://shrenikyd.github.io/expenses-tracker/' }}transactions"
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 3 --retry-delay 5 --retry-all-errors "$url")
+          echo "GET $url -> $code"
+          test "$code" = "200"
+
+      - name: The API the client was built against is awake and migrated
+        if: vars.VITE_API_URL != ''
+        run: |
+          api="${{ vars.VITE_API_URL }}"
+          # a free instance sleeps; the first call can take half a minute
+          health=$(curl -sS --max-time 90 --retry 3 --retry-delay 10 --retry-all-errors "$api/health")
+          echo "health: $health"
+          echo "$health" | grep -q '"status":"ok"'
+          # every route below the auth gate must answer 401, not 404: a 404 means
+          # this API is running a build that predates the route
+          for route in expenses accounts goals summary budgets; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 60 "$api/$route")
+            echo "GET $api/$route -> $code"
+            test "$code" = "401"
+          done

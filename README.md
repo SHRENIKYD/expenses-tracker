@@ -14,6 +14,8 @@ on PostgreSQL.
 - Bank statement PDF import, with duplicate detection
 - Income as well as expenses, payment methods, receipts and accounts
 - Savings goals with contributions, and an accounts view by payment method
+- Installable on a phone: app icon, offline app shell, no store required
+- Password change and recovery codes for a forgotten password
 
 All amounts are formatted as INR with Indian digit grouping (`₹1,23,456.00`).
 
@@ -57,6 +59,13 @@ npm run dev
 | GET    | `/api/budgets`             | All category budgets                                      |
 | PUT    | `/api/budgets/:category`   | Set a monthly limit (`0` clears it)                       |
 | GET    | `/api/summary?month=`      | Month totals, category split, weekly cash flow, per-account totals, daily series, 12-month trend |
+| POST   | `/api/auth/password`       | Change the password; signs every other device out         |
+| GET    | `/api/auth/recovery-codes` | How many unused recovery codes remain                     |
+| POST   | `/api/auth/recovery-codes` | Issue a fresh set (needs the password)                    |
+| POST   | `/api/auth/recover`        | Set a new password with an unused recovery code           |
+| POST   | `/api/receipts`            | Upload a receipt (raw image or PDF body, 2 MB)            |
+| GET    | `/api/receipts/:id`        | The receipt's bytes                                       |
+| DELETE | `/api/receipts/:id`        | Delete a receipt; the transaction keeps its other fields  |
 | GET    | `/api/goals`               | Savings goals                                             |
 | POST   | `/api/goals`               | Create a goal (`name`, `target`, `icon`)                  |
 | PUT    | `/api/goals/:id`           | Update a goal (partial)                                   |
@@ -86,6 +95,40 @@ contain no extractable text and cannot be read at all.
 `sample-expenses.csv` in the repo root holds four months of demo data (89 rows,
 June–September 2026). Import it from the app's **Import CSV** button to populate an
 empty database.
+
+## Signing in
+
+Registration issues **eight recovery codes**, shown once. There is no email
+server, so those codes are the only way back into an account whose password has
+been forgotten: keep them somewhere other than the phone you use the app on.
+Each code works once, a fresh set replaces the old one (Settings → Password),
+and recovering signs every device out.
+
+Changing the password also signs every other device out, which is what makes it
+useful after losing a phone.
+
+## Receipts
+
+Attach an image or PDF (2 MB) when adding a transaction. A paperclip appears
+beside that row in the transactions table; it opens the file in place, and
+deleting the file leaves the transaction alone. Settings shows how much of the
+database receipts are using.
+
+## Installing on a phone
+
+The client ships a web manifest and a service worker, so a phone can add it to
+the home screen: it opens without browser chrome, keeps its own icon, and the
+app shell loads offline. Nothing from the API is cached — account data always
+comes from the network — so an offline launch shows the shell and reports the
+missing connection rather than stale figures.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs both test suites and the client build on every
+push and pull request. After a Pages deploy, `deploy-pages.yml` smoke-tests the
+published page, a deep link, and the API the client was built against —
+including that each authenticated route answers 401 rather than 404, which is
+how an API running an older build gets caught.
 
 ## Hosting
 
