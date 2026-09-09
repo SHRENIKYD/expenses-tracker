@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
-import GoalRow from '../components/GoalRow.jsx';
+import GoalCard from '../components/GoalCard.jsx';
 import { formatMoney } from '../format.js';
 
 const ICONS = ['target', 'savings', 'laptop', 'transport', 'housing', 'education', 'health', 'entertainment', 'briefcase', 'other'];
@@ -45,16 +45,7 @@ export default function SavingsGoals() {
         {goals.length === 0 ? (
           <p className="empty">Nothing being saved for yet. Add a goal below.</p>
         ) : (
-          <ul className="goal-list">
-            {goals.map((goal) => (
-              <GoalRow
-                key={goal.id}
-                goal={goal}
-                onContribute={handlers.contribute}
-                onRemove={handlers.removeGoal}
-              />
-            ))}
-          </ul>
+          <div className="portfolio-grid">{goals.map(goal => <GoalCard key={goal.id} goal={goal} handlers={handlers} />)}</div>
         )}
       </section>
 

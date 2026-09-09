@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Icon, { CATEGORY_ICON } from './Icon.jsx';
-import { formatMoney, formatDayFull, paymentLabel, titleCase } from '../format.js';
+import { formatMoney, formatDayFull, titleCase } from '../format.js';
 
 const COLUMNS = [
   { key: 'date', label: 'Date' },
@@ -16,7 +16,7 @@ export default function ExpenseTable({
   expenses,
   categories,
   incomeCategories = [],
-  paymentMethods = [],
+  accounts = [],
   sort,
   order,
   onSort,
@@ -45,7 +45,7 @@ export default function ExpenseTable({
       amount: String(expense.amount),
       category: expense.category,
       date: expense.date,
-      paymentMethod: expense.paymentMethod || ''
+      accountId: expense.accountId || ''
     });
   }
 
@@ -82,7 +82,9 @@ export default function ExpenseTable({
                   aria-label={`Sort by ${column.label}`}
                 >
                   {column.label}
-                  {sort === column.key && <span aria-hidden="true">{order === 'asc' ? ' ▲' : ' ▼'}</span>}
+                  {sort === column.key && (
+                    <span aria-hidden="true">{order === 'asc' ? ' ▲' : ' ▼'}</span>
+                  )}
                 </button>
               </th>
             ))}
@@ -135,14 +137,14 @@ export default function ExpenseTable({
                 </td>
                 <td>
                   <select
-                    value={draft.paymentMethod}
-                    onChange={(event) => setDraft({ ...draft, paymentMethod: event.target.value })}
                     aria-label="Account"
+                    value={draft.accountId}
+                    onChange={(event) => setDraft({ ...draft, accountId: event.target.value })}
                   >
-                    <option value="">—</option>
-                    {paymentMethods.map((method) => (
-                      <option key={method} value={method}>
-                        {paymentLabel(method)}
+                    <option value="">Unassigned</option>
+                    {accounts.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.name}
                       </option>
                     ))}
                   </select>
@@ -180,7 +182,10 @@ export default function ExpenseTable({
                     {titleCase(expense.category)}
                   </span>
                 </td>
-                <td data-label="Account">{paymentLabel(expense.paymentMethod) || '—'}</td>
+                <td data-label="Account">
+                  {accounts.find((account) => account.id === expense.accountId)?.name ||
+                    'Unassigned'}
+                </td>
                 <td className="numeric" data-label="Amount">
                   <span className={expense.kind === 'income' ? 'amount-in' : 'amount-out'}>
                     {expense.kind === 'income' ? '+' : '−'}
@@ -191,7 +196,11 @@ export default function ExpenseTable({
                   <button type="button" className="link" onClick={() => startEdit(expense)}>
                     Edit
                   </button>
-                  <button type="button" className="link danger" onClick={() => onDelete(expense.id)}>
+                  <button
+                    type="button"
+                    className="link danger"
+                    onClick={() => onDelete(expense.id)}
+                  >
                     Delete
                   </button>
                 </td>
@@ -205,7 +214,7 @@ export default function ExpenseTable({
             <td className="numeric">
               {formatMoney(expenses.reduce((sum, expense) => sum + expense.amount, 0))}
             </td>
-            <td />
+            <td colSpan="2" />
           </tr>
         </tfoot>
       </table>

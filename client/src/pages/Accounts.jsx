@@ -1,77 +1,97 @@
+import { useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
-import { formatMoney, formatMonth, paymentLabel } from '../format.js';
-
-const METHOD_ICON = {
-  upi: 'swap',
-  card: 'accounts',
-  cash: 'wallet',
-  bank_transfer: 'briefcase',
-  unassigned: 'other'
-};
-
+import { money } from '../dashboard.js';
 export default function Accounts() {
-  const { summary, month, loading, setFilters } = useOutletContext();
-
-  if (!summary) {
-    return <p className="empty">{loading ? 'Loading…' : 'Nothing to show yet.'}</p>;
+  const { accounts, summary, handlers, setFilters } = useOutletContext();
+  const [name, setName] = useState('');
+  const [openingBalance, setOpeningBalance] = useState('0');
+  const [busy, setBusy] = useState(false);
+  async function submit(event) {
+    event.preventDefault();
+    setBusy(true);
+    const result = await handlers.createAccount({ name, openingBalance });
+    setBusy(false);
+    if (result) {
+      setName('');
+      setOpeningBalance('0');
+    }
   }
-
-  const { accounts } = summary;
-
-  if (accounts.length === 0) {
-    return <p className="empty">No transactions recorded in {formatMonth(month)}.</p>;
-  }
-
   return (
-    <div className="account-grid">
-      {accounts.map((account) => {
-        const label =
-          account.method === 'unassigned' ? 'No method recorded' : paymentLabel(account.method);
-        return (
-          <section className="card account-card" key={account.method}>
-            <div className="account-head">
-              <span className="kpi-icon mint">
-                <Icon name={METHOD_ICON[account.method] || 'other'} size={19} strokeWidth={1.9} />
-              </span>
-              <div>
-                <h2>{label}</h2>
-                <p className="hint">
-                  {account.count} transaction{account.count === 1 ? '' : 's'} in{' '}
-                  {formatMonth(month)}
-                </p>
-              </div>
-            </div>
-
-            <dl className="account-figures">
-              <div>
-                <dt>Money in</dt>
-                <dd className="amount-in">{formatMoney(account.income)}</dd>
-              </div>
-              <div>
-                <dt>Money out</dt>
-                <dd className="amount-out">{formatMoney(account.expenses)}</dd>
-              </div>
-              <div>
-                <dt>Net</dt>
-                <dd>{formatMoney(account.income - account.expenses)}</dd>
-              </div>
-            </dl>
-
-            {account.method !== 'unassigned' && (
-              <Link
-                to="/transactions"
-                className="link see-all"
-                onClick={() =>
-                  setFilters((current) => ({ ...current, paymentMethod: account.method }))
-                }
-              >
-                See transactions <Icon name="chevronRight" size={15} strokeWidth={2.1} />
+    <>
+      <section className="card">
+        <h2>Add an account</h2>
+        <p className="hint">
+          Enter its balance before the transactions you plan to record. Balances reflect your
+          records, not a live bank connection.
+        </p>
+        <form className="portfolio-form" onSubmit={submit}>
+          <label>
+            Account name
+            <input
+              required
+              maxLength={80}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Savings account"
+            />
+          </label>
+          <label>
+            Opening balance (₹)
+            <input
+              required
+              type="number"
+              step="0.01"
+              min="-9999999999.99"
+              max="9999999999.99"
+              value={openingBalance}
+              onChange={(e) => setOpeningBalance(e.target.value)}
+            />
+          </label>
+          <button disabled={busy}>{busy ? 'Adding…' : 'Add account'}</button>
+        </form>
+      </section>
+      <div className="portfolio-grid">
+        {accounts.map((account) => (
+          <section className="card account-card" key={account.id}>
+            <h2>
+              <Icon name="accounts" />
+              {account.name}
+            </h2>
+            <strong className="account-balance">{money(account.balance)}</strong>
+            <p className="hint">
+              Opening balance {money(account.openingBalance)} · {account.transactions} transactions
+            </p>
+            <div className="button-row">
+              <Link className="link" to="/add">
+                Add transaction
               </Link>
-            )}
+              <button
+                className="link danger"
+                disabled={busy || account.transactions > 0}
+                title={
+                  account.transactions
+                    ? 'Unassign existing transactions before deleting'
+                    : 'Delete empty account'
+                }
+                onClick={async () => {
+                  if (window.confirm(`Delete “${account.name}”?`)) {
+                    setBusy(true);
+                    await handlers.removeAccount(account.id);
+                    setBusy(false);
+                  }
+                }}
+              >
+                Delete account
+              </button>
+            </div>
           </section>
-        );
-      })}
-    </div>
+        ))}
+      </div>
+      {!accounts.length && (
+        <p className="empty">Add your bank, card, or cash account to track its balance.</p>
+      )}
+      {summary?.accounts?.length > 0 && <section className="card"><h2>This month by payment method</h2><div className="portfolio-grid">{summary.accounts.map(method => <div key={method.method}><h3>{method.method.replace('_', ' ')}</h3><p>Income {money(method.income)} · Expenses {money(method.expenses)}</p><Link className="link" to="/transactions" onClick={() => setFilters({q:'',category:'',kind:'',from:'',to:'',paymentMethod:method.method === 'unassigned' ? '' : method.method})}>View transactions</Link></div>)}</div></section>}
+    </>
   );
 }

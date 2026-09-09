@@ -4,10 +4,15 @@ import Icon, { CATEGORY_ICON } from '../components/Icon.jsx';
 import { todayIso, titleCase, formatDayFull } from '../format.js';
 import { uploadReceipt } from '../api.js';
 
-const METHOD_LABEL = { upi: 'UPI', card: 'Card', cash: 'Cash', bank_transfer: 'Bank transfer' };
+const METHOD_LABEL = {
+  upi: 'UPI',
+  card: 'Card',
+  cash: 'Cash',
+  bank_transfer: 'Bank transfer'
+};
 
 export default function AddExpense() {
-  const { categories, submitting, handlers } = useOutletContext();
+  const { categories, accounts, submitting, handlers } = useOutletContext();
   const navigate = useNavigate();
   const fileInput = useRef(null);
 
@@ -18,6 +23,7 @@ export default function AddExpense() {
     category: 'other',
     date: todayIso(),
     paymentMethod: 'upi',
+    accountId: '',
     note: ''
   });
   const [receipt, setReceipt] = useState(null);
@@ -56,6 +62,7 @@ export default function AddExpense() {
       date: form.date,
       paymentMethod: form.paymentMethod,
       note: form.note,
+      accountId: form.accountId || null,
       receiptId: receipt?.id ?? null
     });
     if (created) navigate('/transactions');
@@ -124,11 +131,28 @@ export default function AddExpense() {
         Date
         <span className="date-row">
           <Icon name="calendar" size={17} />
-          <input type="date" value={form.date} max={todayIso()} onChange={update('date')} required />
+          <input
+            type="date"
+            value={form.date}
+            max={todayIso()}
+            onChange={update('date')}
+            required
+          />
           <span className="hint">{formatDayFull(form.date)}</span>
         </span>
       </label>
 
+      <label>
+        Account
+        <select value={form.accountId} onChange={update('accountId')}>
+          <option value="">Unassigned</option>
+          {accounts.map((account) => (
+            <option key={account.id} value={account.id}>
+              {account.name}
+            </option>
+          ))}
+        </select>
+      </label>
       <fieldset className="segmented">
         <legend>Payment method</legend>
         {(categories.paymentMethods || []).map((method) => (
