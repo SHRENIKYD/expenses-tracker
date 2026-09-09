@@ -1,0 +1,71 @@
+name: Android
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: client
+
+      - name: Work out the version
+        id: version
+        run: |
+          version=$(node -p "require('./client/package.json').version")
+          tag=$(git tag --points-at HEAD | grep '^v' | head -1 || true)
+          echo "value=${tag:-$version+${GITHUB_SHA::7}}" >> "$GITHUB_OUTPUT"
+          echo "name=tessera-${tag:-$version}" >> "$GITHUB_OUTPUT"
+
+      # The app ships its own copy of the client, so the base is relative rather
+      # than the /<repo>/ that GitHub Pages needs, and VITE_TARGET keeps the
+      # service worker out of a shell that is already on the device.
+      - name: Build the web assets
+        run: npm run build
+        working-directory: client
+        env:
+          VITE_BASE: ./
+          VITE_TARGET: capacitor
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_APP_VERSION: ${{ steps.version.outputs.value }}
+
+      - name: The project url reached the bundle
+        run: |
+          grep -rq "${{ vars.VITE_SUPABASE_URL }}" client/dist/assets \
+            || { echo "VITE_SUPABASE_URL is missing from the bundle"; exit 1; }
+
+      - name: Copy them into the app
+        run: npx cap sync android
+        working-directory: client
+
+      - name: Build the apk
+        run: ./gradlew assembleDebug --no-daemon
+        working-directory: client/android
+
+      # A debug apk is signed with a throwaway key: enough to install and use,
+      # not enough for the Play Store. Publishing needs a keystore of your own.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.version.outputs.name }}-debug-apk
+          path: client/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

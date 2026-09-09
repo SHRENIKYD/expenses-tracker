@@ -1,0 +1,11 @@
+{
+  "appId": "in.shrenikyd.tessera",
+  "appName": "Tessera",
+  "webDir": "dist",
+  "android": {
+    "backgroundColor": "#094031"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

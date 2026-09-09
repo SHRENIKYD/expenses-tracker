@@ -4,3 +4,10 @@ dist/
 .env.local
 npm-debug.log*
 .DS_Store
+
+# Capacitor copies the built client into the app; the source of truth is dist/
+client/android/app/src/main/assets/public/
+client/android/app/src/main/assets/capacitor.config.json
+client/android/app/src/main/assets/capacitor.plugins.json
+client/android/.gradle/
+client/android/local.properties

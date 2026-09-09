@@ -25,6 +25,11 @@ import {
   vaultState
 } from './data/index.js';
 
+// Pages serves the app under /<repo>/; the Android build serves it from the
+// root of a WebView, where Vite's relative base ('./') is not a path a router
+// can be mounted on.
+const routerBase = import.meta.env.BASE_URL.startsWith('/') ? import.meta.env.BASE_URL : '/';
+
 function Workspace({ session, onSignOut }) {
   const data = useExpensesData();
   const context = { ...data, session, onSignOut };
@@ -96,7 +101,7 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter basename={import.meta.env.BASE_URL}>
+    <BrowserRouter basename={routerBase}>
       <Workspace session={session} onSignOut={handleSignOut} />
     </BrowserRouter>
   );

@@ -167,6 +167,30 @@ app shell loads offline. Nothing from Supabase is cached — account data always
 comes from the network — so an offline launch shows the shell and reports the
 missing connection rather than stale figures.
 
+## The Android app
+
+The same client, wrapped by Capacitor and served from the device rather than
+from Pages. It is a wrapper on purpose: the encryption is WebCrypto and the
+statement parser is pdf.js, so a native rewrite would mean a second
+implementation of the vault that has to open rows sealed by the first one.
+
+```bash
+cd client
+npm run build:app     # builds with a relative base and copies it into android/
+npm run open:android  # opens Android Studio, if you have it
+```
+
+`.github/workflows/android.yml` builds a debug APK on demand (Actions → Android →
+Run workflow) and on every release tag; it lands as an artifact on the run. That
+APK is signed with a throwaway debug key — enough to install and use, not enough
+for the Play Store, which needs a keystore of your own.
+
+Two differences from the web build: the base is relative, since the app serves
+itself from the root of a WebView, and the service worker is left out, because
+the shell is already on the device and a worker would only add a staler copy of
+it. Supabase is reached over the network exactly as it is from the browser, with
+the same key and the same policies.
+
 ## Releases
 
 Versions are semantic and live in `client/package.json`; `CHANGELOG.md` is the
