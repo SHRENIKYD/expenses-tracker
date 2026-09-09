@@ -60,6 +60,13 @@ Ownership is not a `WHERE user_id = $1` the client could forget: every table has
 row-level security and one policy, so a query for someone else's row returns
 nothing. `supabase/test/policies.test.mjs` is the test that matters most.
 
+The client also builds no queries. Every table is behind a function in
+`supabase/migrations/0006_functions.sql` — `list_transactions`,
+`create_transaction`, `set_budget`, `reset_transactions` — and
+`client/src/data/supabase.js` has one place that speaks to the database at all.
+The functions are `security invoker`, so the policies still decide; what they
+add is that the whole surface is legible in one file.
+
 The dashboard's figures are SQL functions (`supabase/migrations/0002_summary.sql`),
 `security invoker`, so they see exactly what the caller sees. `daily_series`
 answers with a row per day of the range, gaps filled with zeros and a running

@@ -48,11 +48,52 @@ function unwrap({ data, error }) {
   return data;
 }
 
+// The only way this file reaches the database. Every table is behind a function
+// in supabase/migrations/0006_functions.sql — `security invoker`, so the
+// policies still decide — and nothing here builds a query of its own.
+const call = async (name, args = {}) => unwrap(await client().rpc(name, args));
+
+// create_transaction and update_transaction take the same columns, so the row
+// is shaped once. Everything absent is written as null: an update replaces the
+// whole row, which is what sealing a plaintext row needs.
+const write = (name, row) =>
+  call(name, {
+    p_id: row.id,
+    p_date: row.date,
+    p_account_id: row.account_id ?? null,
+    p_receipt_path: row.receipt_path ?? null,
+    p_secret: row.secret ?? null,
+    p_iv: row.iv ?? null,
+    p_key_version: row.key_version ?? null,
+    p_ref_hash: row.ref_hash ?? null,
+    p_kind: row.kind ?? null,
+    p_description: row.description ?? null,
+    p_amount: row.amount ?? null,
+    p_category: row.category ?? null,
+    p_payment_method: row.payment_method ?? null,
+    p_note: row.note ?? null,
+    p_source: row.source ?? null,
+    p_external_ref: row.external_ref ?? null
+  });
+
+// A function returning one row answers with a row of nulls when there is none,
+// because SQL has no way to return nothing from a scalar-shaped result.
+const one = (rows) => {
+  const row = Array.isArray(rows) ? rows[0] : rows;
+  return row && (row.id || row.user_id) ? row : null;
+};
+
 // Diagnostics carry codes and counts, never content — see ../diagnostics.js.
 const report = makeReporter({
   appVersion: import.meta.env.VITE_APP_VERSION || 'dev',
-  insert: async (entry) =>
-    unwrap(await client().from('diagnostics').insert({ ...entry, user_id: await currentUserId() }))
+  insert: (entry) =>
+    call('record_diagnostic', {
+      p_code: entry.code,
+      p_row_id: entry.row_id,
+      p_key_version: entry.key_version,
+      p_app_version: entry.app_version,
+      p_detail: entry.detail
+    })
 });
 
 // A row is either sealed or from before the vault existed. Both are read here,
@@ -154,31 +195,24 @@ export async function register({ email, password, displayName }) {
 
   // The vault is made here, in the browser, and only its wrapped form is sent.
   const { vault: envelope, recoveryKey } = await vault.create(password);
-  unwrap(
-    await client()
-      .from('vaults')
-      .insert({ user_id: data.user.id, key_version: envelope.keyVersion, ...envelope })
-  );
+  await call('create_vault', {
+    p_password: envelope.password,
+    p_recovery: envelope.recovery,
+    p_key_version: envelope.keyVersion
+  });
 
   return { ...session(data), recoveryKey };
 }
 
 export async function login({ email, password }) {
   const data = unwrap(await client().auth.signInWithPassword({ email, password }));
-  const [profile] = await Promise.all([
-    unwrap(
-      await client().from('profiles').select('display_name').eq('id', data.user.id).maybeSingle()
-    ),
-    loadVault(password)
-  ]);
-  return session(data, profile || {});
+  const [profile] = await Promise.all([call('get_profile'), loadVault(password)]);
+  return session(data, one(profile) || {});
 }
 
 /** Fetch the vault row and, given the password, open it. */
 export async function loadVault(password) {
-  const stored = unwrap(
-    await client().from('vaults').select('key_version,password,recovery').maybeSingle()
-  );
+  const stored = one(await call('get_vault'));
   if (!stored) {
     // An account from before encryption existed. Its rows are still readable;
     // Settings offers to seal them.
@@ -208,13 +242,12 @@ export async function loadVault(password) {
 export async function protectData(password) {
   if (vault.currentEnvelope()) throw new Error('Your data is already protected.');
 
-  const userId = await currentUserId();
   const { vault: envelope, recoveryKey } = await vault.create(password);
-  unwrap(
-    await client()
-      .from('vaults')
-      .insert({ user_id: userId, key_version: envelope.keyVersion, ...envelope })
-  );
+  await call('create_vault', {
+    p_password: envelope.password,
+    p_recovery: envelope.recovery,
+    p_key_version: envelope.keyVersion
+  });
 
   return { recoveryKey, ...(await sealExisting()) };
 }
@@ -225,28 +258,13 @@ export async function protectData(password) {
  * than a batch that half-applied.
  */
 export async function sealExisting() {
-  const rows = unwrap(await client().from('transactions').select('*').is('secret', null));
+  const rows = (await call('list_transactions')).filter((row) => !row.secret);
 
   let sealed = 0;
   for (const row of rows) {
-    const { id, ...columns } = await forStorage(toTransaction(row));
-    unwrap(
-      await client()
-        .from('transactions')
-        .update({
-          ...columns,
-          // The plaintext goes, or sealing it would have achieved nothing.
-          description: null,
-          amount: null,
-          category: null,
-          kind: null,
-          payment_method: null,
-          note: null,
-          source: null,
-          external_ref: null
-        })
-        .eq('id', row.id)
-    );
+    // update_transaction writes every column it is given and clears the rest,
+    // so the plaintext goes in the same statement that stores the ciphertext.
+    await write('update_transaction', await forStorage(toTransaction(row)));
     sealed += 1;
   }
 
@@ -259,7 +277,7 @@ export async function sealExisting() {
  * is, so it can actually check rather than assume.
  */
 export async function dataHealth() {
-  const rows = unwrap(await client().from('transactions').select('id,date,secret,iv,key_version'));
+  const rows = await call('list_transactions');
 
   const failures = [];
   let sealed = 0;
@@ -282,15 +300,7 @@ export async function dataHealth() {
   return { total: rows.length, sealed, readable, failures };
 }
 
-export async function recentDiagnostics(limit = 50) {
-  return unwrap(
-    await client()
-      .from('diagnostics')
-      .select('at,code,row_id,key_version,app_version,detail')
-      .order('at', { ascending: false })
-      .limit(limit)
-  );
-}
+export const recentDiagnostics = (limit = 50) => call('recent_diagnostics', { p_limit: limit });
 
 export const vaultState = () => ({ exists: Boolean(vault.currentEnvelope()), unlocked: vault.isUnlocked() });
 export const unlockVault = (password) => vault.unlock(password);
@@ -317,7 +327,7 @@ export const changePassword = async (currentPassword, newPassword) => {
   // a failure here leaves the old password still opening the vault.
   if (vault.isUnlocked()) {
     const envelope = await vault.rewrap(newPassword);
-    unwrap(await client().from('vaults').update({ password: envelope.password }).eq('user_id', data.user.id));
+    await call('rewrap_vault', { p_password: envelope.password });
   }
 
   unwrap(await client().auth.updateUser({ password: newPassword }));
@@ -327,21 +337,17 @@ export const changePassword = async (currentPassword, newPassword) => {
 /** A fresh recovery key, replacing the old one. Shown once. */
 export async function reissueRecoveryKey() {
   const { vault: envelope, recoveryKey } = await vault.newRecovery();
-  const userId = await currentUserId();
-  unwrap(await client().from('vaults').update({ recovery: envelope.recovery }).eq('user_id', userId));
+  await call('rewrap_vault', { p_recovery: envelope.recovery });
   return { recoveryKey };
 }
 
 /* ---------------------------------------------------------- transactions */
 
 export async function listExpenses(filters = {}) {
-  // Only the columns the database can still reason about are filtered there.
-  let query = client().from('transactions').select('*');
-  if (filters.from) query = query.gte('date', filters.from);
-  if (filters.to) query = query.lte('date', filters.to);
-  query = query.order('date', { ascending: false });
-
-  const rows = await openAll(unwrap(await query));
+  // The window is the only thing the database can still narrow.
+  const rows = await openAll(
+    await call('list_transactions', { p_from: filters.from || null, p_to: filters.to || null })
+  );
 
   // The rest is decided here, because the database cannot read it.
   const term = filters.q ? String(filters.q).toLowerCase() : '';
@@ -369,199 +375,147 @@ export async function listExpenses(filters = {}) {
 }
 
 export async function createExpense(expense) {
-  const row = await forStorage(expense);
-  return toDomain(
-    unwrap(
-      await client()
-        .from('transactions')
-        .insert({ ...row, user_id: await currentUserId() })
-        .select()
-        .single()
-    )
-  );
+  return toDomain(one(await write('create_transaction', await forStorage(expense))));
 }
 
+// A transaction is replaced rather than patched: sealed, it is one blob, so a
+// partial edit means opening it, merging, and sealing it again under the same
+// id — and the same path unsealed keeps one code path instead of two.
 export async function updateExpense(id, patch) {
-  if (!vault.isUnlocked()) {
-    return toTransaction(
-      unwrap(await client().from('transactions').update(fromTransaction(patch)).eq('id', id).select().single())
-    );
-  }
+  const stored = one(await call('get_transaction', { p_id: id }));
+  if (!stored) throw new Error('That transaction no longer exists.');
 
-  // A sealed row is one blob, so a partial edit means opening it, merging, and
-  // sealing it again under the same id.
-  const stored = unwrap(await client().from('transactions').select('*').eq('id', id).single());
   const merged = { ...(await toDomain(stored)), ...patch, id };
-  const row = await forStorage(merged);
-  const { id: _unchanged, ...columns } = row;
-
-  return toDomain(
-    unwrap(await client().from('transactions').update(columns).eq('id', id).select().single())
-  );
+  return toDomain(one(await write('update_transaction', await forStorage(merged))));
 }
 
-export const deleteExpense = async (id) => {
-  unwrap(await client().from('transactions').delete().eq('id', id));
-};
+export const deleteExpense = (id) => call('delete_transaction', { p_id: id });
+
+/** Every transaction, gone. Accounts, budgets, goals and the profile remain. */
+export const deleteAllTransactions = () => call('reset_transactions');
 
 /* -------------------------------------------------------------- accounts */
 
 export async function listAccounts() {
-  // account_balances summed a column the database can no longer read.
-  const [accounts, rows] = await Promise.all([
-    unwrap(await client().from('accounts').select('*').order('name')).map(toAccount),
-    listExpenses({})
-  ]);
-  return accountBalances(accounts, rows);
+  // account_balances summed a column the database can no longer read, so the
+  // balances are worked out here from the decrypted rows.
+  const [accounts, rows] = await Promise.all([call('list_accounts'), listExpenses({})]);
+  return accountBalances(accounts.map(toAccount), rows);
 }
 
 export const createAccount = async ({ name, openingBalance }) =>
   toAccount(
-    unwrap(
-      await client()
-        .from('accounts')
-        .insert({
-          name: String(name).trim(),
-          opening_balance: Number(openingBalance) || 0,
-          user_id: await currentUserId()
-        })
-        .select()
-        .single()
+    one(
+      await call('create_account', {
+        p_name: String(name).trim(),
+        p_opening_balance: Number(openingBalance) || 0
+      })
     )
   );
 
 export const removeAccount = async (id) => {
-  unwrap(await client().from('accounts').delete().eq('id', id));
+  await call('delete_account', { p_id: id });
 };
 
 /* --------------------------------------------------------------- budgets */
 
-export const listBudgets = async () =>
-  unwrap(await client().from('budgets').select('*').order('category')).map(toBudget);
+export const listBudgets = async () => (await call('list_budgets')).map(toBudget);
 
+// Setting a limit and clearing one are the same call: zero means gone, and the
+// function decides which, so the two cannot drift apart.
 export async function setBudget(category, monthlyLimit) {
-  const userId = await currentUserId();
-  if (Number(monthlyLimit) === 0) {
-    unwrap(await client().from('budgets').delete().eq('category', category));
-    return { category, monthlyLimit: 0 };
-  }
-  return toBudget(
-    unwrap(
-      await client()
-        .from('budgets')
-        .upsert(
-          { user_id: userId, category, monthly_limit: Number(monthlyLimit), updated_at: new Date().toISOString() },
-          { onConflict: 'user_id,category' }
-        )
-        .select()
-        .single()
-    )
-  );
+  await call('set_budget', { p_category: category, p_monthly_limit: Number(monthlyLimit) });
+  return { category, monthlyLimit: Number(monthlyLimit) };
 }
 
 /* ------------------------------------------------------------- recurring */
 
-export const listRecurring = async () =>
-  unwrap(await client().from('recurring').select('*').order('day_of_month')).map(toRecurring);
+export const listRecurring = async () => (await call('list_recurring')).map(toRecurring);
 
 export const createRecurring = async (template) =>
   toRecurring(
-    unwrap(
-      await client()
-        .from('recurring')
-        .insert({
-          description: template.description.trim(),
-          amount: Number(template.amount),
-          category: template.category,
-          day_of_month: Number(template.dayOfMonth),
-          payment_method: template.paymentMethod || null,
-          user_id: await currentUserId()
-        })
-        .select()
-        .single()
+    one(
+      await call('create_recurring', {
+        p_description: template.description.trim(),
+        p_amount: Number(template.amount),
+        p_category: template.category,
+        p_day_of_month: Number(template.dayOfMonth),
+        p_payment_method: template.paymentMethod || null
+      })
     )
   );
 
-export const deleteRecurring = async (id) => {
-  unwrap(await client().from('recurring').delete().eq('id', id));
-};
+export const deleteRecurring = (id) => call('delete_recurring', { p_id: id });
 
 // Creating this month's transaction for each template that has not been applied.
 export async function applyRecurring(month) {
-  const userId = await currentUserId();
-  const templates = unwrap(await client().from('recurring').select('*'));
-  const existing = unwrap(
-    await client()
-      .from('transactions')
-      .select('description,category,date')
-      .gte('date', `${month}-01`)
-      .lte('date', `${month}-31`)
+  const templates = await call('list_recurring');
+  // Which bills are already recorded is decided here: the description and the
+  // category it compares are inside the sealed blob.
+  const existing = await listExpenses({ from: `${month}-01`, to: `${month}-31` });
+
+  const already = new Set(
+    existing.map((row) => `${row.description}|${row.category}|${row.date}`)
   );
 
-  const already = new Set(existing.map((row) => `${row.description}|${row.category}|${row.date}`));
   const due = templates
     .map((row) => ({
-      user_id: userId,
       description: row.description,
       amount: Number(row.amount),
       category: row.category,
-      payment_method: row.payment_method,
+      paymentMethod: row.payment_method,
+      kind: 'expense',
+      source: 'recurring',
       date: `${month}-${String(row.day_of_month).padStart(2, '0')}`
     }))
     .filter((row) => !already.has(`${row.description}|${row.category}|${row.date}`));
 
   if (due.length === 0) return { created: 0, skipped: templates.length, expenses: [] };
 
-  const created = unwrap(await client().from('transactions').insert(due).select());
+  const created = [];
+  for (const row of due) created.push(await createExpense(row));
+
   return {
     created: created.length,
     skipped: templates.length - created.length,
-    expenses: created.map(toTransaction)
+    expenses: created
   };
 }
 
 /* ----------------------------------------------------------------- goals */
 
-export const listGoals = async () =>
-  unwrap(await client().from('goal_progress').select('*').order('created_at')).map(toGoal);
+export const listGoals = async () => (await call('list_goals')).map(toGoal);
 
 export const createGoal = async (goal) =>
   toGoal(
-    unwrap(
-      await client()
-        .from('goals')
-        .insert({
-          name: goal.name.trim(),
-          icon: goal.icon || 'target',
-          target_amount: Number(goal.target),
-          saved_amount: Number(goal.saved) || 0,
-          user_id: await currentUserId()
-        })
-        .select()
-        .single()
+    one(
+      await call('create_goal', {
+        p_name: goal.name.trim(),
+        p_target_amount: Number(goal.target),
+        p_icon: goal.icon || 'target',
+        p_saved_amount: Number(goal.saved) || 0
+      })
     )
   );
 
-export const updateGoal = async (id, patch) => {
-  const row = {};
-  if (patch.name !== undefined) row.name = patch.name.trim();
-  if (patch.icon !== undefined) row.icon = patch.icon;
-  if (patch.target !== undefined) row.target_amount = Number(patch.target);
-  return toGoal(unwrap(await client().from('goals').update(row).eq('id', id).select().single()));
-};
+export const updateGoal = async (id, patch) =>
+  toGoal(
+    one(
+      await call('update_goal', {
+        p_id: id,
+        p_name: patch.name === undefined ? null : patch.name.trim(),
+        p_target_amount: patch.target === undefined ? null : Number(patch.target),
+        p_icon: patch.icon === undefined ? null : patch.icon
+      })
+    )
+  );
 
-export const deleteGoal = async (id) => {
-  unwrap(await client().from('goals').delete().eq('id', id));
-};
+export const deleteGoal = (id) => call('delete_goal', { p_id: id });
 
 export const removeGoal = deleteGoal;
 
 export const addToGoal = async (id, amount) => {
-  unwrap(
-    await client()
-      .from('goal_contributions')
-      .insert({ goal_id: id, amount: Number(amount), user_id: await currentUserId() })
-  );
+  await call('add_contribution', { p_goal_id: id, p_amount: Number(amount) });
   const goals = await listGoals();
   return goals.find((goal) => goal.id === id);
 };
@@ -569,29 +523,28 @@ export const addToGoal = async (id, amount) => {
 export const contributeGoal = addToGoal;
 
 export const listContributions = async (id) =>
-  unwrap(
-    await client().from('goal_contributions').select('*').eq('goal_id', id).order('created_at', { ascending: false })
-  ).map(toContribution);
+  (await call('list_contributions', { p_goal_id: id })).map(toContribution);
 
 /* -------------------------------------------------------------- settings */
 
-export async function getSettings() {
-  const row = unwrap(
-    await client().from('profiles').select('display_name,monthly_budget').eq('id', await currentUserId()).single()
-  );
-  return { displayName: row.display_name, monthlyBudget: Number(row.monthly_budget) };
-}
+const toSettings = (row) => ({
+  displayName: row.display_name,
+  monthlyBudget: Number(row.monthly_budget)
+});
 
-export async function saveSettings(settings) {
-  const row = {};
-  if (settings.displayName !== undefined) row.display_name = String(settings.displayName).slice(0, 60);
-  if (settings.monthlyBudget !== undefined) row.monthly_budget = Number(settings.monthlyBudget) || 0;
+export const getSettings = async () => toSettings(one(await call('get_profile')));
 
-  const saved = unwrap(
-    await client().from('profiles').update(row).eq('id', await currentUserId()).select().single()
+export const saveSettings = async (settings) =>
+  toSettings(
+    one(
+      await call('save_profile', {
+        p_display_name:
+          settings.displayName === undefined ? null : String(settings.displayName).slice(0, 60),
+        p_monthly_budget:
+          settings.monthlyBudget === undefined ? null : Number(settings.monthlyBudget) || 0
+      })
+    )
   );
-  return { displayName: saved.display_name, monthlyBudget: Number(saved.monthly_budget) };
-}
 
 const CATEGORIES = {
   expense: ['food', 'transport', 'housing', 'utilities', 'health', 'entertainment', 'education', 'shopping', 'other'],
@@ -613,16 +566,15 @@ export async function getSummary(period) {
   const query = typeof period === 'string' ? { month: period } : period || {};
   const { from, to } = resolvePeriod(query);
 
-  const db = client();
   // One window covers the range, the period before it and the twelve-month
   // trend, so the rows are fetched and decrypted once.
   const start = summaryWindow(from, to);
 
   const [rows, budgets, profile, recurring] = await Promise.all([
     listExpenses({ from: start, to }),
-    db.from('budgets').select('*'),
-    db.from('profiles').select('display_name,monthly_budget').single(),
-    db.from('recurring').select('*')
+    call('list_budgets'),
+    call('get_profile'),
+    call('list_recurring')
   ]);
 
   const inRange = rows.filter((row) => row.date >= from && row.date <= to);
@@ -635,9 +587,9 @@ export async function getSummary(period) {
     categories: categoryTotals(rows, from, to),
     accounts: accountTotals(rows, from, to),
     trend: monthlyTrend(rows, to),
-    budgets: unwrap(budgets),
-    profile: unwrap(profile),
-    recurring: unwrap(recurring),
+    budgets,
+    profile: one(profile),
+    recurring,
     applied: inRange.map((row) => ({
       description: row.description,
       category: row.category,
@@ -720,7 +672,8 @@ export async function deleteReceipt(id) {
   // A storage object has no foreign key, so the ON DELETE SET NULL the API
   // relied on is done here: the transactions that carried it stop pointing at
   // a file that is gone.
-  unwrap(await client().from('transactions').update({ receipt_path: null }).eq('receipt_path', id));
+  const carrying = (await call('list_transactions')).filter((row) => row.receipt_path === id);
+  for (const row of carrying) await updateExpense(row.id, { receiptId: null });
 }
 
 export async function receiptUsage() {
@@ -865,7 +818,6 @@ export async function importStatement(transactions, options = {}) {
     throw error;
   }
 
-  const userId = await currentUserId();
   const existing = await neighbours(accepted.map((entry) => entry.date));
 
   let duplicates = 0;
@@ -889,8 +841,7 @@ export async function importStatement(transactions, options = {}) {
         // One statement belongs to one account, so the whole batch carries it.
         accountId: options.accountId || null,
         paymentMethod: options.paymentMethod || null
-      })),
-      user_id: userId
+      }))
     });
   }
 
@@ -900,20 +851,18 @@ export async function importStatement(transactions, options = {}) {
 
   if (rows.length === 0) return { imported: 0, duplicates, rejected };
 
-  const batch = await client().from('transactions').insert(rows).select();
-  if (!batch.error) return { imported: batch.data.length, duplicates, rejected };
-
-  // 23505 is the partial unique index on (user_id, external_ref): the same
-  // statement was imported before. One bad row must not lose the rest, so the
-  // batch is retried row by row and the clashes are counted.
-  if (batch.error.code !== '23505') throw new Error(batch.error.message);
-
+  // Row by row, because one clash must not lose the rest: the unique index on
+  // the blind reference refuses a statement imported twice, and that refusal is
+  // counted rather than thrown.
   let imported = 0;
   for (const row of rows) {
-    const one = await client().from('transactions').insert(row);
-    if (!one.error) imported += 1;
-    else if (one.error.code === '23505') duplicates += 1;
-    else throw new Error(one.error.message);
+    try {
+      await write('create_transaction', row);
+      imported += 1;
+    } catch (err) {
+      if (/duplicate key|23505/.test(err.message)) duplicates += 1;
+      else throw err;
+    }
   }
   return { imported, duplicates, rejected };
 }
@@ -929,12 +878,11 @@ const ruleKey = async (description) => {
 };
 
 export async function listMerchantRules() {
-  const rows = unwrap(await client().from('merchant_rules').select('merchant,category'));
+  const rows = await call('list_merchant_rules');
   return new Map(rows.map((row) => [row.merchant, row.category]));
 }
 
 export async function saveMerchantRules(entries) {
-  const userId = await currentUserId();
   const rules = new Map();
   for (const entry of entries) {
     const merchant = await ruleKey(entry.description);
@@ -943,51 +891,31 @@ export async function saveMerchantRules(entries) {
   }
   if (rules.size === 0) return { saved: 0 };
 
-  unwrap(
-    await client()
-      .from('merchant_rules')
-      .upsert(
-        [...rules].map(([merchant, category]) => ({ user_id: userId, merchant, category, updated_at: new Date().toISOString() })),
-        { onConflict: 'user_id,merchant' }
-      )
-  );
+  // The whole set in one call: an import teaches several merchants at once.
+  await call('save_merchant_rules', {
+    p_rules: [...rules].map(([merchant, category]) => ({ merchant, category }))
+  });
   return { saved: rules.size };
 }
 
-export async function forgetMerchantRule(merchant) {
-  unwrap(await client().from('merchant_rules').delete().eq('merchant', merchant));
-}
+export const forgetMerchantRule = (merchant) =>
+  call('forget_merchant_rule', { p_merchant: merchant });
 
 /* ------------------------------------------------- rows without an account */
 
 // Statements imported before this existed, and anything added without picking
 // an account, sit outside the Accounts page until they are claimed.
-export async function unassignedCount() {
-  const { count, error } = await client()
-    .from('transactions')
-    .select('id', { count: 'exact', head: true })
-    .is('account_id', null);
-  if (error) throw new Error(error.message);
-  return count ?? 0;
-}
+export const unassignedCount = () => call('count_unassigned');
 
 export async function assignUnassigned({ accountId, paymentMethod }) {
   if (!accountId && !paymentMethod) return { updated: 0 };
 
-  // account_id is a column the database still owns, so it moves in one
-  // statement. The payment method is inside the sealed blob, so those rows are
-  // opened and sealed again one at a time.
-  if (!paymentMethod || !vault.isUnlocked()) {
-    const patch = {};
-    if (accountId) patch.account_id = accountId;
-    if (paymentMethod) patch.payment_method = paymentMethod;
-    const rows = unwrap(
-      await client().from('transactions').update(patch).is('account_id', null).select('id')
-    );
-    return { updated: rows.length };
-  }
+  // The account is a column the database still owns, so it moves in one call.
+  // The payment method is inside the sealed blob, so those rows are opened and
+  // sealed again one at a time.
+  if (!paymentMethod) return { updated: await call('assign_unassigned', { p_account_id: accountId }) };
 
-  const pending = unwrap(await client().from('transactions').select('id').is('account_id', null));
+  const pending = (await call('list_transactions')).filter((row) => !row.account_id);
   for (const row of pending) await updateExpense(row.id, { accountId, paymentMethod });
   return { updated: pending.length };
 }
@@ -1034,27 +962,21 @@ export async function importCsv(text) {
     throw error;
   }
 
-  const userId = await currentUserId();
-  const inserted = unwrap(
-    await client()
-      .from('transactions')
-      .insert(
-        await Promise.all(
-          accepted.map(async (entry) => ({
-            ...(await forStorage({
-              kind: entry.kind,
-              description: entry.description,
-              amount: entry.amount,
-              category: entry.category,
-              date: entry.date,
-              source: 'csv'
-            })),
-            user_id: userId
-          }))
-        )
-      )
-      .select('id')
-  );
+  let imported = 0;
+  for (const entry of accepted) {
+    await write(
+      'create_transaction',
+      await forStorage({
+        kind: entry.kind,
+        description: entry.description,
+        amount: entry.amount,
+        category: entry.category,
+        date: entry.date,
+        source: 'csv'
+      })
+    );
+    imported += 1;
+  }
 
-  return { imported: inserted.length, rejected };
+  return { imported, rejected };
 }

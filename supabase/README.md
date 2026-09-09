@@ -11,6 +11,7 @@ migrations/0002_summary.sql   the dashboard's aggregates as SQL functions
 migrations/0003_receipts.sql  the receipts bucket and the policy that owns it
 migrations/0004_merchant_rules.sql  remembered categories, one row per merchant
 migrations/0005_encryption.sql  vaults, sealed columns, diagnostics
+migrations/0006_functions.sql   every table reached through a function
 test/                         policies and functions, run against real Postgres
 ```
 
@@ -132,6 +133,22 @@ Locally, `client/.env.local` holds the same three names; it is gitignored.
 Going back is the same switch: clear `VITE_DATA_BACKEND` and re-run the
 workflow. Nothing in the Express API is removed until the Supabase side has been
 running on real use.
+
+## One surface
+
+0006 puts every table behind a function. The client builds no queries: it calls
+`list_transactions`, `create_transaction`, `set_budget`, `reset_transactions`
+and so on by name, and `client/src/data/supabase.js` has exactly one place —
+`call()` — that speaks to the database at all.
+
+They are `security invoker`, so nothing changes about who may see what: a
+function runs as the caller and the policies still decide. What changes is that
+the answer to "what can this application do with a table" is in one file instead
+of spread across a dozen.
+
+`test/functions.test.mjs` runs each of them as one account and then as another,
+because a function that quietly widened access would be a worse mistake than a
+wrong query.
 
 ## After encryption
 
