@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { titleCase, currentMonth } from '../format.js';
+import { titleCase, todayIso } from '../format.js';
 
 const emptyForm = () => ({
   description: '',
   amount: '',
   category: 'other',
-  date: new Date().toISOString().slice(0, 10)
+  date: todayIso()
 });
 
 export default function ExpenseForm({ categories, onSubmit, submitting }) {
@@ -65,7 +65,7 @@ export default function ExpenseForm({ categories, onSubmit, submitting }) {
         <input
           type="date"
           value={form.date}
-          max={`${currentMonth()}-31`}
+          max={todayIso()}
           onChange={(event) => update('date', event.target.value)}
           required
         />

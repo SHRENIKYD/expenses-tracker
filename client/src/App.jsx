@@ -9,6 +9,7 @@ import Budgets from './components/Budgets.jsx';
 import ImportExport from './components/ImportExport.jsx';
 import DailyChart from './components/DailyChart.jsx';
 import useDebouncedValue from './useDebouncedValue.js';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { currentMonth } from './format.js';
 import {
   createExpense,
@@ -221,24 +222,30 @@ export default function App() {
           {summary && <SummaryCards summary={summary} />}
 
           {summary && (
-            <div className="card">
-              <h2>By category</h2>
-              <CategoryChart categories={summary.categories} />
-            </div>
+            <ErrorBoundary title="By category">
+              <div className="card">
+                <h2>By category</h2>
+                <CategoryChart categories={summary.categories} />
+              </div>
+            </ErrorBoundary>
           )}
 
           {summary && (
-            <div className="card">
-              <h2>Daily spending</h2>
-              <DailyChart month={summary.month} daily={summary.daily} />
-            </div>
+            <ErrorBoundary title="Daily spending">
+              <div className="card">
+                <h2>Daily spending</h2>
+                <DailyChart month={summary.month} daily={summary.daily} />
+              </div>
+            </ErrorBoundary>
           )}
 
           {summary && (
-            <div className="card">
-              <h2>Last 12 months</h2>
-              <TrendChart trend={summary.trend} />
-            </div>
+            <ErrorBoundary title="Last 12 months">
+              <div className="card">
+                <h2>Last 12 months</h2>
+                <TrendChart trend={summary.trend} />
+              </div>
+            </ErrorBoundary>
           )}
 
           <Filters

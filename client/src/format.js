@@ -27,3 +27,5 @@ export const formatPercent = (fraction) =>
 export const titleCase = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 
 export const currentMonth = () => new Date().toISOString().slice(0, 7);
+
+export const todayIso = () => new Date().toISOString().slice(0, 10);
