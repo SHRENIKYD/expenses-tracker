@@ -6,7 +6,7 @@ import StatementImport from '../components/StatementImport.jsx';
 import { emptyFilters } from '../useExpensesData.js';
 
 export default function Transactions() {
-  const { expenses, categories, filters, setFilters, sort, order, loading, handlers } =
+  const { expenses, accounts, categories, filters, setFilters, sort, order, loading, handlers } =
     useOutletContext();
 
   return (
@@ -23,6 +23,7 @@ export default function Transactions() {
         <div className={loading ? 'refreshing' : undefined}>
           <ExpenseTable
             expenses={expenses}
+            accounts={accounts}
             categories={categories.expense}
             incomeCategories={categories.income}
             paymentMethods={categories.paymentMethods}

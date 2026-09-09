@@ -2383,3 +2383,208 @@ tr.is-duplicate {
     row-gap: 10px;
   }
 }
+
+/* Accounts, contribution history and notification controls. */
+.search-field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #fafbf9;
+  color: var(--muted);
+}
+.search-field input {
+  border: none;
+  background: transparent;
+  padding: 10px 0;
+  flex: 1;
+  width: 100%;
+}
+.search-field:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.search-field input:focus-visible {
+  outline: none;
+}
+.global-search {
+  width: clamp(200px, 23vw, 360px);
+}
+.global-search button {
+  background: transparent;
+  color: var(--muted);
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+.notification-button {
+  position: relative;
+  background: transparent;
+  color: var(--text);
+  padding: 8px;
+  display: grid;
+  place-items: center;
+}
+.notification-dot {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d99727;
+}
+.alerts-container {
+  position: relative;
+}
+.notification-panel {
+  position: absolute;
+  top: 45px;
+  right: 0;
+  z-index: 30;
+  width: min(330px, 85vw);
+  padding: 20px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px #18382c20;
+}
+.notification-panel h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+.notification-panel a {
+  display: block;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+.notification-panel button {
+  margin-top: 12px;
+}
+.mobile-menu-button,
+.mobile-menu {
+  display: none;
+}
+
+.goal-content {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.goal-icon {
+  width: 65px;
+  height: 76px;
+  flex: 0 0 65px;
+  display: grid;
+  place-items: center;
+  background: #e8f4ec;
+  color: #174f3b;
+  border-radius: 10px;
+}
+.goal-details {
+  flex: 1;
+  min-width: 0;
+}
+.goal-details > strong {
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+.goal-details p {
+  font-size: 0.875rem;
+  margin: 7px 0;
+}
+.goal-details .meter {
+  margin-top: 10px;
+}
+.goal-actions {
+  display: flex;
+  gap: 12px;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.soft-button {
+  background: #e1f5eb;
+  color: #126148;
+  font-size: 0.8125rem;
+  padding: 8px 10px;
+}
+.meter {
+  background: #deeee6;
+  height: 10px;
+  border-radius: 20px;
+  overflow: hidden;
+}
+.meter-fill {
+  height: 100%;
+  background: #5bb58d;
+  border-radius: inherit;
+}
+
+.portfolio-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+  margin-top: 20px;
+}
+.portfolio-form label {
+  flex: 1 1 220px;
+}
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 18px;
+}
+.account-balance {
+  font-family: Georgia, serif;
+  font-size: 2rem;
+}
+.account-card .button-row {
+  margin-top: 20px;
+  justify-content: space-between;
+}
+.contribution-form {
+  margin-top: 18px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.contribution-form label {
+  flex: 1 1 160px;
+}
+.contribution-form .hint {
+  flex-basis: 100%;
+  margin: 0;
+}
+.goal-footer {
+  margin-top: 18px;
+  justify-content: space-between;
+}
+.history-list {
+  list-style: none;
+  padding: 0;
+}
+.history-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.goal-card h2 { display: flex; align-items: center; gap: 10px; }
+.goal-card .link { display: inline-flex; align-items: center; }
+.mobile-menu-button, .mobile-menu { display: none; }
+@media(max-width: 1100px) { .global-search { display:none; } .goal-content { flex-wrap:wrap; } }
+@media(max-width: 768px) {
+ .mobile-menu-button { display:grid; }
+ .mobile-menu { display:grid; grid-template-columns:1fr 1fr; gap:10px; background:white; padding:15px; border-radius:10px; }
+ .mobile-menu a { padding:8px; }
+ .goal-icon { width:46px; height:60px; flex-basis:46px; }
+ .notification-panel { right:-50px; }
+}

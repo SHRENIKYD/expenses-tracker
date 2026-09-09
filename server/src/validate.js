@@ -54,7 +54,9 @@ function isIsoDate(value) {
 }
 
 function isIsoMonth(value) {
-  return /^\d{4}-\d{2}$/.test(value) && Number(value.slice(5, 7)) >= 1 && Number(value.slice(5, 7)) <= 12;
+  return (
+    /^\d{4}-\d{2}$/.test(value) && Number(value.slice(5, 7)) >= 1 && Number(value.slice(5, 7)) <= 12
+  );
 }
 
 function validateExpense(body, { partial = false, existingKind = 'expense' } = {}) {
@@ -109,7 +111,11 @@ function validateExpense(body, { partial = false, existingKind = 'expense' } = {
     value.category = kind === 'income' ? 'salary' : 'other';
   }
 
-  if (input.paymentMethod !== undefined && input.paymentMethod !== null && input.paymentMethod !== '') {
+  if (
+    input.paymentMethod !== undefined &&
+    input.paymentMethod !== null &&
+    input.paymentMethod !== ''
+  ) {
     if (!PAYMENT_METHODS.includes(input.paymentMethod)) {
       errors.push(`paymentMethod must be one of: ${PAYMENT_METHODS.join(', ')}`);
     } else {
@@ -117,6 +123,16 @@ function validateExpense(body, { partial = false, existingKind = 'expense' } = {
     }
   } else if (input.paymentMethod === null || input.paymentMethod === '') {
     value.paymentMethod = null;
+  }
+
+  if (input.accountId !== undefined) {
+    if (input.accountId === null || input.accountId === '') value.accountId = null;
+    else if (
+      typeof input.accountId === 'string' &&
+      /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(input.accountId)
+    )
+      value.accountId = input.accountId;
+    else errors.push('accountId must be a valid account');
   }
 
   if (input.note !== undefined) {

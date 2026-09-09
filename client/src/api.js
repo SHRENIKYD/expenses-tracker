@@ -16,7 +16,10 @@ export function authHeaders(extra = {}) {
 async function request(path, options = {}) {
   const response = await fetch(`${BASE}${path}`, {
     ...options,
-    headers: authHeaders({ 'Content-Type': 'application/json', ...(options.headers || {}) })
+    headers: authHeaders({
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    })
   });
 
   // A 401 from the auth endpoints means bad credentials, not an expired session;
@@ -64,10 +67,16 @@ export const createRecurring = (template) =>
   request('/recurring', { method: 'POST', body: JSON.stringify(template) });
 export const deleteRecurring = (id) => request(`/recurring/${id}`, { method: 'DELETE' });
 export const applyRecurring = (month) =>
-  request('/recurring/apply', { method: 'POST', body: JSON.stringify({ month }) });
+  request('/recurring/apply', {
+    method: 'POST',
+    body: JSON.stringify({ month })
+  });
 export const listBudgets = () => request('/budgets');
 export const setBudget = (category, monthlyLimit) =>
-  request(`/budgets/${category}`, { method: 'PUT', body: JSON.stringify({ monthlyLimit }) });
+  request(`/budgets/${category}`, {
+    method: 'PUT',
+    body: JSON.stringify({ monthlyLimit })
+  });
 
 export async function exportCsv(filters = {}) {
   const response = await fetch(`${BASE}/expenses/export${toQuery(filters)}`, {
@@ -93,13 +102,18 @@ export async function importCsv(text) {
   });
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(payload?.errors?.join(', ') || payload?.error || `Import failed (${response.status})`);
+    throw new Error(
+      payload?.errors?.join(', ') || payload?.error || `Import failed (${response.status})`
+    );
   }
   return payload;
 }
 
 export const register = (credentials) =>
-  request('/auth/register', { method: 'POST', body: JSON.stringify(credentials) });
+  request('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(credentials)
+  });
 export const login = (credentials) =>
   request('/auth/login', { method: 'POST', body: JSON.stringify(credentials) });
 export const logout = () => request('/auth/logout', { method: 'POST' });
@@ -116,7 +130,9 @@ export async function uploadReceipt(file) {
   });
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(payload?.errors?.join(', ') || payload?.error || `Upload failed (${response.status})`);
+    throw new Error(
+      payload?.errors?.join(', ') || payload?.error || `Upload failed (${response.status})`
+    );
   }
   return payload;
 }
@@ -127,11 +143,17 @@ export async function previewStatement(file, password) {
   const headers = authHeaders({ 'Content-Type': 'application/pdf' });
   if (password) headers['X-Statement-Password'] = password;
 
-  const response = await fetch(`${BASE}/statements/preview`, { method: 'POST', headers, body: file });
+  const response = await fetch(`${BASE}/statements/preview`, {
+    method: 'POST',
+    headers,
+    body: file
+  });
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const error = new Error(payload?.error || payload?.errors?.join(', ') || `Failed (${response.status})`);
+    const error = new Error(
+      payload?.error || payload?.errors?.join(', ') || `Failed (${response.status})`
+    );
     error.code = payload?.code;
     error.details = payload;
     throw error;
@@ -140,16 +162,26 @@ export async function previewStatement(file, password) {
 }
 
 export const importStatement = (transactions) =>
-  request('/statements/import', { method: 'POST', body: JSON.stringify({ transactions }) });
+  request('/statements/import', {
+    method: 'POST',
+    body: JSON.stringify({ transactions })
+  });
 
+export const listAccounts = () => request('/accounts');
+export const createAccount = (value) =>
+  request('/accounts', { method: 'POST', body: JSON.stringify(value) });
+export const removeAccount = (id) => request(`/accounts/${id}`, { method: 'DELETE' });
 export const listGoals = () => request('/goals');
+export const createGoal = (value) =>
+  request('/goals', { method: 'POST', body: JSON.stringify(value) });
+export const removeGoal = (id) => request(`/goals/${id}`, { method: 'DELETE' });
+export const contributeGoal = (id, amount) =>
+  request(`/goals/${id}/contributions`, {
+    method: 'POST',
+    body: JSON.stringify({ amount })
+  });
+export const listContributions = (id) => request(`/goals/${id}/contributions`);
 
-export const createGoal = (goal) => request('/goals', { method: 'POST', body: JSON.stringify(goal) });
-
-export const updateGoal = (id, patch) =>
-  request(`/goals/${id}`, { method: 'PUT', body: JSON.stringify(patch) });
-
-export const deleteGoal = (id) => request(`/goals/${id}`, { method: 'DELETE' });
-
-export const addToGoal = (id, amount) =>
-  request(`/goals/${id}/add`, { method: 'POST', body: JSON.stringify({ amount }) });
+export const deleteGoal = removeGoal;
+export const addToGoal = contributeGoal;
+export const updateGoal = (id, patch) => request(`/goals/${id}`, { method: 'PUT', body: JSON.stringify(patch) });

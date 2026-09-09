@@ -4,7 +4,7 @@ import Icon, { CATEGORY_ICON } from '../components/Icon.jsx';
 import CashFlowChart from '../components/CashFlowChart.jsx';
 import SpendingDonut from '../components/SpendingDonut.jsx';
 import KpiTile from '../components/KpiTile.jsx';
-import GoalRow from '../components/GoalRow.jsx';
+import GoalCard from '../components/GoalCard.jsx';
 import UpcomingBills from '../components/UpcomingBills.jsx';
 import useDebouncedValue from '../useDebouncedValue.js';
 import {
@@ -61,7 +61,7 @@ function budgetRunway(weekly, overallBudget) {
 }
 
 export default function Overview() {
-  const { summary, expenses, goals, loading, month, handlers } = useOutletContext();
+  const { summary, expenses, accounts, goals, loading, month, handlers } = useOutletContext();
   const [period, setPeriod] = useState('weekly');
   const [search, setSearch] = useState('');
   const query = useDebouncedValue(search, 200);
@@ -75,8 +75,8 @@ export default function Overview() {
             expense.category.toLowerCase().includes(needle)
         )
       : expenses;
-    return matches.slice(0, 5);
-  }, [expenses, query]);
+    return matches.filter(row => row.date.startsWith(month)).sort((a,b) => b.date.localeCompare(a.date)).slice(0, 5);
+  }, [expenses, query, month]);
 
   if (!summary) {
     return <p className="empty">{loading ? 'Loading…' : 'Nothing to show yet.'}</p>;
@@ -293,7 +293,7 @@ export default function Overview() {
                             </span>
                           </td>
                           <td data-label="Date">{formatDayFull(expense.date)}</td>
-                          <td data-label="Account">{paymentLabel(expense.paymentMethod) || '—'}</td>
+                          <td data-label="Account">{accounts.find(account => account.id === expense.accountId)?.name || paymentLabel(expense.paymentMethod) || '—'}</td>
                           <td className="numeric" data-label="Amount">
                             <span className={expense.kind === 'income' ? 'amount-in' : 'amount-out'}>
                               {expense.kind === 'income' ? '+' : '−'}
@@ -341,27 +341,7 @@ export default function Overview() {
             )}
           </section>
 
-          <section className="card">
-            <div className="card-head">
-              <h2>
-                <Icon name="target" size={19} strokeWidth={1.9} />
-                Savings goal
-              </h2>
-              <Link to="/goals" className="link see-all">
-                View all <Icon name="chevronRight" size={15} strokeWidth={2.1} />
-              </Link>
-            </div>
-
-            {topGoal ? (
-              <ul className="goal-list">
-                <GoalRow goal={topGoal} onContribute={handlers.contribute} />
-              </ul>
-            ) : (
-              <p className="empty">
-                No goal yet. <Link to="/goals">Set one up.</Link>
-              </p>
-            )}
-          </section>
+          <GoalCard goal={topGoal} handlers={handlers} compact />
 
           <UpcomingBills upcoming={upcoming} />
         </div>
