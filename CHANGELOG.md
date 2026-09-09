@@ -27,7 +27,12 @@ The tag builds the client with its own number stamped in, publishes it to
 Pages, and opens a GitHub release with the section below. A tag that disagrees
 with `client/package.json`, or has no section here, fails rather than ships.
 
-## 1.1.0 — unreleased
+## Unreleased
+
+Work lands here and stays on 1.0.0 until it has been used enough to call
+stable. Builds carry `1.0.0+<short sha>`, which names the commit exactly, so
+nothing is lost by not renumbering: the version moves when there is a reason to
+move it, not on every change.
 
 ### Added
 
