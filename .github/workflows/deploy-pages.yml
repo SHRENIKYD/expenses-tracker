@@ -30,6 +30,20 @@ jobs:
         run: npm ci
         working-directory: client
 
+      # A malformed URL builds and deploys perfectly happily and then fails in
+      # the browser as ERR_NAME_NOT_RESOLVED, so the shape is checked here
+      # rather than by whoever opens the site. A trailing comma once cost an
+      # afternoon.
+      - name: The Supabase URL is a URL
+        if: vars.VITE_DATA_BACKEND == 'supabase'
+        run: |
+          url="${{ vars.VITE_SUPABASE_URL }}"
+          key="${{ vars.VITE_SUPABASE_ANON_KEY }}"
+          printf '%s' "$url" | grep -Eq '^https://[a-z0-9]+\.supabase\.co$' \
+            || { echo "VITE_SUPABASE_URL is not a bare project URL: [$url]"; exit 1; }
+          printf '%s' "$key" | grep -Eq '^(sb_publishable_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_.-]+)$' \
+            || { echo "VITE_SUPABASE_ANON_KEY is not a publishable or anon key"; exit 1; }
+
       - name: Build
         run: npm run build
         working-directory: client
