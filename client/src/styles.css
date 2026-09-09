@@ -870,7 +870,7 @@ tfoot td {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 0 26px;
+  padding: 0 44px 0 26px;
   min-height: 34px;
   margin-bottom: 33px;
   position: relative;
@@ -3162,22 +3162,31 @@ tr.is-duplicate {
 }
 
 /* ---------- collapsible sidebar ---------- */
+/* Pinned to the sidebar's right edge, level with the brand, half over the
+   divider — it belongs to the sidebar, so it sits on it. The sidebar clips its
+   own overflow, so the button is positioned inside that edge rather than
+   straddling it. */
 .sidebar-toggle {
+  position: absolute;
+  top: 32px;
+  right: 10px;
+  z-index: 2;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  margin-top: 4px;
+  width: 26px;
+  height: 26px;
   padding: 0;
-  flex: 0 0 34px;
-  border: 1px solid #dfe8e2;
-  border-radius: 10px;
-  color: #3d6b57;
-  background: #ffffff;
+  border: 1px solid #ffffff26;
+  border-radius: 999px;
+  color: #a9d2bd;
+  background: #10382a;
   cursor: pointer;
-  transition: background .15s ease, color .15s ease, border-color .15s ease;
+  opacity: .55;
+  transition: opacity .15s ease, color .15s ease, background .15s ease;
 }
-.sidebar-toggle:hover { color: #12402f; border-color: #b9d3c5; background: #f2f8f4; }
+.sidebar:hover .sidebar-toggle { opacity: 1; }
+.sidebar-toggle:hover { color: #eaf6ef; background: #17503b; opacity: 1; }
+.sidebar-toggle:focus-visible { opacity: 1; }
 .sidebar-toggle:focus-visible { outline: 2px solid #7fd0a8; outline-offset: 2px; }
 
 /* Collapsed, the rail keeps the icons and drops everything that needs width.
@@ -3190,7 +3199,8 @@ tr.is-duplicate {
   padding-left: 0;
   padding-right: 0;
 }
-.sidebar.collapsed .brand { padding: 0; justify-content: center; gap: 0; }
+.sidebar.collapsed .sidebar-toggle { top: 8px; right: 50%; transform: translateX(50%); }
+.sidebar.collapsed .brand { padding: 0; justify-content: center; gap: 0; margin-top: 18px; }
 .sidebar.collapsed .brand-name,
 .sidebar.collapsed .sidebar-motto,
 .sidebar.collapsed .sidebar-name,
