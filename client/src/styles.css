@@ -3165,11 +3165,13 @@ tr.is-duplicate {
 /* Its own row under the brand. Pinned to the edge it eventually collided with
    the brand name, which is as wide as whichever serif the machine has; a row in
    the flow cannot overlap anything at any width. */
+/* The nav is inset 14px, so its pills end 14px from the sidebar's edge. The
+   button lines up with that edge rather than floating short of it. */
 .sidebar-toggle-row {
   display: flex;
   justify-content: flex-end;
-  padding: 0 22px;
-  margin: -18px 0 12px;
+  padding: 0 14px;
+  margin: -20px 0 10px;
   position: relative;
   z-index: 1;
 }
