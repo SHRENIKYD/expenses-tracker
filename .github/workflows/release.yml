@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # A tag whose version does not match the one in package.json would ship a
+      # build stamped with the wrong number, so it fails here instead.
+      - name: The tag matches the version in package.json
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version=$(node -p "require('./client/package.json').version")
+          echo "tag $tag, package.json $version"
+          test "$tag" = "$version"
+
+      - name: The changelog has an entry for it
+        run: |
+          grep -q "^## ${GITHUB_REF_NAME#v} " CHANGELOG.md \
+            || { echo "CHANGELOG.md has no section for ${GITHUB_REF_NAME#v}"; exit 1; }
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The notes are the changelog's own section, so there is one account
+          # of what changed rather than two that can disagree.
+          awk -v version="${GITHUB_REF_NAME#v}" '
+            $0 ~ "^## " version " " { printing = 1; next }
+            printing && /^## / { exit }
+            printing { print }
+          ' CHANGELOG.md > /tmp/notes.md
+          # A tag can arrive from a push or from the Releases page, which
+          # creates the release itself. Either way the notes end up being the
+          # changelog's.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --notes-file /tmp/notes.md
+          else
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file /tmp/notes.md
+          fi

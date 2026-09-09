@@ -108,6 +108,12 @@ export default function SettingsPage() {
             <dd>{session.user.email}</dd>
           </div>
           <div>
+            <dt>Version</dt>
+            {/* The same string the diagnostics carry, so a screenshot of this
+                page and a report from it name the same build. */}
+            <dd>{import.meta.env.VITE_APP_VERSION || 'dev'}</dd>
+          </div>
+          <div>
             <dt>Receipts stored</dt>
             <dd>
               {usage
