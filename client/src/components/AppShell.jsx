@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { budgetAlert, money } from '../dashboard.js';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Icon from './Icon.jsx';
-import ForestArt from './ForestArt.jsx';
+import { SIDEBAR_THEMES, readSidebarTheme, saveSidebarTheme } from '../sidebarThemes.js';
 import BrandMark from './BrandMark.jsx';
 import RangePicker from './RangePicker.jsx';
 import GlobalSearch from './GlobalSearch.jsx';
@@ -45,6 +45,12 @@ const TITLES = {
 
 export default function AppShell({ context }) {
   const [alertsOpen, setAlertsOpen] = useState(false);
+  const [sidebarTheme, setSidebarTheme] = useState(readSidebarTheme);
+  const theme = SIDEBAR_THEMES.find((item) => item.id === sidebarTheme);
+
+  useEffect(() => {
+    saveSidebarTheme(sidebarTheme);
+  }, [sidebarTheme]);
   // The choice is the reader's, and it should survive a reload.
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem('sidebar-collapsed') === 'yes'
@@ -79,7 +85,11 @@ export default function AppShell({ context }) {
 
   return (
     <div className="shell">
-      <aside className={collapsed ? 'sidebar collapsed' : 'sidebar'}>
+      <aside
+        className={collapsed ? 'sidebar collapsed' : 'sidebar'}
+        data-sidebar-theme={sidebarTheme}
+        style={{ '--sidebar-image': `url("${theme.image}")` }}
+      >
         <div className="brand">
           <span className="brand-mark">
             <BrandMark size={30} />
@@ -125,8 +135,6 @@ export default function AppShell({ context }) {
           tomorrows.
           <span className="sidebar-rule" />
         </p>
-
-        <ForestArt />
 
         <div className="sidebar-foot">
           <NavLink
@@ -266,7 +274,7 @@ export default function AppShell({ context }) {
           </p>
         )}
 
-        <Outlet context={context} />
+        <Outlet context={{ ...context, sidebarTheme, setSidebarTheme }} />
       </div>
 
       <nav className="tabbar">
