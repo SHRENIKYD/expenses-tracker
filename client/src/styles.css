@@ -803,12 +803,17 @@ tfoot td {
   border-top: 1px solid var(--border);
 }
 
+/* Signing in is the one screen with nothing in it yet, so it is the app's own
+   colour rather than a white card on grey: the ledger is what is bright. */
 .signin {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px;
+  padding: 40px 22px;
+  color: #eaf6ef;
+  background: linear-gradient(180deg, #10402f 0%, #07291d 100%);
 }
 
 .signin-card {
@@ -817,23 +822,72 @@ tfoot td {
 }
 
 .signin-card h1 {
-  font-size: 1.35rem;
-  margin: 0 0 4px;
+  margin: 20px 0 6px;
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.7px;
+  color: #ffffff;
+}
+
+.signin-card .hint { color: #a9cbba; font-size: 0.9rem; }
+.signin-card .error {
+  margin-top: 14px;
+  color: #ffd9d4;
+  background: #ff6b5e1f;
+  border: 1px solid #ff8a7d3d;
 }
 
 .signin-card form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 16px;
+  gap: 14px;
+  margin-top: 26px;
+}
+
+.signin-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #a9cbba;
+}
+
+.signin-card input {
+  height: 46px;
+  padding: 0 14px;
+  font-size: 1rem;
+  color: #ffffff;
+  background: #ffffff14;
+  border: 1px solid #ffffff2e;
+  border-radius: 12px;
+}
+.signin-card input::placeholder { color: #7fa792; }
+.signin-card input:focus {
+  outline: none;
+  border-color: #7fd0a8;
+  background: #ffffff1f;
 }
 
 .signin-card button[type='submit'] {
-  margin-top: 4px;
+  margin-top: 8px;
+  height: 48px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0d3b2a;
+  background: #cae5d1;
+  border: 0;
+  border-radius: 12px;
 }
+.signin-card button[type='submit']:hover:not(:disabled) { background: #d8eede; }
+
+.signin-card .link { color: #eaf6ef; font-weight: 600; }
+.signin-card .button-row button { color: #0d3b2a; }
 
 .signin-switch {
-  margin-top: 14px;
+  margin-top: 16px;
+  text-align: center;
+  color: #a9cbba;
 }
 
 .account-bar {
@@ -3495,3 +3549,112 @@ select.remembered { border-color: #7fb79a; background: #f1f8f4; }
   border-radius: 0 8px 8px 0;
 }
 .suggestion-list .button-row { margin: 0; }
+
+/* ---------- settings as a list ---------- */
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 620px;
+}
+
+.setting-group {
+  background: #fff;
+  border: 1px solid var(--line, #e4ebe6);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.setting-group h2 {
+  margin: 0;
+  padding: 13px 16px 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #8aa094;
+}
+
+.setting-row { border-top: 1px solid #f0f4f1; }
+.setting-group h2 + .setting-row { border-top: 0; }
+
+.setting-open {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  padding: 14px 16px;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.setting-open:hover { background: #f7faf8; }
+.setting-open.static { cursor: default; }
+.setting-open.static:hover { background: transparent; }
+
+.setting-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 11px;
+  color: #1d6b4c;
+  background: #eef6f1;
+}
+
+.setting-text { flex: 1; min-width: 0; }
+.setting-title {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: #17362b;
+}
+.setting-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: #6b7f76;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.setting-pill {
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.setting-pill.on { color: #1d6b4c; background: #e2f2e8; }
+.setting-pill.off { color: #a1591c; background: #fdf0e4; }
+
+/* The detail belongs to the row, so it opens where the row is rather than on a
+   page of its own. */
+.setting-detail {
+  padding: 4px 16px 18px 63px;
+  border-top: 1px solid #f4f8f6;
+}
+.setting-detail .form { gap: 12px; }
+.setting-detail > .recovery-block { margin-top: 14px; }
+
+/* The one row that deletes something says so before it is pressed. */
+.setting-row.danger .setting-icon { color: #a3241f; background: #fdeceb; }
+.setting-row.danger .setting-title { color: #a3241f; }
+
+.danger-button {
+  background: #a3241f;
+  border-color: #a3241f;
+  color: #fff;
+}
+.danger-button:hover:not(:disabled) { background: #8c1e1a; }
+.danger-button:disabled { background: #d8b6b4; border-color: #d8b6b4; }
+
+@media (max-width: 560px) {
+  .setting-detail { padding-left: 16px; }
+}

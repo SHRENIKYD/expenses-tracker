@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import BrandMark from './BrandMark.jsx';
 import RecoveryKey from './RecoveryKey.jsx';
 import { requestPasswordReset } from '../data/index.js';
 
@@ -47,7 +48,8 @@ export default function SignIn({ onAuthenticated, onSubmit }) {
   if (recoveryKey) {
     return (
       <div className="signin">
-        <div className="card signin-card">
+        <div className="signin-card">
+          <BrandMark size={40} />
           <h1>Save your recovery key</h1>
           <RecoveryKey
             value={recoveryKey}
@@ -61,12 +63,15 @@ export default function SignIn({ onAuthenticated, onSubmit }) {
 
   return (
     <div className="signin">
-      <div className="card signin-card">
-        <h1>Tessera</h1>
+      <div className="signin-card">
+        <BrandMark size={44} />
+        <h1>
+          {isRegister ? 'Start tracking' : isRecover ? 'Reset your password' : 'Welcome back'}
+        </h1>
         <p className="hint">
-          {isRegister && 'Create an account to start tracking.'}
+          {isRegister && 'An account, a key that never leaves your device, and a ledger only you can read.'}
           {isRecover && 'Give your email address and a reset link will be sent to it.'}
-          {!isRegister && !isRecover && 'Sign in to see your expenses.'}
+          {!isRegister && !isRecover && 'Sign in to see where your money went.'}
         </p>
 
         {error && <p className="error">{error}</p>}

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import Icon from './Icon.jsx';
+import Frame from './Frame.jsx';
 import { changePassword, requestPasswordReset } from '../data/index.js';
 
-export default function PasswordCard({ email }) {
+export default function PasswordCard({ email, bare = false }) {
   const [form, setForm] = useState({ currentPassword: '', newPassword: '' });
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
@@ -39,11 +40,7 @@ export default function PasswordCard({ email }) {
   }
 
   return (
-    <section className="card">
-      <h2>
-        <Icon name="settings" size={19} strokeWidth={1.9} />
-        Password
-      </h2>
+    <Frame bare={bare} icon="settings" title="Password">
 
       <form className="form" onSubmit={submit}>
         <label>
@@ -85,6 +82,6 @@ export default function PasswordCard({ email }) {
       </div>
 
       {error && <p className="error">{error}</p>}
-    </section>
+    </Frame>
   );
 }

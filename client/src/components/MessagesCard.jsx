@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Icon from './Icon.jsx';
+import Frame from './Frame.jsx';
 import {
   available,
   notificationAccess,
@@ -10,7 +11,7 @@ import {
 import { readingMessages, setReadingMessages } from './MessageSuggestions.jsx';
 
 // Turning the message reader on, and saying plainly what it does.
-export default function MessagesCard() {
+export default function MessagesCard({ bare = false }) {
   const [on, setOn] = useState(readingMessages);
   const [granted, setGranted] = useState(false);
   const [notifications, setNotifications] = useState(false);
@@ -34,16 +35,12 @@ export default function MessagesCard() {
 
   if (!available()) {
     return (
-      <section className="card">
-        <h2>
-          <Icon name="bell" size={19} strokeWidth={1.9} />
-          Bank messages
-        </h2>
+      <Frame bare={bare} icon="bell" title="Bank messages">
         <p className="hint">
           On the Android app, Tessera can read your bank’s SMS alerts and offer each one as a
           transaction to confirm. A browser cannot read messages, so this is only available there.
         </p>
-      </section>
+      </Frame>
     );
   }
 
@@ -65,11 +62,7 @@ export default function MessagesCard() {
   }
 
   return (
-    <section className="card">
-      <h2>
-        <Icon name="bell" size={19} strokeWidth={1.9} />
-        Bank messages
-      </h2>
+    <Frame bare={bare} icon="bell" title="Bank messages">
 
       <p className="hint">
         Alerts from your bank are read on this phone and offered as transactions to confirm.
@@ -115,6 +108,6 @@ export default function MessagesCard() {
           </button>
         )}
       </div>
-    </section>
+    </Frame>
   );
 }

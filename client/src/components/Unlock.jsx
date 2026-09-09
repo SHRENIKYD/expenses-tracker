@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import Icon from './Icon.jsx';
+import BrandMark from './BrandMark.jsx';
 
 // A fresh tab has the session but not the key: the session lives in
 // localStorage, the key never does. Nothing can be shown until this is answered,
@@ -26,10 +26,9 @@ export default function Unlock({ email, onUnlock, onUnlockWithKey, onSignOut }) 
 
   return (
     <div className="signin">
-      <div className="card signin-card">
-        <h1>
-          <Icon name="settings" size={22} strokeWidth={2} /> Locked
-        </h1>
+      <div className="signin-card">
+        <BrandMark size={40} />
+        <h1>Locked</h1>
         <p className="hint">
           Tessera encrypts your transactions on this device before storing them, so {email} needs
           to unlock them here.

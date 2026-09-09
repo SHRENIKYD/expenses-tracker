@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Icon from './Icon.jsx';
+import Frame from './Frame.jsx';
 import RecoveryKey from './RecoveryKey.jsx';
 import { dataHealth, protectData, recentDiagnostics, reissueRecoveryKey, sealExisting, vaultState } from '../data/index.js';
 
@@ -8,7 +9,7 @@ import { dataHealth, protectData, recentDiagnostics, reissueRecoveryKey, sealExi
 // Nothing here can read a transaction on the server's behalf: the checks run in
 // this page, where the key is, and what they report — codes, counts, row ids —
 // carries no content at all.
-export default function EncryptionCard() {
+export default function EncryptionCard({ bare = false }) {
   const [state, setState] = useState(vaultState);
   const [password, setPassword] = useState('');
   const [recoveryKey, setRecoveryKey] = useState(null);
@@ -66,11 +67,7 @@ export default function EncryptionCard() {
   };
 
   return (
-    <section className="card">
-      <h2>
-        <Icon name="settings" size={19} strokeWidth={1.9} />
-        Encryption
-      </h2>
+    <Frame bare={bare} icon="target" title="Encryption">
 
       {!state.exists ? (
         <>
@@ -190,6 +187,6 @@ export default function EncryptionCard() {
           </p>
         </div>
       )}
-    </section>
+    </Frame>
   );
 }
