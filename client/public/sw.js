@@ -1,5 +1,5 @@
 // Bump to retire the previous cache. The app shell is cached so the tracker
-// opens offline; nothing from the API is ever stored, since every response is
+// opens offline; nothing from Supabase is ever stored, since every response is
 // account data behind a bearer token.
 const VERSION = 'v1';
 const SHELL = `shell-${VERSION}`;
@@ -26,7 +26,7 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
-  // The API lives on another origin and is per-account: always go to the network.
+  // Supabase lives on another origin and is per-account: always go to the network.
   if (url.origin !== self.location.origin) return;
 
   // Navigations: try the network so a deploy is picked up, fall back to the

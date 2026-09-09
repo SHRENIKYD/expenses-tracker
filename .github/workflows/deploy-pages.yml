@@ -35,7 +35,6 @@ jobs:
       # rather than by whoever opens the site. A trailing comma once cost an
       # afternoon.
       - name: The Supabase URL is a URL
-        if: vars.VITE_DATA_BACKEND == 'supabase'
         run: |
           url="${{ vars.VITE_SUPABASE_URL }}"
           key="${{ vars.VITE_SUPABASE_ANON_KEY }}"
@@ -49,11 +48,6 @@ jobs:
         working-directory: client
         env:
           VITE_BASE: /${{ github.event.repository.name }}/
-          VITE_API_URL: ${{ vars.VITE_API_URL }}
-          # Which backend the bundle talks to: `supabase` or, by default, the
-          # Express API. Flipping the repository variable and re-running this
-          # workflow is the whole cutover, and the whole way back.
-          VITE_DATA_BACKEND: ${{ vars.VITE_DATA_BACKEND }}
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           # The publishable key. It is meant to reach the browser — row-level
           # security, not secrecy, is what keeps one account out of another's
@@ -61,15 +55,10 @@ jobs:
           # (sb_secret_…) bypasses those policies and belongs in neither.
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
 
-      - name: The bundle was built for the backend it was configured for
+      - name: The project URL reached the bundle
         run: |
-          want="${{ vars.VITE_DATA_BACKEND }}"
-          if [ "$want" = "supabase" ]; then
-            grep -rq "${{ vars.VITE_SUPABASE_URL }}" client/dist/assets \
-              || { echo "VITE_SUPABASE_URL is missing from the bundle"; exit 1; }
-          else
-            echo "Built against the Express API"
-          fi
+          grep -rq "${{ vars.VITE_SUPABASE_URL }}" client/dist/assets \
+            || { echo "VITE_SUPABASE_URL is missing from the bundle"; exit 1; }
 
       # GitHub Pages has no SPA fallback: without this, a deep link such as
       # /expenses-tracker/transactions returns a hard 404 on refresh.
@@ -126,19 +115,3 @@ jobs:
             test "$code" = "200"
           done
           grep -q '"start_url"' /tmp/asset || curl -sS "${base}manifest.webmanifest" | grep -q '"start_url"'
-
-      - name: The API the client was built against is awake and migrated
-        if: vars.VITE_API_URL != ''
-        run: |
-          api="${{ vars.VITE_API_URL }}"
-          # a free instance sleeps; the first call can take half a minute
-          health=$(curl -sS --max-time 90 --retry 3 --retry-delay 10 --retry-all-errors "$api/health")
-          echo "health: $health"
-          echo "$health" | grep -q '"status":"ok"'
-          # every route below the auth gate must answer 401, not 404: a 404 means
-          # this API is running a build that predates the route
-          for route in expenses accounts goals summary budgets; do
-            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 60 "$api/$route")
-            echo "GET $api/$route -> $code"
-            test "$code" = "401"
-          done

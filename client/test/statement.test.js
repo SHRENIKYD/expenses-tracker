@@ -176,3 +176,38 @@ test('a merchant is recognised across its varying reference numbers', async () =
   assert.equal(merchantKey('IMPS PAYMENT 123456789012'), '');
   assert.ok(merchantKey('A'.repeat(200)).length <= 60);
 });
+
+test('the CSV round trip keeps income income', async () => {
+  const { toCsv, csvToExpenses } = await import('../src/csv.js');
+
+  const rows = [
+    { date: '2026-09-01', description: 'Salary', category: 'salary', amount: 100000, kind: 'income' },
+    { date: '2026-09-01', description: 'Rent, paid', category: 'housing', amount: 18500, kind: 'expense' }
+  ];
+
+  const { records } = csvToExpenses(toCsv(rows));
+  assert.deepEqual(
+    records.map((row) => [row.description, row.kind, row.amount]),
+    [
+      ['Salary', 'income', '100000'],
+      ['Rent, paid', 'expense', '18500']
+    ]
+  );
+});
+
+test('a file exported before the kind column still imports', async () => {
+  const { csvToExpenses } = await import('../src/csv.js');
+
+  const { errors, records } = csvToExpenses(
+    'date,description,category,amount\n2026-09-01,Salary,salary,100000\n'
+  );
+  assert.deepEqual(errors, []);
+  assert.equal(records[0].kind, '');
+});
+
+test('a file missing a required column is refused by name', async () => {
+  const { csvToExpenses } = await import('../src/csv.js');
+
+  const { errors } = csvToExpenses('date,description\n2026-09-01,Salary\n');
+  assert.match(errors[0], /category, amount/);
+});

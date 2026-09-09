@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  client:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,17 +16,9 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install server dependencies
-        run: npm ci
-        working-directory: server
-
-      - name: Install client dependencies
+      - name: Install dependencies
         run: npm ci
         working-directory: client
-
-      - name: Server tests
-        run: npm test
-        working-directory: server
 
       - name: Client tests
         run: npm test
@@ -35,3 +27,34 @@ jobs:
       - name: Client build
         run: npm run build
         working-directory: client
+
+  # The policies and the summary functions are the part of this app that a
+  # mistake turns into someone else's money, so they run against a real
+  # PostgreSQL rather than a mock.
+  supabase:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: supabase
+
+      - name: Policy and function tests
+        run: npm test
+        working-directory: supabase
+        env:
+          ADMIN_URL: postgres://postgres:postgres@localhost:5432/postgres

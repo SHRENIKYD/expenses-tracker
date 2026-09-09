@@ -12,7 +12,7 @@ import SettingsPage from './pages/SettingsPage.jsx';
 import AddExpense from './pages/AddExpense.jsx';
 import useExpensesData from './useExpensesData.js';
 import { readSession, writeSession, clearSession } from './session.js';
-import { login, logout, recoverAccount, register, setUnauthorisedHandler } from './data/index.js';
+import { login, logout, register, setUnauthorisedHandler } from './data/index.js';
 
 function Workspace({ session, onSignOut }) {
   const data = useExpensesData();
@@ -43,9 +43,7 @@ export default function App() {
   }, []);
 
   async function handleAuth(mode, payload) {
-    // Recovery ends in a signed-in session too, so it is stored the same way;
-    // otherwise the token never reaches localStorage and the next call 401s.
-    const call = { register, recover: recoverAccount }[mode] || login;
+    const call = mode === 'register' ? register : login;
     const result = await call(payload);
     writeSession(result);
     return result;

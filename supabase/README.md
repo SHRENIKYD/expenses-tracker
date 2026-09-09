@@ -132,3 +132,10 @@ Locally, `client/.env.local` holds the same three names; it is gitignored.
 Going back is the same switch: clear `VITE_DATA_BACKEND` and re-run the
 workflow. Nothing in the Express API is removed until the Supabase side has been
 running on real use.
+
+## Leftovers from the move
+
+`export-data.mjs` and `test/parity.test.mjs` both reach for the Express API and
+the database behind it. That code is no longer in this repository, but the
+deployed API and its database may still be running: keep these until the last of
+the old data has been carried across, then delete them.

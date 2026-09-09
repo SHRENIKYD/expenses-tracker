@@ -3,6 +3,7 @@ import { assembleSummary, resolvePeriod } from './summary.js';
 import { detectBank, parseStatement } from '../statement.js';
 import { NEAR_DAYS, findDuplicate } from '../duplicates.js';
 import { merchantKey } from '../merchant.js';
+import { csvToExpenses, toCsv } from '../csv.js';
 import {
   fromTransaction,
   toAccount,
@@ -672,4 +673,69 @@ export async function assignUnassigned({ accountId, paymentMethod }) {
     await client().from('transactions').update(patch).is('account_id', null).select('id')
   );
   return { updated: rows.length };
+}
+
+/* ------------------------------------------------------------------- csv */
+
+export async function exportCsv(filters = {}) {
+  const rows = await listExpenses(filters);
+  const blob = new Blob([toCsv(rows)], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'expenses.csv';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+export async function importCsv(text) {
+  const { errors, records } = csvToExpenses(text);
+  if (errors.length) throw new Error(errors.join(', '));
+  if (records.length === 0) throw new Error('No rows to import.');
+  if (records.length > 5000) throw new Error('Too many rows (max 5000).');
+
+  const accepted = [];
+  const rejected = [];
+
+  records.forEach((record, position) => {
+    // A file without a kind column is read by its category, which is how the
+    // categories are split in the first place.
+    const kind =
+      record.kind || (CATEGORIES.income.includes(record.category) ? 'income' : 'expense');
+    const entry = { ...record, kind, amount: Number(record.amount) };
+    const rowIssues = rowErrors(entry);
+    // The header is row one, so a record's own row number is its index plus two.
+    if (rowIssues.length) rejected.push({ row: position + 2, errors: rowIssues });
+    else accepted.push(entry);
+  });
+
+  if (accepted.length === 0) {
+    const error = new Error('No valid rows.');
+    error.details = { rejected };
+    throw error;
+  }
+
+  const userId = await currentUserId();
+  const inserted = unwrap(
+    await client()
+      .from('transactions')
+      .insert(
+        accepted.map((entry) => ({
+          ...fromTransaction({
+            kind: entry.kind,
+            description: entry.description,
+            amount: entry.amount,
+            category: entry.category,
+            date: entry.date,
+            source: 'csv'
+          }),
+          user_id: userId
+        }))
+      )
+      .select('id')
+  );
+
+  return { imported: inserted.length, rejected };
 }
