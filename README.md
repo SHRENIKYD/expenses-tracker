@@ -191,6 +191,29 @@ the shell is already on the device and a worker would only add a staler copy of
 it. Supabase is reached over the network exactly as it is from the browser, with
 the same key and the same policies.
 
+## Bank messages (Android)
+
+Turned on in Settings, and off by default. The app registers for SMS, reads only
+senders shaped like a bank, and parses the alerts on the device:
+`client/src/sms.js` turns a message into an amount, a direction, a merchant and
+a reference, or into nothing at all.
+
+Nothing is recorded automatically. Each reading appears on the Overview beside
+the words it came from, and becomes a transaction only when you tap Add — at
+which point it is encrypted like any other. Unconfirmed suggestions live in
+memory: they are not written to the phone or to the database, and the last three
+days can be re-read from the inbox when the app opens.
+
+What it refuses is as important as what it reads: an OTP, a balance alert, a
+statement reminder, an advertisement with a number in it, and any message whose
+direction is unclear — because a wrong direction is the one mistake a total will
+not reveal. `client/test/sms.test.js` holds those cases.
+
+The permissions are `RECEIVE_SMS` and `READ_SMS`, requested only when the
+feature is switched on. Note that Google Play restricts them to apps that are
+the device's default SMS handler, so a build using this cannot be listed there;
+it is for the APK you install yourself.
+
 ## Releases
 
 Versions are semantic and live in `client/package.json`; `CHANGELOG.md` is the

@@ -3,6 +3,7 @@ import Icon from '../components/Icon.jsx';
 import { SIDEBAR_THEMES } from '../sidebarThemes.js';
 import PasswordCard from '../components/PasswordCard.jsx';
 import EncryptionCard from '../components/EncryptionCard.jsx';
+import MessagesCard from '../components/MessagesCard.jsx';
 import { useOutletContext } from 'react-router-dom';
 import { formatMoney } from '../format.js';
 import { receiptUsage } from '../data/index.js';
@@ -98,6 +99,8 @@ export default function SettingsPage() {
       <PasswordCard email={session.user.email} />
 
       <EncryptionCard />
+
+      <MessagesCard />
 
       <section className="card">
         <h2>

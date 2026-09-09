@@ -4,6 +4,7 @@ import Icon, { CATEGORY_ICON } from '../components/Icon.jsx';
 import CashFlowChart from '../components/CashFlowChart.jsx';
 import SpendingDonut from '../components/SpendingDonut.jsx';
 import KpiTile from '../components/KpiTile.jsx';
+import MessageSuggestions from '../components/MessageSuggestions.jsx';
 import GoalCard from '../components/GoalCard.jsx';
 import UpcomingBills from '../components/UpcomingBills.jsx';
 import useDebouncedValue from '../useDebouncedValue.js';
@@ -138,6 +139,8 @@ export default function Overview() {
 
   return (
     <>
+      <MessageSuggestions onAdd={handlers.create} categories={categories} />
+
       <section className="card hero-card">
         <span className="hero-label">Remaining income</span>
         <p className="hero-amount">{formatMoney(remaining)}</p>

@@ -27,6 +27,20 @@ The tag builds the client with its own number stamped in, publishes it to
 Pages, and opens a GitHub release with the section below. A tag that disagrees
 with `client/package.json`, or has no section here, fails rather than ships.
 
+## 1.1.0 — unreleased
+
+### Added
+
+- **Bank messages on Android.** Alerts are read on the device and offered as
+  transactions to confirm; nothing is recorded automatically, and the message is
+  shown beside the reading so a misreading is obvious. Off by default.
+
+### Changed
+
+- **The phone leads with the figure.** The Overview's header is the remaining
+  balance, in the brand's green, with search and the period behind icons — about
+  208px of chrome instead of 380.
+
 ## 1.0.0 — 2026-09-09
 
 The first version that stands on its own: a static client and a database, with

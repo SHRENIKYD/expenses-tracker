@@ -38,4 +38,11 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Bank alerts are read on the device to suggest transactions; nothing is
+         recorded without being confirmed, and no message leaves the phone.
+         Both are optional: the app asks for them only when the feature is
+         turned on in Settings, and works without them. -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
 </manifest>
