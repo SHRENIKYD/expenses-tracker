@@ -870,7 +870,7 @@ tfoot td {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 0 44px 0 26px;
+  padding: 0 26px;
   min-height: 34px;
   margin-bottom: 33px;
   position: relative;
@@ -3162,29 +3162,33 @@ tr.is-duplicate {
 }
 
 /* ---------- collapsible sidebar ---------- */
-/* Pinned to the sidebar's right edge, level with the brand, half over the
-   divider — it belongs to the sidebar, so it sits on it. The sidebar clips its
-   own overflow, so the button is positioned inside that edge rather than
-   straddling it. */
+/* Its own row under the brand. Pinned to the edge it eventually collided with
+   the brand name, which is as wide as whichever serif the machine has; a row in
+   the flow cannot overlap anything at any width. */
+.sidebar-toggle-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 22px;
+  margin: -18px 0 12px;
+  position: relative;
+  z-index: 1;
+}
 .sidebar-toggle {
-  position: absolute;
-  top: 32px;
-  right: 10px;
-  z-index: 2;
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   border: 1px solid #ffffff26;
-  border-radius: 999px;
+  border-radius: 9px;
   color: #a9d2bd;
   background: #10382a;
   cursor: pointer;
   opacity: .55;
   transition: opacity .15s ease, color .15s ease, background .15s ease;
 }
-.sidebar:hover .sidebar-toggle { opacity: 1; }
+.sidebar:hover .sidebar-toggle,
+.sidebar-toggle:hover { opacity: 1; }
 .sidebar-toggle:hover { color: #eaf6ef; background: #17503b; opacity: 1; }
 .sidebar-toggle:focus-visible { opacity: 1; }
 .sidebar-toggle:focus-visible { outline: 2px solid #7fd0a8; outline-offset: 2px; }
@@ -3199,8 +3203,8 @@ tr.is-duplicate {
   padding-left: 0;
   padding-right: 0;
 }
-.sidebar.collapsed .sidebar-toggle { top: 8px; right: 50%; transform: translateX(50%); }
-.sidebar.collapsed .brand { padding: 0; justify-content: center; gap: 0; margin-top: 18px; }
+.sidebar.collapsed .sidebar-toggle-row { justify-content: center; padding: 0; }
+.sidebar.collapsed .brand { padding: 0; justify-content: center; gap: 0; }
 .sidebar.collapsed .brand-name,
 .sidebar.collapsed .sidebar-motto,
 .sidebar.collapsed .sidebar-name,
