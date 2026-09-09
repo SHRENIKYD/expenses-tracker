@@ -34,6 +34,8 @@ const emptyFilters = { q: '', category: '', from: '', to: '' };
 export default function App() {
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState(['other']);
+  const [incomeCategories, setIncomeCategories] = useState(['salary']);
+  const [paymentMethods, setPaymentMethods] = useState([]);
   const [budgets, setBudgets] = useState([]);
   const [recurring, setRecurring] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -81,7 +83,10 @@ export default function App() {
     Promise.all([loadExpenses(), loadSummary(), listCategories()])
       .then(([, , nextCategories]) => {
         if (!cancelled) {
-          setCategories(nextCategories);
+          // the endpoint returns { expense, income, paymentMethods }
+          setCategories(nextCategories.expense);
+          setIncomeCategories(nextCategories.income);
+          setPaymentMethods(nextCategories.paymentMethods);
           setError('');
         }
       })

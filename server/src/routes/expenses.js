@@ -1,6 +1,6 @@
 const express = require('express');
 const { pool, rowToExpense } = require('../db');
-const { CATEGORIES, validateExpense, parseFilters } = require('../validate');
+const { CATEGORIES, EXPENSE_CATEGORIES, INCOME_CATEGORIES, PAYMENT_METHODS, validateExpense, parseFilters } = require('../validate');
 const { toCsv, csvToExpenses } = require('../csv');
 
 const router = express.Router();
@@ -9,6 +9,10 @@ function buildWhere(filters) {
   const clauses = [];
   const params = [];
 
+  if (filters.kind) {
+    params.push(filters.kind);
+    clauses.push(`kind = $${params.length}`);
+  }
   if (filters.category) {
     params.push(filters.category);
     clauses.push(`category = $${params.length}`);
@@ -46,7 +50,9 @@ async function queryExpenses(filters) {
   return rows.map(rowToExpense);
 }
 
-router.get('/categories', (req, res) => res.json(CATEGORIES));
+router.get('/categories', (req, res) =>
+  res.json({ expense: EXPENSE_CATEGORIES, income: INCOME_CATEGORIES, paymentMethods: PAYMENT_METHODS })
+);
 
 router.get('/export', async (req, res, next) => {
   try {
@@ -118,9 +124,18 @@ router.post('/', async (req, res, next) => {
     if (errors.length) return res.status(400).json({ errors });
 
     const { rows } = await pool.query(
-      `INSERT INTO expenses (description, amount, category, date)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [value.description, value.amount, value.category, value.date]
+      `INSERT INTO expenses (kind, description, amount, category, date, payment_method, note, receipt_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [
+        value.kind,
+        value.description,
+        value.amount,
+        value.category,
+        value.date,
+        value.paymentMethod ?? null,
+        value.note ?? '',
+        value.receiptId ?? null
+      ]
     );
     res.status(201).json(rowToExpense(rows[0]));
   } catch (err) {
@@ -128,9 +143,26 @@ router.post('/', async (req, res, next) => {
   }
 });
 
+const COLUMN_FOR = {
+  kind: 'kind',
+  description: 'description',
+  amount: 'amount',
+  category: 'category',
+  date: 'date',
+  paymentMethod: 'payment_method',
+  note: 'note',
+  receiptId: 'receipt_id'
+};
+
 router.put('/:id', async (req, res, next) => {
   try {
-    const { errors, value } = validateExpense(req.body, { partial: true });
+    const current = await pool.query('SELECT kind FROM expenses WHERE id = $1', [req.params.id]);
+    if (current.rowCount === 0) return res.status(404).json({ error: 'Expense not found' });
+
+    const { errors, value } = validateExpense(req.body, {
+      partial: true,
+      existingKind: current.rows[0].kind
+    });
     if (errors.length) return res.status(400).json({ errors });
 
     const fields = Object.keys(value);
@@ -138,7 +170,7 @@ router.put('/:id', async (req, res, next) => {
       return res.status(400).json({ errors: ['no updatable fields provided'] });
     }
 
-    const assignments = fields.map((field, position) => `${field} = $${position + 1}`);
+    const assignments = fields.map((field, position) => `${COLUMN_FOR[field]} = $${position + 1}`);
     const params = fields.map((field) => value[field]);
     params.push(req.params.id);
 

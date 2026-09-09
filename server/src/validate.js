@@ -1,4 +1,4 @@
-const CATEGORIES = [
+const EXPENSE_CATEGORIES = [
   'food',
   'transport',
   'housing',
@@ -9,6 +9,18 @@ const CATEGORIES = [
   'shopping',
   'other'
 ];
+
+const INCOME_CATEGORIES = ['salary', 'freelance', 'interest', 'refund', 'other income'];
+
+const KINDS = ['expense', 'income'];
+const PAYMENT_METHODS = ['upi', 'card', 'cash', 'bank_transfer'];
+
+// Kept for the existing expense-only endpoints and the CSV importer.
+const CATEGORIES = EXPENSE_CATEGORIES;
+
+function categoriesFor(kind) {
+  return kind === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+}
 
 const SORT_COLUMNS = {
   date: 'date',
@@ -32,10 +44,23 @@ function isIsoMonth(value) {
   return /^\d{4}-\d{2}$/.test(value) && Number(value.slice(5, 7)) >= 1 && Number(value.slice(5, 7)) <= 12;
 }
 
-function validateExpense(body, { partial = false } = {}) {
+function validateExpense(body, { partial = false, existingKind = 'expense' } = {}) {
   const errors = [];
   const value = {};
   const input = body && typeof body === 'object' ? body : {};
+
+  let kind = existingKind;
+  if (input.kind !== undefined) {
+    if (!KINDS.includes(input.kind)) {
+      errors.push(`kind must be one of: ${KINDS.join(', ')}`);
+    } else {
+      kind = input.kind;
+      value.kind = kind;
+    }
+  } else if (!partial) {
+    kind = 'expense';
+    value.kind = kind;
+  }
 
   if (input.description !== undefined) {
     if (typeof input.description !== 'string' || input.description.trim() === '') {
@@ -60,14 +85,30 @@ function validateExpense(body, { partial = false } = {}) {
     errors.push('amount is required');
   }
 
+  const allowed = categoriesFor(kind);
   if (input.category !== undefined) {
-    if (!CATEGORIES.includes(input.category)) {
-      errors.push(`category must be one of: ${CATEGORIES.join(', ')}`);
+    if (!allowed.includes(input.category)) {
+      errors.push(`category for a ${kind} must be one of: ${allowed.join(', ')}`);
     } else {
       value.category = input.category;
     }
   } else if (!partial) {
-    value.category = 'other';
+    value.category = kind === 'income' ? 'salary' : 'other';
+  }
+
+  if (input.paymentMethod !== undefined && input.paymentMethod !== null && input.paymentMethod !== '') {
+    if (!PAYMENT_METHODS.includes(input.paymentMethod)) {
+      errors.push(`paymentMethod must be one of: ${PAYMENT_METHODS.join(', ')}`);
+    } else {
+      value.paymentMethod = input.paymentMethod;
+    }
+  } else if (input.paymentMethod === null || input.paymentMethod === '') {
+    value.paymentMethod = null;
+  }
+
+  if (input.note !== undefined) {
+    if (typeof input.note !== 'string') errors.push('note must be a string');
+    else value.note = input.note.trim().slice(0, 500);
   }
 
   if (input.date !== undefined) {
@@ -105,8 +146,14 @@ function parseFilters(query) {
   const errors = [];
   const filters = {};
 
+  if (query.kind) {
+    if (!KINDS.includes(query.kind)) errors.push('unknown kind filter');
+    else filters.kind = query.kind;
+  }
+
   if (query.category) {
-    if (!CATEGORIES.includes(query.category)) errors.push('unknown category filter');
+    const known = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES];
+    if (!known.includes(query.category)) errors.push('unknown category filter');
     else filters.category = query.category;
   }
 
@@ -146,8 +193,33 @@ function validateRecurring(body, { partial = false } = {}) {
   return { errors, value };
 }
 
+function validateSetting(key, rawValue) {
+  const errors = [];
+  let value = null;
+
+  if (key === 'displayName') {
+    if (typeof rawValue !== 'string') errors.push('displayName must be a string');
+    else value = rawValue.trim().slice(0, 60);
+  } else if (key === 'monthlyBudget') {
+    const amount = Number(rawValue);
+    if (!Number.isFinite(amount) || amount < 0) errors.push('monthlyBudget must be zero or more');
+    else if (amount > 9999999999) errors.push('monthlyBudget is too large');
+    else value = String(Math.round(amount * 100) / 100);
+  } else {
+    errors.push(`unknown setting: ${key}`);
+  }
+
+  return { errors, value };
+}
+
 module.exports = {
   CATEGORIES,
+  EXPENSE_CATEGORIES,
+  INCOME_CATEGORIES,
+  KINDS,
+  PAYMENT_METHODS,
+  categoriesFor,
+  validateSetting,
   validateExpense,
   validateBudget,
   validateRecurring,

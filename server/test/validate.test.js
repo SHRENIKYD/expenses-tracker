@@ -4,6 +4,7 @@ const {
   validateExpense,
   validateBudget,
   validateRecurring,
+  validateSetting,
   parseFilters,
   CATEGORIES
 } = require('../src/validate');
@@ -100,4 +101,28 @@ test('recurring requires a day of month and rejects days above 28', () => {
   assert.ok(validateRecurring({ description: 'x', amount: 1, dayOfMonth: 0 }).errors.length);
   assert.ok(validateRecurring({ description: 'x', amount: 1, dayOfMonth: 1.5 }).errors.length);
   assert.ok(validateRecurring({ description: 'x', amount: 1 }).errors.length);
+});
+
+test('income and expense categories are kept separate', () => {
+  assert.deepEqual(validateExpense({ kind: 'income', description: 'Salary', amount: 60000, category: 'salary' }).errors, []);
+  assert.ok(validateExpense({ kind: 'income', description: 'x', amount: 1, category: 'food' }).errors.length);
+  assert.ok(validateExpense({ kind: 'expense', description: 'x', amount: 1, category: 'salary' }).errors.length);
+});
+
+test('kind defaults to expense and only accepts the two known values', () => {
+  assert.equal(validateExpense({ description: 'x', amount: 1 }).value.kind, 'expense');
+  assert.ok(validateExpense({ kind: 'transfer', description: 'x', amount: 1 }).errors.length);
+});
+
+test('payment method is optional but enum-checked when present', () => {
+  assert.deepEqual(validateExpense({ description: 'x', amount: 1, paymentMethod: 'upi' }).errors, []);
+  assert.equal(validateExpense({ description: 'x', amount: 1, paymentMethod: '' }).value.paymentMethod, null);
+  assert.ok(validateExpense({ description: 'x', amount: 1, paymentMethod: 'crypto' }).errors.length);
+});
+
+test('settings validation bounds the budget and rejects unknown keys', () => {
+  assert.equal(validateSetting('monthlyBudget', '30000').value, '30000');
+  assert.ok(validateSetting('monthlyBudget', -5).errors.length);
+  assert.ok(validateSetting('somethingElse', 'x').errors.length);
+  assert.equal(validateSetting('displayName', '  Shrenik  ').value, 'Shrenik');
 });

@@ -24,32 +24,40 @@ router.get('/', async (req, res, next) => {
     const previous = shiftMonth(month, -1);
     const trendStart = `${shiftMonth(month, -11)}-01`;
 
-    const [totals, byCategory, daily, trend, budgets] = await Promise.all([
+    const [totals, byCategory, daily, trend, budgets, incomeRows, settingsRows, recurringRows] =
+      await Promise.all([
       pool.query(
         `SELECT to_char(date, 'YYYY-MM') AS month, COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count
-         FROM expenses WHERE to_char(date, 'YYYY-MM') IN ($1, $2)
+         FROM expenses WHERE kind = 'expense' AND to_char(date, 'YYYY-MM') IN ($1, $2)
          GROUP BY 1`,
         [month, previous]
       ),
       pool.query(
         `SELECT category, SUM(amount) AS total, COUNT(*) AS count
-         FROM expenses WHERE to_char(date, 'YYYY-MM') = $1
+         FROM expenses WHERE kind = 'expense' AND to_char(date, 'YYYY-MM') = $1
          GROUP BY category ORDER BY SUM(amount) DESC`,
         [month]
       ),
       pool.query(
         `SELECT to_char(date, 'YYYY-MM-DD') AS day, SUM(amount) AS total
-         FROM expenses WHERE to_char(date, 'YYYY-MM') = $1
+         FROM expenses WHERE kind = 'expense' AND to_char(date, 'YYYY-MM') = $1
          GROUP BY 1 ORDER BY 1`,
         [month]
       ),
       pool.query(
         `SELECT to_char(date, 'YYYY-MM') AS month, SUM(amount) AS total
-         FROM expenses WHERE date >= $1::date AND to_char(date, 'YYYY-MM') <= $2
+         FROM expenses WHERE kind = 'expense' AND date >= $1::date AND to_char(date, 'YYYY-MM') <= $2
          GROUP BY 1 ORDER BY 1`,
         [trendStart, month]
       ),
-      pool.query('SELECT * FROM budgets')
+      pool.query('SELECT * FROM budgets'),
+      pool.query(
+        `SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count
+         FROM expenses WHERE kind = 'income' AND to_char(date, 'YYYY-MM') = $1`,
+        [month]
+      ),
+      pool.query('SELECT key, value FROM settings'),
+      pool.query('SELECT * FROM recurring ORDER BY day_of_month')
     ]);
 
     const totalFor = (target) => {
@@ -99,8 +107,41 @@ router.get('/', async (req, res, next) => {
     const elapsedDays = isCurrentMonth ? Number(todayIso.slice(8, 10)) : totalDays;
     const projected = isCurrentMonth && elapsedDays > 0 ? (total / elapsedDays) * totalDays : null;
 
+    const income = Number(incomeRows.rows[0].total);
+    const settings = Object.fromEntries(settingsRows.rows.map((row) => [row.key, row.value]));
+    const overallBudget = Number(settings.monthlyBudget ?? 0);
+
+    // Recurring templates whose expense for this month has not been created yet.
+    const appliedDates = new Set(
+      (
+        await pool.query(
+          `SELECT description, category, to_char(date, 'YYYY-MM-DD') AS day
+           FROM expenses WHERE to_char(date, 'YYYY-MM') = $1`,
+          [month]
+        )
+      ).rows.map((row) => `${row.description}|${row.category}|${row.day}`)
+    );
+
+    const upcoming = recurringRows.rows
+      .map((row) => ({
+        id: row.id,
+        description: row.description,
+        amount: Number(row.amount),
+        category: row.category,
+        dayOfMonth: row.day_of_month,
+        date: `${month}-${String(row.day_of_month).padStart(2, '0')}`
+      }))
+      .filter((entry) => !appliedDates.has(`${entry.description}|${entry.category}|${entry.date}`))
+      .sort((a, b) => a.dayOfMonth - b.dayOfMonth);
+
     res.json({
       month,
+      income,
+      remaining: income - total,
+      overallBudget,
+      budgetUsed: overallBudget > 0 ? total / overallBudget : null,
+      budgetLeft: overallBudget > 0 ? overallBudget - total : null,
+      upcoming,
       total,
       count: countFor(month),
       previousMonth: previous,

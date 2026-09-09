@@ -7,11 +7,17 @@ const expensesRouter = require('./routes/expenses');
 const budgetsRouter = require('./routes/budgets');
 const summaryRouter = require('./routes/summary');
 const recurringRouter = require('./routes/recurring');
+const receiptsRouter = require('./routes/receipts');
+const settingsRouter = require('./routes/settings');
 
 const app = express();
 
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
 app.use('/api/expenses/import', express.text({ type: '*/*', limit: '2mb' }));
+app.use(
+  '/api/receipts',
+  express.raw({ type: ['image/*', 'application/pdf'], limit: '2mb' })
+);
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
@@ -19,6 +25,8 @@ app.use('/api/expenses', expensesRouter);
 app.use('/api/budgets', budgetsRouter);
 app.use('/api/summary', summaryRouter);
 app.use('/api/recurring', recurringRouter);
+app.use('/api/receipts', receiptsRouter);
+app.use('/api/settings', settingsRouter);
 
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 
