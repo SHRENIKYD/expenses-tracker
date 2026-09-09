@@ -870,7 +870,7 @@ tfoot td {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 0 26px;
+  padding: 0 14px 0 26px;
   min-height: 34px;
   margin-bottom: 33px;
   position: relative;
@@ -3165,17 +3165,13 @@ tr.is-duplicate {
 /* Its own row under the brand. Pinned to the edge it eventually collided with
    the brand name, which is as wide as whichever serif the machine has; a row in
    the flow cannot overlap anything at any width. */
-/* The nav is inset 14px, so its pills end 14px from the sidebar's edge. The
-   button lines up with that edge rather than floating short of it. */
-.sidebar-toggle-row {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0 14px;
-  margin: -20px 0 10px;
-  position: relative;
-  z-index: 1;
-}
+/* On the brand row, pushed to the end of it. The row is inset 14px on the
+   right, which is where the nav pills end, so the button and the pills share
+   one edge. It fits here now that the name is one short word — it did not when
+   the app was called Expense Tracker, which is what put it on a row of its
+   own. */
 .sidebar-toggle {
+  margin-left: auto;
   display: grid;
   place-items: center;
   width: 30px;
@@ -3205,8 +3201,13 @@ tr.is-duplicate {
   padding-left: 0;
   padding-right: 0;
 }
-.sidebar.collapsed .sidebar-toggle-row { justify-content: center; padding: 0; }
-.sidebar.collapsed .brand { padding: 0; justify-content: center; gap: 0; }
+/* Collapsed there is no room for both side by side, so the row stacks. */
+.sidebar.collapsed .brand {
+  flex-direction: column;
+  padding: 0;
+  gap: 12px;
+}
+.sidebar.collapsed .sidebar-toggle { margin: 0; }
 .sidebar.collapsed .brand-name,
 .sidebar.collapsed .sidebar-motto,
 .sidebar.collapsed .sidebar-name,

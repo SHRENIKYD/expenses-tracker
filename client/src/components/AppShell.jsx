@@ -85,9 +85,6 @@ export default function AppShell({ context }) {
             <BrandMark size={30} />
           </span>
           <span className="brand-name">Tessera</span>
-        </div>
-
-        <div className="sidebar-toggle-row">
           <button
             type="button"
             className="sidebar-toggle"
