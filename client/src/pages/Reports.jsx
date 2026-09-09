@@ -2,11 +2,18 @@ import { useOutletContext } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import ErrorBoundary from '../components/ErrorBoundary.jsx';
 import { ReportsSkeleton } from '../components/Skeleton.jsx';
+import { bucketSeries, rollingAverage } from '../series.js';
 import KpiTile from '../components/KpiTile.jsx';
 import SpendingDonut from '../components/SpendingDonut.jsx';
 import DailyChart from '../components/DailyChart.jsx';
 import TrendChart from '../components/TrendChart.jsx';
-import { formatMoney, formatMoneyTrim, formatMonthLong, formatPercent } from '../format.js';
+import {
+  formatDayFull,
+  formatMoney,
+  formatMoneyTrim,
+  formatMonthLong,
+  formatPercent
+} from '../format.js';
 
 export default function Reports() {
   const { summary, loading } = useOutletContext();
@@ -24,13 +31,26 @@ export default function Reports() {
     dailyAverage,
     elapsedDays,
     totalDays,
-    weekly,
     daily,
     trend,
-    categories
+    categories,
+    range,
+    previousRange
   } = summary;
 
+  // A custom window has no month to name, so every label falls back to its dates.
+  const periodLabel = month
+    ? formatMonthLong(month)
+    : `${formatDayFull(range.from)} – ${formatDayFull(range.to)}`;
+  const previousLabel = previousRange
+    ? `${formatDayFull(previousRange.from)} – ${formatDayFull(previousRange.to)}`
+    : formatMonthLong(previousMonth);
+
   const dailySeries = daily.map((day) => day.total);
+  const buckets = bucketSeries(daily, 5);
+  // A seven-day trailing mean, slid across the series in one pass.
+  const smoothed = rollingAverage(dailySeries, 7);
+  const latestAverage = smoothed.length ? smoothed[smoothed.length - 1] : 0;
 
   return (
     <>
@@ -40,14 +60,14 @@ export default function Reports() {
           icon="trendDown"
           label="Spent"
           value={formatMoneyTrim(total)}
-          foot={`${count} transaction${count === 1 ? '' : 's'} in ${formatMonthLong(month)}`}
-          series={weekly.map((week) => week.expenses)}
+          foot={`${count} transaction${count === 1 ? '' : 's'} · ${periodLabel}`}
+          series={buckets.map((bucket) => bucket.expenses)}
         />
         <KpiTile
           icon="calendar"
           label="Daily average"
           value={formatMoneyTrim(dailyAverage)}
-          foot={`Day ${elapsedDays} of ${totalDays}`}
+          foot={`Day ${elapsedDays} of ${totalDays} · 7-day ${formatMoneyTrim(latestAverage)}`}
           series={dailySeries}
         />
         <KpiTile
@@ -55,18 +75,18 @@ export default function Reports() {
           tone="amber"
           label="Projected"
           value={projected === null ? formatMoneyTrim(total) : formatMoneyTrim(projected)}
-          foot={projected === null ? 'Month complete' : 'At this pace, by month end'}
-          series={weekly.map((week) => week.expenses)}
+          foot={projected === null ? 'Period complete' : 'At this pace, by the end of it'}
+          series={buckets.map((bucket) => bucket.expenses)}
         />
         <KpiTile
           icon={change !== null && change > 0 ? 'arrowUpRight' : 'arrowDownRight'}
           tone={change !== null && change > 0 ? 'spend' : 'mint'}
-          label="Versus last month"
+          label="Versus the period before"
           value={change === null ? '—' : formatPercent(change)}
           foot={
             previousTotal === 0
-              ? 'Nothing recorded last month'
-              : `${formatMoney(previousTotal)} in ${formatMonthLong(previousMonth)}`
+              ? 'Nothing recorded then'
+              : `${formatMoney(previousTotal)} · ${previousLabel}`
           }
           series={trend.slice(-5).map((row) => row.total)}
         />
@@ -80,7 +100,7 @@ export default function Reports() {
                 <Icon name="pie" size={19} strokeWidth={1.9} />
                 By category
               </h2>
-              <span className="pill-static">{formatMonthLong(month)}</span>
+              <span className="pill-static">{periodLabel}</span>
             </div>
             <SpendingDonut categories={categories} total={total} />
           </section>
@@ -93,7 +113,7 @@ export default function Reports() {
                 <Icon name="chart" size={19} strokeWidth={1.9} />
                 Daily spending
               </h2>
-              <span className="pill-static">{formatMonthLong(month)}</span>
+              <span className="pill-static">{periodLabel}</span>
             </div>
             <DailyChart month={month} daily={daily} />
           </section>

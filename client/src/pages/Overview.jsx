@@ -7,6 +7,7 @@ import KpiTile from '../components/KpiTile.jsx';
 import GoalCard from '../components/GoalCard.jsx';
 import UpcomingBills from '../components/UpcomingBills.jsx';
 import useDebouncedValue from '../useDebouncedValue.js';
+import { bucketSeries, buildPrefix, heaviestWindow, rangeSum } from '../series.js';
 import { OverviewSkeleton } from '../components/Skeleton.jsx';
 import {
   currentMonth,
@@ -29,41 +30,44 @@ function pressuredCategory(categories) {
   return withBudget.sort((a, b) => b.total / b.budget - a.total / a.budget)[0];
 }
 
-function weeklySeries(weekly, month) {
-  const label = shortMonth(month);
-  return weekly.map((week) => ({
-    index: week.week,
-    label: week.label,
-    range: `${week.from}–${week.to} ${label}`,
-    income: week.income,
-    expenses: week.expenses
+// Buckets come from the daily series through its prefix sums, so a month, a
+// fortnight or a year all bucket the same way and cost the same to redraw.
+function bucketedSeries(daily, count) {
+  return bucketSeries(daily, count).map((bucket) => ({
+    index: bucket.index,
+    label: bucket.days === 1 ? shortDay(bucket.from) : `${shortDay(bucket.from)}`,
+    range: bucket.days === 1 ? '' : `to ${shortDay(bucket.to)}`,
+    income: bucket.income,
+    expenses: bucket.expenses
   }));
 }
 
-function dailySeries(daily, month) {
-  const label = shortMonth(month);
+const shortDay = (date) => `${Number(date.slice(8))} ${shortMonth(date.slice(0, 7))}`;
+
+function dailySeries(daily) {
   return daily.map((day, index) => ({
     index: index + 1,
     label: String(Number(day.date.slice(8, 10))),
-    range: index === 0 || index === daily.length - 1 ? label : '',
+    range: index === 0 || index === daily.length - 1 ? shortMonth(day.date.slice(0, 7)) : '',
     income: day.income,
     expenses: day.total
   }));
 }
 
-// What was left of the monthly budget at the end of each week.
-function budgetRunway(weekly, overallBudget) {
+// What was left of the budget at the end of each bucket, read straight off the
+// running total rather than re-summing the days under each one.
+function budgetRunway(buckets, overallBudget) {
   if (!(overallBudget > 0)) return [];
   let spent = 0;
-  return weekly.map((week) => {
-    spent += week.expenses;
+  return buckets.map((bucket) => {
+    spent += bucket.expenses;
     return Math.max(overallBudget - spent, 0);
   });
 }
 
 export default function Overview() {
-  const { summary, expenses, accounts, goals, loading, month, handlers } = useOutletContext();
-  const [period, setPeriod] = useState('weekly');
+  const { summary, expenses, accounts, goals, loading, handlers } = useOutletContext();
+  const [period, setPeriod] = useState('buckets');
   const [search, setSearch] = useState('');
   const query = useDebouncedValue(search, 200);
 
@@ -76,8 +80,10 @@ export default function Overview() {
             expense.category.toLowerCase().includes(needle)
         )
       : expenses;
-    return matches.filter(row => row.date.startsWith(month)).sort((a,b) => b.date.localeCompare(a.date)).slice(0, 5);
-  }, [expenses, query, month]);
+    // The list arrives already scoped to the selected range, so it only needs
+    // ordering and trimming here.
+    return [...matches].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+  }, [expenses, query]);
 
   if (!summary) {
     return loading ? <OverviewSkeleton /> : <p className="empty">Nothing to show yet.</p>;
@@ -92,14 +98,31 @@ export default function Overview() {
     budgetUsed,
     categories,
     upcoming,
-    weekly,
-    daily
+    daily,
+    range,
+    month
   } = summary;
+
+  const isThisMonth = Boolean(month) && month === currentMonth();
+  const periodLabel = month
+    ? formatMonth(month)
+    : `${formatDayFull(range.from)} – ${formatDayFull(range.to)}`;
+  const footLabel = isThisMonth ? 'This month' : periodLabel;
 
   const usedPct = budgetUsed === null ? null : Math.round(budgetUsed * 100);
   const savingsRate = income > 0 ? Math.round((remaining / income) * 100) : null;
   const pressured = pressuredCategory(categories);
-  const series = period === 'weekly' ? weeklySeries(weekly, month) : dailySeries(daily, month);
+
+  // One pass over the days feeds the chart, the tile sparklines and the
+  // heaviest-week callout; each of those then reads sub-ranges in constant time.
+  // A short range reads best day by day; a longer one is grouped into roughly
+  // weekly columns so the chart never turns into a picket fence.
+  const bucketCount = daily.length <= 14 ? daily.length : Math.min(6, Math.ceil(daily.length / 7));
+  const buckets = bucketSeries(daily, bucketCount);
+  const series = period === 'buckets' ? bucketedSeries(daily, buckets.length) : dailySeries(daily);
+  const heaviest = daily.length >= 7 ? heaviestWindow(daily, 7) : null;
+  const spendPrefix = buildPrefix(daily.map((day) => day.total));
+  const lastWeek = rangeSum(spendPrefix, Math.max(0, daily.length - 7), daily.length);
   const topGoal = goals[0];
 
   return (
@@ -151,31 +174,37 @@ export default function Overview() {
           icon="trendUp"
           label="Income"
           value={formatMoneyTrim(income)}
-          foot="This month"
-          series={weekly.map((week) => week.income)}
+          foot={footLabel}
+          series={buckets.map((bucket) => bucket.income)}
         />
         <KpiTile
           icon="trendDown"
           tone="spend"
           label="Expenses"
           value={formatMoneyTrim(total)}
-          foot="This month"
-          series={weekly.map((week) => week.expenses)}
+          foot={footLabel}
+          series={buckets.map((bucket) => bucket.expenses)}
         />
         <KpiTile
           icon="savings"
           label="Net savings"
           value={formatMoneyTrim(remaining)}
           foot={savingsRate === null ? 'Income minus expenses' : `${savingsRate}% of income kept`}
-          series={weekly.map((week) => Math.max(week.income - week.expenses, 0))}
+          series={buckets.map((bucket) => Math.max(bucket.income - bucket.expenses, 0))}
         />
         <KpiTile
           icon="pie"
           tone="amber"
           label="Budget remaining"
           value={budgetLeft === null ? '—' : formatMoneyTrim(budgetLeft)}
-          foot={overallBudget > 0 ? `Of ${formatMoneyTrim(overallBudget)} budget` : 'No budget set'}
-          series={budgetRunway(weekly, overallBudget)}
+          foot={
+            overallBudget > 0
+              ? `Of ${formatMoneyTrim(overallBudget)} budget`
+              : month
+                ? 'No budget set'
+                : 'Budgets are monthly'
+          }
+          series={budgetRunway(buckets, overallBudget)}
         />
       </div>
 
@@ -202,12 +231,18 @@ export default function Overview() {
                   onChange={(event) => setPeriod(event.target.value)}
                   aria-label="Cash flow period"
                 >
-                  <option value="weekly">Weekly</option>
+                  <option value="buckets">Grouped</option>
                   <option value="daily">Daily</option>
                 </select>
               </div>
             </div>
-            <CashFlowChart series={series} monthLabel={formatMonth(month)} />
+            <CashFlowChart series={series} monthLabel={periodLabel} />
+            {heaviest && heaviest.total > 0 && (
+              <p className="chart-foot muted">
+                Heaviest seven days {formatDayFull(heaviest.from)} – {formatDayFull(heaviest.to)} ·{' '}
+                {formatMoney(heaviest.total)} · last seven {formatMoney(lastWeek)}
+              </p>
+            )}
           </section>
 
           <section className="card">
@@ -319,7 +354,7 @@ export default function Overview() {
                 Spending breakdown
               </h2>
               <span className="pill-static">
-                {month === currentMonth() ? 'This month' : formatMonth(month)}
+                {isThisMonth ? 'This month' : periodLabel}
               </span>
             </div>
             <SpendingDonut categories={categories} total={total} />

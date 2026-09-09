@@ -59,7 +59,7 @@ npm run dev
 | POST   | `/api/expenses/import`     | Bulk import from a CSV body                               |
 | GET    | `/api/budgets`             | All category budgets                                      |
 | PUT    | `/api/budgets/:category`   | Set a monthly limit (`0` clears it)                       |
-| GET    | `/api/summary?month=`      | Month totals, category split, weekly cash flow, per-account totals, daily series, 12-month trend |
+| GET    | `/api/summary`             | Totals for a period: `month=YYYY-MM`, or `from=`/`to=` for any range |
 | POST   | `/api/auth/password`       | Change the password; signs every other device out         |
 | GET    | `/api/auth/recovery-codes` | How many unused recovery codes remain                     |
 | POST   | `/api/auth/recovery-codes` | Issue a fresh set (needs the password)                    |
@@ -96,6 +96,24 @@ contain no extractable text and cannot be read at all.
 `sample-expenses.csv` in the repo root holds four months of demo data (89 rows,
 June–September 2026). Import it from the app's **Import CSV** button to populate an
 empty database.
+
+## Periods
+
+The period selector takes a month, a preset (last 7 days, last 30 days, this
+quarter, year to date) or an explicit `from`–`to` range, and everything follows
+it: the tiles, the charts, the category split and the transaction list.
+
+`/api/summary` resolves all of those to one `[from, to]` window and answers with
+a row per day, gaps filled with zeros and a running total alongside — a prefix
+sum computed in SQL. The client builds its own prefix sums from that series
+(`client/src/series.js`), which is what lets it bucket the chart, size the
+sparklines and answer "how much in these days" without another request: O(n)
+once, then O(1) per range. The seven-day rolling average and the heaviest-week
+callout use a sliding window over the same array, O(n) rather than O(n·7).
+
+Budgets are monthly figures, so they are reported only when the selected period
+is exactly one calendar month; a fortnight is not compared against a month's
+limit.
 
 ## Signing in
 

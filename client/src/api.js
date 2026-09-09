@@ -60,7 +60,9 @@ export const updateExpense = (id, patch) =>
   request(`/expenses/${id}`, { method: 'PUT', body: JSON.stringify(patch) });
 export const deleteExpense = (id) => request(`/expenses/${id}`, { method: 'DELETE' });
 
-export const getSummary = (month) => request(`/summary${toQuery({ month })}`);
+// Accepts either {month} or {from,to}; the server resolves both to one range.
+export const getSummary = (period) =>
+  request(`/summary${toQuery(typeof period === 'string' ? { month: period } : period)}`);
 
 export const listRecurring = () => request('/recurring');
 export const createRecurring = (template) =>

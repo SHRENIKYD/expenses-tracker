@@ -3,6 +3,7 @@ import { budgetAlert, money } from '../dashboard.js';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import ForestArt from './ForestArt.jsx';
+import RangePicker from './RangePicker.jsx';
 import { formatToday } from '../format.js';
 
 const NAV = [
@@ -50,8 +51,8 @@ export default function AppShell({ context }) {
   const isTask = pathname === '/add';
 
   const {
-    month,
-    setMonth,
+    range,
+    setRange,
     error,
     undoable,
     handlers,
@@ -237,15 +238,7 @@ export default function AppShell({ context }) {
         )}
         {!isTask && (
           <div className="page-actions">
-            <label className="month-select">
-              <Icon name="calendar" size={16} />
-              <input
-                type="month"
-                value={month}
-                onChange={(event) => setMonth(event.target.value)}
-                aria-label="Month"
-              />
-            </label>
+            <RangePicker range={range} onChange={setRange} />
             <button type="button" className="secondary" onClick={handlers.exportCsv}>
               <Icon name="export" size={16} /> Export
             </button>

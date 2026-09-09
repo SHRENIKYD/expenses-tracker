@@ -11,6 +11,7 @@ import {
   contributeGoal
 } from './api.js';
 import { currentMonth } from './format.js';
+import { defaultRange, monthSelection, rangeQuery } from './range.js';
 import {
   applyRecurring,
   createExpense,
@@ -51,7 +52,10 @@ export default function useExpensesData() {
   const [filters, setFilters] = useState(emptyFilters);
   const [sort, setSort] = useState('date');
   const [order, setOrder] = useState('desc');
-  const [month, setMonth] = useState(currentMonth());
+  const [range, setRange] = useState(defaultRange);
+  // Everything that still thinks in months reads this; a custom window reports
+  // the month its range ends in.
+  const month = range.mode === 'month' ? range.month : range.to.slice(0, 7);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -68,10 +72,19 @@ export default function useExpensesData() {
       category: filters.category,
       kind: filters.kind,
       paymentMethod: filters.paymentMethod,
-      from: filters.from || monthRange(month).from,
-      to: filters.to || monthRange(month).to
+      from: filters.from || range.from,
+      to: filters.to || range.to
     }),
-    [debouncedQuery, filters.category, filters.kind, filters.paymentMethod, filters.from, filters.to, month]
+    [
+      debouncedQuery,
+      filters.category,
+      filters.kind,
+      filters.paymentMethod,
+      filters.from,
+      filters.to,
+      range.from,
+      range.to
+    ]
   );
 
   const loadExpenses = useCallback(async () => {
@@ -84,7 +97,7 @@ export default function useExpensesData() {
     const request = ++contextRequest.current;
     const [nextSummary, nextBudgets, nextRecurring, nextSettings, nextAccounts, nextGoals] =
       await Promise.all([
-        getSummary(month),
+        getSummary(rangeQuery(range)),
         listBudgets(),
         listRecurring(),
         getSettings(),
@@ -98,7 +111,7 @@ export default function useExpensesData() {
     setSettings(nextSettings);
     setAccounts(nextAccounts);
     setGoals(nextGoals);
-  }, [month]);
+  }, [range]);
 
   useEffect(() => {
     let cancelled = false;
@@ -292,9 +305,17 @@ export default function useExpensesData() {
     sort,
     order,
     month,
+    range,
+    // The list follows the range by default, so choosing a window narrows both
+    // the figures and the transactions behind them. An explicit date filter
+    // still wins over it.
+    setRange: (next) => {
+      setRange(next);
+      setFilters((current) => ({ ...current, from: '', to: '' }));
+    },
     setMonth: (value) => {
       if (!/^\d{4}-\d{2}$/.test(value)) return;
-      setMonth(value);
+      setRange(monthSelection(value));
       setFilters((current) => ({ ...current, from: '', to: '' }));
     },
     loading,

@@ -2053,6 +2053,94 @@ button.mint:hover:not(:disabled) {
   padding: 14px;
 }
 
+/* ---------- range picker ---------- */
+.range-picker {
+  position: relative;
+}
+
+.range-button {
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.range-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 30;
+  width: 300px;
+  padding: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 16px 36px rgba(9, 42, 30, 0.16);
+}
+
+.range-presets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.range-preset {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 9px 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.range-preset:hover {
+  border-color: var(--accent);
+}
+
+.range-preset.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.range-custom {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.range-custom label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.range-or {
+  font-size: 0.76rem;
+  color: var(--muted);
+  text-transform: none;
+}
+
+.range-custom button[type='submit'] {
+  align-self: flex-start;
+}
+
+@media (max-width: 640px) {
+  .range-panel {
+    right: auto;
+    left: 0;
+    width: min(300px, calc(100vw - 32px));
+  }
+}
+
 /* ---------- loading skeletons ---------- */
 .skeleton-page {
   display: flex;

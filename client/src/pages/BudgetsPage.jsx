@@ -25,6 +25,9 @@ export default function BudgetsPage() {
     if (saved) setEditing(false);
   }
 
+  // The budget is monthly, so this page only reports against it when the
+  // selected range is a whole month.
+  const monthSelected = Boolean(summary?.month);
   const overall = summary?.overallBudget ?? 0;
   const used = summary?.total ?? 0;
   const left = summary?.budgetLeft;
@@ -66,6 +69,11 @@ export default function BudgetsPage() {
               Cancel
             </button>
           </form>
+        ) : !monthSelected ? (
+          <p className="empty">
+            Budgets are monthly. Pick a month in the period selector to see how this one is
+            tracking.
+          </p>
         ) : overall > 0 ? (
           <>
             <p className="budget-figures">
