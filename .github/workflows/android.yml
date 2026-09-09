@@ -41,7 +41,9 @@ jobs:
           version=$(node -p "require('./client/package.json').version")
           tag=$(git tag --points-at HEAD | grep '^v' | head -1 || true)
           echo "value=${tag:-$version+${GITHUB_SHA::7}}" >> "$GITHUB_OUTPUT"
-          echo "name=tessera-${tag:-$version}" >> "$GITHUB_OUTPUT"
+          # An untagged build is named after its commit, so an apk attached to
+          # a release cannot be mistaken for the release's own build.
+          echo "name=tessera-${tag:-$version+${GITHUB_SHA::7}}" >> "$GITHUB_OUTPUT"
 
       # The app ships its own copy of the client, so the base is relative rather
       # than the /<repo>/ that GitHub Pages needs, and VITE_TARGET keeps the
