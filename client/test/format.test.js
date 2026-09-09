@@ -32,3 +32,25 @@ test('titleCase capitalises only the first letter', () => {
   assert.equal(titleCase('food'), 'Food');
   assert.equal(titleCase('other categories'), 'Other categories');
 });
+
+test('relative days label only today and yesterday, then fall back to a date', async () => {
+  const { formatRelativeDay } = await import('../src/format.js');
+  const day = (offset) => {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - offset);
+    return d.toISOString().slice(0, 10);
+  };
+  assert.equal(formatRelativeDay(day(0)), 'Today');
+  assert.equal(formatRelativeDay(day(1)), 'Yesterday');
+  assert.notEqual(formatRelativeDay(day(2)), 'Yesterday');
+  assert.match(strip(formatRelativeDay(day(5))), /\d{2}\s\w+/);
+  // a future date is a real date, never "Today"
+  assert.notEqual(formatRelativeDay(day(-1)), 'Today');
+});
+
+test('payment methods get readable labels', async () => {
+  const { paymentLabel } = await import('../src/format.js');
+  assert.equal(paymentLabel('upi'), 'UPI');
+  assert.equal(paymentLabel('bank_transfer'), 'Bank transfer');
+  assert.equal(paymentLabel(null), null);
+});

@@ -1,6 +1,6 @@
 import { Link, useOutletContext } from 'react-router-dom';
 import Icon, { CATEGORY_ICON } from '../components/Icon.jsx';
-import { formatMoney, formatDay, titleCase } from '../format.js';
+import { formatMoney, formatDay, formatRelativeDay, paymentLabel, titleCase } from '../format.js';
 
 function StatTile({ icon, tone, label, value, foot }) {
   return (
@@ -18,7 +18,7 @@ function StatTile({ icon, tone, label, value, foot }) {
 }
 
 export default function Overview() {
-  const { summary, expenses, loading } = useOutletContext();
+  const { summary, expenses, loading, settings } = useOutletContext();
 
   if (!summary) {
     return <p className="empty">{loading ? 'Loading…' : 'Nothing to show yet.'}</p>;
@@ -33,6 +33,47 @@ export default function Overview() {
 
   return (
     <>
+      <section className="card hero-card">
+        <span className="hero-label">Remaining income</span>
+        <p className="hero-amount">{formatMoney(remaining)}</p>
+        <div className="hero-split">
+          <span>
+            <span className="hero-key">Income</span>
+            <span className="hero-val">{formatMoney(income)}</span>
+          </span>
+          <span>
+            <span className="hero-key">Expenses</span>
+            <span className="hero-val">{formatMoney(total)}</span>
+          </span>
+        </div>
+      </section>
+
+      {overallBudget > 0 && (
+        <Link to="/budgets" className="card budget-summary">
+          <div className="card-head">
+            <h2>Monthly budget</h2>
+            <Icon name="chevronRight" size={17} />
+          </div>
+          <p className="budget-figures">
+            {formatMoney(total)} <span className="muted">/ {formatMoney(overallBudget)}</span>
+          </p>
+          <div className="budget-meter-row">
+            <div className="meter">
+              <div
+                className={usedPct > 100 ? 'meter-fill over' : 'meter-fill'}
+                style={{ width: `${Math.min(usedPct, 100)}%` }}
+              />
+            </div>
+            <span className="budget-pct-small">{usedPct}%</span>
+          </div>
+          <p className="hint">
+            {budgetLeft >= 0
+              ? `${formatMoney(budgetLeft)} left to spend`
+              : `${formatMoney(Math.abs(budgetLeft))} over budget`}
+          </p>
+        </Link>
+      )}
+
       <div className="stat-row">
         <StatTile icon="trendUp" tone="good" label="Income" value={formatMoney(income)} foot="This month" />
         <StatTile icon="trendDown" tone="spend" label="Expenses" value={formatMoney(total)} foot="This month" />
@@ -159,7 +200,29 @@ export default function Overview() {
         {recent.length === 0 ? (
           <p className="empty">No transactions yet.</p>
         ) : (
-          <div className="table-scroll">
+          <>
+          <ul className="txn-list">
+            {recent.map((expense) => (
+              <li key={expense.id}>
+                <span className="cat-icon">
+                  <Icon name={CATEGORY_ICON[expense.category] || 'other'} size={18} />
+                </span>
+                <span className="txn-main">
+                  <span className="txn-name">{expense.description}</span>
+                  <span className="hint">
+                    {formatRelativeDay(expense.date)}
+                    {paymentLabel(expense.paymentMethod) && ` · ${paymentLabel(expense.paymentMethod)}`}
+                  </span>
+                </span>
+                <span className={expense.kind === 'income' ? 'amount-in' : 'amount-out'}>
+                  {expense.kind === 'income' ? '+' : '−'}
+                  {formatMoney(expense.amount)}
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="table-scroll desktop-only">
             <table>
               <thead>
                 <tr>
@@ -197,6 +260,7 @@ export default function Overview() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </section>
     </>

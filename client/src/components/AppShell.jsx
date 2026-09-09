@@ -25,7 +25,9 @@ export default function AppShell({ context }) {
   // The add screen is a task, not a dashboard: a month picker and a second
   // "Add expense" button there would do nothing useful.
   const isTask = pathname === '/add';
-  const { month, setMonth, error, undoable, handlers, session, onSignOut } = context;
+  const { month, setMonth, error, undoable, handlers, session, onSignOut, settings } = context;
+  const name = settings?.displayName || session.user.displayName || '';
+  const initial = (name || session.user.email).trim().charAt(0).toUpperCase();
 
   return (
     <div className="shell">
@@ -74,9 +76,22 @@ export default function AppShell({ context }) {
             )}
             <div>
               <h1>{page.title}</h1>
-              {page.subtitle && <p className="page-subtitle">{page.subtitle}</p>}
+              {page.subtitle && (
+                <>
+                  <p className="page-subtitle desktop-only">{page.subtitle}</p>
+                  <p className="page-subtitle mobile-only">
+                    {name ? `Hi, ${name}` : page.subtitle}
+                  </p>
+                </>
+              )}
             </div>
           </div>
+
+          {!isTask && (
+            <span className="avatar mobile-only" aria-hidden="true">
+              {initial}
+            </span>
+          )}
 
           {!isTask && (
           <div className="page-actions">
