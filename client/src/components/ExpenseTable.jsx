@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
-import { formatMoney, formatDay, titleCase } from '../format.js';
+import Icon, { CATEGORY_ICON } from './Icon.jsx';
+import { formatMoney, formatDayFull, paymentLabel, titleCase } from '../format.js';
 
 const COLUMNS = [
   { key: 'date', label: 'Date' },
-  { key: 'description', label: 'Description' },
-  { key: 'category', label: 'Category' },
-  { key: 'amount', label: 'Amount', numeric: true }
+  { key: 'description', label: 'Name' },
+  { key: 'category', label: 'Category' }
 ];
+
+const AMOUNT_COLUMN = { key: 'amount', label: 'Amount', numeric: true };
 
 const PAGE_SIZE = 25;
 
@@ -42,7 +44,8 @@ export default function ExpenseTable({
       description: expense.description,
       amount: String(expense.amount),
       category: expense.category,
-      date: expense.date
+      date: expense.date,
+      paymentMethod: expense.paymentMethod || ''
     });
   }
 
@@ -67,7 +70,7 @@ export default function ExpenseTable({
 
   return (
     <div className="table-scroll">
-      <table>
+      <table className="txn-table">
         <thead>
           <tr>
             {COLUMNS.map((column) => (
@@ -83,6 +86,20 @@ export default function ExpenseTable({
                 </button>
               </th>
             ))}
+            <th>Account</th>
+            <th className="numeric">
+              <button
+                type="button"
+                className="sort"
+                onClick={() => onSort(AMOUNT_COLUMN.key)}
+                aria-label="Sort by Amount"
+              >
+                {AMOUNT_COLUMN.label}
+                {sort === AMOUNT_COLUMN.key && (
+                  <span aria-hidden="true">{order === 'asc' ? ' ▲' : ' ▼'}</span>
+                )}
+              </button>
+            </th>
             <th aria-label="Actions" />
           </tr>
         </thead>
@@ -116,6 +133,20 @@ export default function ExpenseTable({
                     ))}
                   </select>
                 </td>
+                <td>
+                  <select
+                    value={draft.paymentMethod}
+                    onChange={(event) => setDraft({ ...draft, paymentMethod: event.target.value })}
+                    aria-label="Account"
+                  >
+                    <option value="">—</option>
+                    {paymentMethods.map((method) => (
+                      <option key={method} value={method}>
+                        {paymentLabel(method)}
+                      </option>
+                    ))}
+                  </select>
+                </td>
                 <td className="numeric">
                   <input
                     type="number"
@@ -136,11 +167,20 @@ export default function ExpenseTable({
               </tr>
             ) : (
               <tr key={expense.id}>
-                <td data-label="Date">{formatDay(expense.date)}</td>
-                <td data-label="Description">{expense.description}</td>
-                <td data-label="Category">
-                  <span className="tag">{titleCase(expense.category)}</span>
+                <td data-label="Date">{formatDayFull(expense.date)}</td>
+                <td data-label="Name">
+                  <span className="with-icon">
+                    <Icon name={CATEGORY_ICON[expense.category] || 'other'} size={19} strokeWidth={1.8} />
+                    {expense.description}
+                  </span>
                 </td>
+                <td data-label="Category">
+                  <span className="tag">
+                    <Icon name={CATEGORY_ICON[expense.category] || 'other'} size={13} strokeWidth={2} />
+                    {titleCase(expense.category)}
+                  </span>
+                </td>
+                <td data-label="Account">{paymentLabel(expense.paymentMethod) || '—'}</td>
                 <td className="numeric" data-label="Amount">
                   <span className={expense.kind === 'income' ? 'amount-in' : 'amount-out'}>
                     {expense.kind === 'income' ? '+' : '−'}
@@ -161,7 +201,7 @@ export default function ExpenseTable({
         </tbody>
         <tfoot>
           <tr>
-            <td colSpan="3">Total of {expenses.length} matching</td>
+            <td colSpan="4">Total of {expenses.length} matching</td>
             <td className="numeric">
               {formatMoney(expenses.reduce((sum, expense) => sum + expense.amount, 0))}
             </td>

@@ -287,8 +287,19 @@ th.numeric .sort {
 .chart svg {
   width: 100%;
   height: auto;
+  max-height: 300px;
   display: block;
   overflow: visible;
+}
+
+/* the area charts are drawn in a 420-wide box; letting them fill a 1200px card
+   scales their labels up with it, so they keep to a readable width */
+.chart.area {
+  max-width: 760px;
+}
+
+.chart.area svg {
+  max-height: none;
 }
 
 .chart-axis {
@@ -686,6 +697,24 @@ tfoot td {
 
   thead th[aria-label='Actions'] {
     display: none;
+  }
+
+  /* A stacked row repeats every column as a labelled line, so the account —
+     which the phone can still edit — comes out of the reading view. */
+  .txn-table thead th:nth-child(4),
+  .txn-table tbody td[data-label='Account'] {
+    display: none;
+  }
+
+  .txn-table tbody tr:not(.editing) td[data-label='Name'] {
+    font-size: 0.95rem;
+  }
+
+  .txn-table tbody td::before {
+    font-size: 0.76rem;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
   }
 
   tbody tr {
@@ -1664,7 +1693,8 @@ button.mint:hover:not(:disabled) {
 }
 
 /* ---------- transactions table ---------- */
-.txn-table th {
+.txn-table th,
+.txn-table th .sort {
   font-size: 0.82rem;
   font-weight: 500;
   color: var(--muted);
@@ -2016,6 +2046,84 @@ button.mint:hover:not(:disabled) {
   padding: 14px;
 }
 
+/* ---------- forms and secondary pages ---------- */
+.card .form button[type='submit'] {
+  align-self: flex-start;
+  height: 44px;
+  padding: 0 20px;
+  font-size: 0.9rem;
+}
+
+.detail-list + .hint {
+  margin-top: 12px;
+}
+
+.card > h2:first-child {
+  margin-bottom: 16px;
+}
+
+.budget-list li {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.budget-list li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.budget-head {
+  margin-bottom: 8px;
+}
+
+.budget-foot {
+  margin-top: 7px;
+}
+
+.recurring-list li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.recurring-list li:last-child {
+  border-bottom: none;
+}
+
+.filters .filter-row label,
+.goal-form label,
+.settings-form label {
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.budget-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 600;
+}
+
+.add-form {
+  max-width: 640px;
+}
+
+.add-form .button-row button[type='submit'] {
+  height: 44px;
+  padding: 0 20px;
+  font-size: 0.92rem;
+}
+
+.two-col > .card {
+  height: auto;
+}
+
+/* the sheet behind More on a phone */
+.sheet-scrim,
+.more-sheet {
+  display: none;
+}
+
 /* ---------- mobile tab bar ---------- */
 .tabbar {
   display: none;
@@ -2125,6 +2233,62 @@ button.mint:hover:not(:disabled) {
 
   .category-grid {
     grid-template-columns: repeat(3, 1fr);
+  }
+
+  .sheet-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(9, 42, 30, 0.35);
+    border: none;
+    padding: 0;
+    z-index: 25;
+  }
+
+  .more-sheet {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: calc(78px + env(safe-area-inset-bottom));
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px;
+    z-index: 26;
+    box-shadow: 0 14px 34px rgba(9, 42, 30, 0.18);
+  }
+
+  .sheet-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 48px;
+    padding: 0 12px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text);
+    font-size: 0.94rem;
+    font-weight: 600;
+    text-decoration: none;
+    text-align: left;
+  }
+
+  .sheet-item span:first-of-type {
+    flex: 1 1 auto;
+  }
+
+  .sheet-item.active {
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+  }
+
+  .tabbar button.tab {
+    background: transparent;
+    border: none;
+    padding: 0;
   }
 }
 

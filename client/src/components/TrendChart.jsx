@@ -24,7 +24,7 @@ export default function TrendChart({ trend }) {
   const activeCoord = active ? coordFor(active.index) : null;
 
   return (
-    <div className="chart">
+    <div className="chart area">
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Total spending for each of the last twelve months">
         <path d={area} className="area-fill" />
         <path d={line} className="area-line" />

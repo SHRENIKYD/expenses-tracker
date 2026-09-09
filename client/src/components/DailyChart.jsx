@@ -24,7 +24,7 @@ export default function DailyChart({ month, daily }) {
   const active = hovered === null ? null : days[hovered];
 
   return (
-    <div className="chart">
+    <div className="chart area">
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Spending for each day of the selected month">
         <path d={area} className="area-fill" />
         <path d={line} className="area-line" />

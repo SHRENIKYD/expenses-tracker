@@ -82,7 +82,10 @@ export default function StatementImport({ onImported }) {
   return (
     <section className="card">
       <div className="card-head">
-        <h2>Import a bank statement</h2>
+        <h2>
+          <Icon name="bills" size={19} strokeWidth={1.9} />
+          Import a bank statement
+        </h2>
         {preview && (
           <button type="button" className="link" onClick={reset}>
             Start over

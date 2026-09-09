@@ -13,7 +13,9 @@ const NAV = [
   { to: '/reports', label: 'Reports', icon: 'bills' }
 ];
 
-const TABS = [NAV[0], NAV[1], NAV[3], NAV[5]];
+// Four tab slots flank the action button; the rest of the app lives behind More.
+const TABS = [NAV[0], NAV[1], NAV[3]];
+const MORE = [NAV[2], NAV[4], NAV[5], { to: '/settings', label: 'Settings', icon: 'settings' }];
 
 const TITLES = {
   '/': { title: 'Your money, in focus.', subtitle: 'today' },
@@ -32,14 +34,28 @@ export default function AppShell({ context }) {
   const page = TITLES[pathname] || TITLES['/'];
   const isTask = pathname === '/add';
 
-  const { month, setMonth, error, undoable, handlers, session, settings, summary, filters, setFilters } =
-    context;
+  const {
+    month,
+    setMonth,
+    error,
+    undoable,
+    handlers,
+    session,
+    settings,
+    summary,
+    filters,
+    setFilters,
+    onSignOut
+  } = context;
   const name = settings?.displayName || session.user.displayName || '';
   const initial = (name || session.user.email).trim().charAt(0).toUpperCase();
   const dueSoon = summary?.dueSoon || 0;
 
   const [search, setSearch] = useState(filters.q);
   useEffect(() => setSearch(filters.q), [filters.q]);
+
+  const [moreOpen, setMoreOpen] = useState(false);
+  useEffect(() => setMoreOpen(false), [pathname]);
 
   function runSearch(event) {
     event.preventDefault();
@@ -188,6 +204,34 @@ export default function AppShell({ context }) {
         <Outlet context={context} />
       </div>
 
+      {moreOpen && (
+        <>
+          <button
+            type="button"
+            className="sheet-scrim"
+            aria-label="Close menu"
+            onClick={() => setMoreOpen(false)}
+          />
+          <div className="more-sheet" role="dialog" aria-label="More pages">
+            {MORE.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) => (isActive ? 'sheet-item active' : 'sheet-item')}
+              >
+                <Icon name={item.icon} size={20} strokeWidth={1.9} />
+                <span>{item.label}</span>
+                <Icon name="chevronRight" size={16} strokeWidth={2} />
+              </NavLink>
+            ))}
+            <button type="button" className="sheet-item" onClick={onSignOut}>
+              <Icon name="logout" size={20} strokeWidth={1.9} />
+              <span>Sign out</span>
+            </button>
+          </div>
+        </>
+      )}
+
       <nav className="tabbar">
         {TABS.slice(0, 2).map((item) => (
           <NavLink
@@ -211,6 +255,16 @@ export default function AppShell({ context }) {
             <span>{item.label}</span>
           </NavLink>
         ))}
+
+        <button
+          type="button"
+          className={moreOpen ? 'tab active' : 'tab'}
+          onClick={() => setMoreOpen((open) => !open)}
+          aria-expanded={moreOpen}
+        >
+          <Icon name="filter" size={21} strokeWidth={1.9} />
+          <span>More</span>
+        </button>
       </nav>
     </div>
   );

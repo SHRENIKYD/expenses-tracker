@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Icon from '../components/Icon.jsx';
 import { useOutletContext } from 'react-router-dom';
 import { formatMoney } from '../format.js';
 import { receiptUsage } from '../api.js';
@@ -33,7 +34,10 @@ export default function SettingsPage() {
   return (
     <div className="two-col">
       <section className="card">
-        <h2>Your details</h2>
+        <h2>
+          <Icon name="settings" size={19} strokeWidth={1.9} />
+          Your details
+        </h2>
         <form className="form" onSubmit={submit}>
           <label>
             Display name
@@ -64,7 +68,10 @@ export default function SettingsPage() {
       </section>
 
       <section className="card">
-        <h2>Account</h2>
+        <h2>
+          <Icon name="accounts" size={19} strokeWidth={1.9} />
+          Account
+        </h2>
         <dl className="detail-list">
           <div>
             <dt>Signed in as</dt>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Icon, { CATEGORY_ICON } from './Icon.jsx';
 import { formatMoney, titleCase } from '../format.js';
 
 export default function Budgets({ categories, budgets, spending, onSave }) {
@@ -28,7 +29,10 @@ export default function Budgets({ categories, budgets, spending, onSave }) {
 
   return (
     <div className="card">
-      <h2>Monthly budgets</h2>
+      <h2>
+          <Icon name="budget" size={19} strokeWidth={1.9} />
+          Monthly budgets
+        </h2>
 
       {rows.length === 0 && !adding && (
         <p className="hint">No budgets set. Add one to track a category against a limit.</p>
@@ -44,7 +48,12 @@ export default function Budgets({ categories, budgets, spending, onSave }) {
           return (
             <li key={category}>
               <div className="budget-head">
-                <span>{titleCase(category)}</span>
+                <span className="budget-name">
+                  <span className="cat-icon small">
+                    <Icon name={CATEGORY_ICON[category] || 'other'} size={15} strokeWidth={1.9} />
+                  </span>
+                  {titleCase(category)}
+                </span>
                 {editing === category ? (
                   <span className="budget-edit">
                     <input

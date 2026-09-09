@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import Icon, { CATEGORY_ICON } from '../components/Icon.jsx';
-import { todayIso, titleCase, formatDay } from '../format.js';
+import { todayIso, titleCase, formatDayFull } from '../format.js';
 import { uploadReceipt } from '../api.js';
 
 const METHOD_LABEL = { upi: 'UPI', card: 'Card', cash: 'Cash', bank_transfer: 'Bank transfer' };
@@ -125,7 +125,7 @@ export default function AddExpense() {
         <span className="date-row">
           <Icon name="calendar" size={17} />
           <input type="date" value={form.date} max={todayIso()} onChange={update('date')} required />
-          <span className="hint">{formatDay(form.date)}</span>
+          <span className="hint">{formatDayFull(form.date)}</span>
         </span>
       </label>
 

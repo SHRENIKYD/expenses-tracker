@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import Icon from './Icon.jsx';
 
 export default function ImportExport({ onExport, onImport }) {
   const fileInput = useRef(null);
@@ -34,7 +35,10 @@ export default function ImportExport({ onExport, onImport }) {
 
   return (
     <div className="card">
-      <h2>Import / export</h2>
+      <h2>
+          <Icon name="export" size={19} strokeWidth={1.9} />
+          Import / export
+        </h2>
       <p className="hint">CSV columns: date, description, category, amount</p>
       <div className="button-row">
         <button type="button" className="secondary" onClick={handleExport} disabled={busy}>

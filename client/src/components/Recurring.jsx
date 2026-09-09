@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Icon from './Icon.jsx';
 import { formatMoney, formatMonthLong, titleCase } from '../format.js';
 
 const emptyDraft = () => ({ description: '', amount: '', category: 'other', dayOfMonth: '1' });
@@ -39,7 +40,10 @@ export default function Recurring({ month, categories, templates, onAdd, onDelet
 
   return (
     <div className="card">
-      <h2>Recurring</h2>
+      <h2>
+          <Icon name="calendar" size={19} strokeWidth={1.9} />
+          Recurring
+        </h2>
 
       {templates.length === 0 ? (
         <p className="hint">Nothing recurring yet. Add rent or a bill to stop retyping it.</p>
