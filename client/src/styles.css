@@ -3212,3 +3212,29 @@ tr.is-duplicate {
 @media (prefers-reduced-motion: reduce) {
   .sidebar { transition: none; }
 }
+
+/* ---------- statement diagnostics ---------- */
+.statement-details { margin-top: 12px; }
+.statement-details summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d5c43;
+}
+.statement-sample,
+.statement-skipped {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #33413b;
+  background: #f2f6f3;
+  border: 1px solid #dfe8e2;
+  border-radius: 10px;
+}
+.statement-skipped { list-style: none; }
+.statement-skipped code { color: #0f3c2c; }

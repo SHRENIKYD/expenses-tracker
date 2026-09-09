@@ -13,6 +13,7 @@ export default function StatementImport({ onImported }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState('');
+  const [details, setDetails] = useState(null);
 
   function reset() {
     setFile(null);
@@ -21,12 +22,14 @@ export default function StatementImport({ onImported }) {
     setPassword('');
     setNeedsPassword(false);
     setError('');
+    setDetails(null);
   }
 
   async function run(selected, withPassword) {
     setBusy(true);
     setError('');
     setResult('');
+    setDetails(null);
     try {
       const data = await previewStatement(selected, withPassword);
       setPreview(data);
@@ -37,6 +40,7 @@ export default function StatementImport({ onImported }) {
       setPreview(null);
       if (err.code === 'password') setNeedsPassword(true);
       setError(err.message);
+      setDetails(err.details || null);
     } finally {
       setBusy(false);
     }
@@ -126,6 +130,28 @@ export default function StatementImport({ onImported }) {
       )}
 
       {error && <p className="error">{error}</p>}
+
+      {details && (
+        <details className="statement-details">
+          <summary>What the parser saw</summary>
+          <p className="hint">
+            {details.bank ? `${details.bank.name}, ` : 'Bank not recognised, '}
+            {details.pages} page{details.pages === 1 ? '' : 's'}, {details.lines} lines of text.
+          </p>
+          {details.sample?.length > 0 && (
+            <pre className="statement-sample">{details.sample.join('\n')}</pre>
+          )}
+          {details.skipped?.length > 0 && (
+            <ul className="statement-skipped">
+              {details.skipped.map((row) => (
+                <li key={row.line}>
+                  <code>{row.line}</code> — {row.reason}
+                </li>
+              ))}
+            </ul>
+          )}
+        </details>
+      )}
       {result && <p className="hint">{result}</p>}
 
       {preview && (

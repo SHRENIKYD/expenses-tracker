@@ -474,10 +474,21 @@ export async function previewStatement(file, password) {
   const { transactions, skipped } = parseStatement(lines);
 
   if (transactions.length === 0) {
+    const words = lines.filter((line) => line.trim()).length;
     const error = new Error(
-      'No transactions could be read from this statement. Bank layouts differ; if this is a scanned or image-only PDF the text cannot be extracted at all.'
+      words === 0
+        ? `No text at all could be read from these ${pages} page${pages === 1 ? '' : 's'}. This is a scanned or image-only PDF, so there is nothing to parse.`
+        : `No transactions could be read from these ${pages} page${pages === 1 ? '' : 's'}, though ${words} lines of text were found. The layout is one this parser does not recognise yet.`
     );
-    error.details = { bank, pages, skipped: skipped.slice(0, 8) };
+    // The extracted lines say which of the two it is, and what the rows look
+    // like. They stay on this device, in the page that read the file.
+    error.details = {
+      bank,
+      pages,
+      lines: words,
+      skipped: skipped.slice(0, 8),
+      sample: lines.filter((line) => line.trim()).slice(0, 8)
+    };
     throw error;
   }
 
