@@ -178,10 +178,10 @@ rather than ships.
 Every other build carries `<version>+<short sha>`, which is what the diagnostics
 report, so a screenshot of a problem names the code that produced it.
 
-A tag pushed by the release workflow does not itself trigger a deploy: GitHub
-suppresses events raised with the default token so workflows cannot recurse. Run
-the deploy against the tag afterwards, or tag from your own machine, where the
-push triggers it normally.
+The stamp comes from the commit, not from the ref: a build whose commit carries
+a release tag is stamped with it, which is also why a tag pushed by the release
+workflow needs no deploy of its own. It could not trigger one anyway — GitHub
+suppresses events raised with the default token so workflows cannot recurse.
 
 ## Continuous integration
 

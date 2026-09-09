@@ -14,12 +14,14 @@ git commit -am 'Release 1.1.0' && git tag v1.1.0 && git push --follow-tags
 Or from the Releases page on GitHub: draft a release, give it the tag, publish.
 The workflow rewrites its notes from the section below either way.
 
-One wrinkle worth knowing: a tag pushed by the workflow itself does not trigger
-other workflows — GitHub suppresses events raised with the default token, so
-workflows cannot recurse. A release cut from the Actions tab therefore needs the
-deploy run against the tag (Actions → Deploy client to GitHub Pages → Run
-workflow → choose the tag), or the published build carries `<version>+<sha>`
-rather than the tag. A tag pushed from your own machine triggers it normally.
+A build is stamped with the tag when the commit it was built from carries one,
+and with `<version>+<short sha>` otherwise. So the published site reads `v1.0.0`
+while the released commit is the head of `main`, and `1.0.0+<sha>` after the
+next commit — which is the truth: that build is not the release.
+
+The tag is read from the commit rather than from the ref because a tag pushed by
+a workflow triggers nothing at all: GitHub suppresses events raised with the
+default token so workflows cannot recurse.
 
 The tag builds the client with its own number stamped in, publishes it to
 Pages, and opens a GitHub release with the section below. A tag that disagrees
