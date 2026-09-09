@@ -4,9 +4,11 @@ import { formatMoney, titleCase } from '../format.js';
 export default function Budgets({ categories, budgets, spending, onSave }) {
   const [editing, setEditing] = useState(null);
   const [value, setValue] = useState('');
+  const [adding, setAdding] = useState('');
 
   const limits = new Map(budgets.map((budget) => [budget.category, budget.monthlyLimit]));
   const spent = new Map(spending.map((entry) => [entry.category, entry.total]));
+  const unset = categories.filter((category) => !limits.has(category));
 
   function startEdit(category) {
     setEditing(category);
@@ -18,14 +20,22 @@ export default function Budgets({ categories, budgets, spending, onSave }) {
     if (saved) {
       setEditing(null);
       setValue('');
+      setAdding('');
     }
   }
+
+  const rows = categories.filter((category) => limits.has(category) || editing === category);
 
   return (
     <div className="card">
       <h2>Monthly budgets</h2>
+
+      {rows.length === 0 && !adding && (
+        <p className="hint">No budgets set. Add one to track a category against a limit.</p>
+      )}
+
       <ul className="budget-list">
-        {categories.map((category) => {
+        {rows.map((category) => {
           const limit = limits.get(category) ?? null;
           const used = spent.get(category) ?? 0;
           const over = limit !== null && used > limit;
@@ -55,7 +65,7 @@ export default function Budgets({ categories, budgets, spending, onSave }) {
                   </span>
                 ) : (
                   <button type="button" className="link" onClick={() => startEdit(category)}>
-                    {limit === null ? 'Set budget' : formatMoney(limit)}
+                    {formatMoney(limit)}
                   </button>
                 )}
               </div>
@@ -79,6 +89,28 @@ export default function Budgets({ categories, budgets, spending, onSave }) {
           );
         })}
       </ul>
+
+      {unset.length > 0 && (
+        <div className="budget-add">
+          <label>
+            Add a budget
+            <select
+              value={adding}
+              onChange={(event) => {
+                setAdding(event.target.value);
+                if (event.target.value) startEdit(event.target.value);
+              }}
+            >
+              <option value="">Choose a category…</option>
+              {unset.map((category) => (
+                <option key={category} value={category}>
+                  {titleCase(category)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
     </div>
   );
 }

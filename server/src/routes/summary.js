@@ -91,12 +91,24 @@ router.get('/', async (req, res, next) => {
     const total = totalFor(month);
     const previousTotal = totalFor(previous);
 
+    // Project month-end only while the month is still running.
+    const [year, monthNumber] = month.split('-').map(Number);
+    const totalDays = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const isCurrentMonth = todayIso.slice(0, 7) === month;
+    const elapsedDays = isCurrentMonth ? Number(todayIso.slice(8, 10)) : totalDays;
+    const projected = isCurrentMonth && elapsedDays > 0 ? (total / elapsedDays) * totalDays : null;
+
     res.json({
       month,
       total,
       count: countFor(month),
       previousMonth: previous,
       previousTotal,
+      elapsedDays,
+      totalDays,
+      dailyAverage: elapsedDays > 0 ? total / elapsedDays : 0,
+      projected,
       change: previousTotal === 0 ? null : (total - previousTotal) / previousTotal,
       categories,
       daily: daily.rows.map((row) => ({ date: row.day, total: Number(row.total) })),

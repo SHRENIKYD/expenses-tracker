@@ -126,12 +126,12 @@ export default function ExpenseTable({ expenses, categories, sort, order, onSort
               </tr>
             ) : (
               <tr key={expense.id}>
-                <td>{formatDay(expense.date)}</td>
-                <td>{expense.description}</td>
-                <td>
+                <td data-label="Date">{formatDay(expense.date)}</td>
+                <td data-label="Description">{expense.description}</td>
+                <td data-label="Category">
                   <span className="tag">{titleCase(expense.category)}</span>
                 </td>
-                <td className="numeric">{formatMoney(expense.amount)}</td>
+                <td className="numeric" data-label="Amount">{formatMoney(expense.amount)}</td>
                 <td className="actions">
                   <button type="button" className="link" onClick={() => startEdit(expense)}>
                     Edit
@@ -144,6 +144,15 @@ export default function ExpenseTable({ expenses, categories, sort, order, onSort
             )
           )}
         </tbody>
+        <tfoot>
+          <tr>
+            <td colSpan="3">Total of {expenses.length} matching</td>
+            <td className="numeric">
+              {formatMoney(expenses.reduce((sum, expense) => sum + expense.amount, 0))}
+            </td>
+            <td />
+          </tr>
+        </tfoot>
       </table>
 
       <div className="pager">

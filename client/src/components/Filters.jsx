@@ -13,7 +13,7 @@ export default function Filters({ categories, filters, onChange, onReset }) {
             type="search"
             value={filters.q}
             onChange={update('q')}
-            placeholder="Description contains…"
+            placeholder="Description, category or amount"
           />
         </label>
 

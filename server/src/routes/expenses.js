@@ -23,7 +23,14 @@ function buildWhere(filters) {
   }
   if (filters.q) {
     params.push(`%${filters.q}%`);
-    clauses.push(`description ILIKE $${params.length}`);
+    const like = `$${params.length}`;
+    const numeric = Number(filters.q);
+    if (Number.isFinite(numeric)) {
+      params.push(numeric);
+      clauses.push(`(description ILIKE ${like} OR category ILIKE ${like} OR amount = $${params.length})`);
+    } else {
+      clauses.push(`(description ILIKE ${like} OR category ILIKE ${like})`);
+    }
   }
 
   return { text: clauses.length ? `WHERE ${clauses.join(' AND ')}` : '', params };

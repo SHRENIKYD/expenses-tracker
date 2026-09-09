@@ -297,9 +297,10 @@ export default function App() {
 
           <div className="card">
             <h2>Expenses</h2>
-            {loading ? (
+            {loading && expenses.length === 0 ? (
               <p className="empty">Loading…</p>
             ) : (
+              <div className={loading ? 'refreshing' : undefined}>
               <ExpenseTable
                 expenses={expenses}
                 categories={categories}
@@ -309,6 +310,7 @@ export default function App() {
                 onSave={handleUpdate}
                 onDelete={handleDelete}
               />
+              </div>
             )}
           </div>
         </div>

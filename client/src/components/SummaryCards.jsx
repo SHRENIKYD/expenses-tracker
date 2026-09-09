@@ -1,7 +1,8 @@
 import { formatMoney, formatMonthLong, formatPercent } from '../format.js';
 
 export default function SummaryCards({ summary }) {
-  const { total, count, change, previousTotal, month } = summary;
+  const { total, count, change, previousTotal, month, projected, dailyAverage, elapsedDays, totalDays } =
+    summary;
 
   return (
     <div className="card">
@@ -9,6 +10,7 @@ export default function SummaryCards({ summary }) {
       <p className="hero">{formatMoney(total)}</p>
       <p className="hero-sub">
         {count} {count === 1 ? 'expense' : 'expenses'}
+        {projected !== null && ` · day ${elapsedDays} of ${totalDays}`}
       </p>
       <p className="hero-delta">
         {change === null ? (
@@ -20,6 +22,17 @@ export default function SummaryCards({ summary }) {
           </>
         )}
       </p>
+
+      {projected !== null && (
+        <div className="projection">
+          <span>
+            <span className="projection-label">Averaging</span> {formatMoney(dailyAverage)}/day
+          </span>
+          <span>
+            <span className="projection-label">On this pace</span> {formatMoney(projected)} by month end
+          </span>
+        </div>
+      )}
     </div>
   );
 }
