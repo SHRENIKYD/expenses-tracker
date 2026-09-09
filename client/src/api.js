@@ -163,11 +163,19 @@ export async function previewStatement(file, password) {
   return payload;
 }
 
-export const importStatement = (transactions) =>
+export const importStatement = (transactions, options = {}) =>
   request('/statements/import', {
     method: 'POST',
-    body: JSON.stringify({ transactions })
+    body: JSON.stringify({ transactions, ...options })
   });
+
+// Remembered categories and bulk assignment are Supabase-only: the API has no
+// endpoint for either, and saying so beats a request that 404s.
+const notOnTheApi = (what) => () => Promise.reject(new Error(`${what} needs the Supabase backend.`));
+export const listMerchantRules = async () => new Map();
+export const forgetMerchantRule = notOnTheApi('Forgetting a merchant');
+export const unassignedCount = async () => 0;
+export const assignUnassigned = notOnTheApi('Assigning an account in bulk');
 
 export const listAccounts = () => request('/accounts');
 export const createAccount = (value) =>

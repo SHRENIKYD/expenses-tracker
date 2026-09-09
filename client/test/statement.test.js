@@ -165,3 +165,14 @@ test('an account statement is still read as one, balance and all', () => {
   assert.equal(transactions[1].kind, 'income');
   assert.equal(transactions[1].balance, 101550);
 });
+
+test('a merchant is recognised across its varying reference numbers', async () => {
+  const { merchantKey } = await import('../src/merchant.js');
+
+  assert.equal(merchantKey('AMAZONMUMBAI'), 'amazonmumbai');
+  assert.equal(merchantKey('UPI-SWIGGY ORDER-UTR 402512345678'), 'swiggy order');
+  assert.equal(merchantKey('UPI-SWIGGY ORDER-UTR 998877665544'), 'swiggy order');
+  // Noise words alone are not a merchant.
+  assert.equal(merchantKey('IMPS PAYMENT 123456789012'), '');
+  assert.ok(merchantKey('A'.repeat(200)).length <= 60);
+});

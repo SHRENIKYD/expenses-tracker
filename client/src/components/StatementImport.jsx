@@ -3,7 +3,7 @@ import Icon from './Icon.jsx';
 import { formatMoney, formatDay, titleCase } from '../format.js';
 import { previewStatement, importStatement } from '../data/index.js';
 
-export default function StatementImport({ onImported }) {
+export default function StatementImport({ onImported, accounts = [], categories }) {
   const fileInput = useRef(null);
   const [file, setFile] = useState(null);
   const [password, setPassword] = useState('');
@@ -14,6 +14,7 @@ export default function StatementImport({ onImported }) {
   const [error, setError] = useState('');
   const [result, setResult] = useState('');
   const [details, setDetails] = useState(null);
+  const [destination, setDestination] = useState({ accountId: '', paymentMethod: '' });
 
   function reset() {
     setFile(null);
@@ -54,6 +55,14 @@ export default function StatementImport({ onImported }) {
     await run(selected, '');
   }
 
+  const recategorise = (index, category) =>
+    setPreview((current) => ({
+      ...current,
+      transactions: current.transactions.map((row, position) =>
+        position === index ? { ...row, category, remembered: false } : row
+      )
+    }));
+
   const toggle = (index) =>
     setChosen((current) => {
       const next = new Set(current);
@@ -67,7 +76,7 @@ export default function StatementImport({ onImported }) {
     setError('');
     try {
       const rows = preview.transactions.filter((_, index) => chosen.has(index));
-      const outcome = await importStatement(rows);
+      const outcome = await importStatement(rows, destination);
       setResult(
         `Imported ${outcome.imported}` +
           (outcome.duplicates ? `, skipped ${outcome.duplicates} already recorded` : '')
@@ -161,6 +170,44 @@ export default function StatementImport({ onImported }) {
             {preview.count} transactions found · {preview.duplicates} already recorded
             {preview.skipped.length > 0 && ` · ${preview.skipped.length} rows could not be read`}
           </p>
+          <p className="hint">
+            Correct a category here and it is remembered: the same merchant is categorised that way
+            next time.
+          </p>
+
+          <div className="statement-destination">
+            <label>
+              Account
+              <select
+                value={destination.accountId}
+                onChange={(event) => setDestination({ ...destination, accountId: event.target.value })}
+              >
+                <option value="">Leave unassigned</option>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Paid by
+              <select
+                value={destination.paymentMethod}
+                onChange={(event) =>
+                  setDestination({ ...destination, paymentMethod: event.target.value })
+                }
+              >
+                <option value="">Not set</option>
+                {(categories?.paymentMethods || []).map((method) => (
+                  <option key={method} value={method}>
+                    {titleCase(method.replace('_', ' '))}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <span className="hint">Applied to every row imported from this statement.</span>
+          </div>
 
           <div className="table-scroll">
             <table>
@@ -189,7 +236,21 @@ export default function StatementImport({ onImported }) {
                       {row.description}
                       {row.duplicate && <span className="dup-flag"> already recorded — {row.duplicateReason}</span>}
                     </td>
-                    <td data-label="Category">{titleCase(row.category)}</td>
+                    <td data-label="Category">
+                      <select
+                        value={row.category}
+                        onChange={(event) => recategorise(index, event.target.value)}
+                        aria-label={`Category for ${row.description}`}
+                        className={row.remembered ? 'remembered' : undefined}
+                        title={row.remembered ? 'Remembered from a previous import' : undefined}
+                      >
+                        {(categories?.[row.kind] || [row.category]).map((name) => (
+                          <option key={name} value={name}>
+                            {titleCase(name)}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
                     <td className="numeric" data-label="Amount">
                       <span className={row.kind === 'income' ? 'amount-in' : 'amount-out'}>
                         {row.kind === 'income' ? '+' : '−'}

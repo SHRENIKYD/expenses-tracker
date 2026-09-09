@@ -71,3 +71,7 @@ export const deleteGoal = bind('deleteGoal');
 export const contributeGoal = bind('contributeGoal');
 export const addToGoal = bind('addToGoal');
 export const listContributions = bind('listContributions');
+export const listMerchantRules = bind('listMerchantRules');
+export const forgetMerchantRule = bind('forgetMerchantRule');
+export const unassignedCount = bind('unassignedCount');
+export const assignUnassigned = bind('assignUnassigned');

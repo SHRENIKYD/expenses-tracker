@@ -3238,3 +3238,31 @@ tr.is-duplicate {
 }
 .statement-skipped { list-style: none; }
 .statement-skipped code { color: #0f3c2c; }
+
+/* ---------- statement destination and unclaimed rows ---------- */
+.statement-destination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  margin: 14px 0 4px;
+}
+.statement-destination label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #33413b;
+}
+.statement-destination select { min-width: 170px; }
+.statement-destination .hint { flex: 1 1 200px; margin: 0 0 8px; }
+.unassigned { margin-bottom: 18px; }
+/* A category the importer remembered from a previous correction, rather than
+   guessed from its keyword list. */
+select.remembered { border-color: #7fb79a; background: #f1f8f4; }
+
+@media (max-width: 560px) {
+  .statement-destination { flex-direction: column; align-items: stretch; }
+  .statement-destination select { min-width: 0; width: 100%; }
+}

@@ -217,3 +217,49 @@ test('a receipt cannot be written into another account’s folder', async () => 
     assert.equal(written.rowCount, 1);
   });
 });
+
+test('a merchant rule belongs to the account that set it', async () => {
+  const mine = await createUser(db, 'rules-owner@example.com');
+  const theirs = await createUser(db, 'rules-stranger@example.com');
+
+  await db.query(
+    `insert into public.merchant_rules (user_id, merchant, category) values ($1, 'swiggy order', 'food')`,
+    [mine]
+  );
+
+  await asUser(db, theirs, async () => {
+    const seen = await db.query('select merchant from public.merchant_rules');
+    assert.equal(seen.rowCount, 0, 'another account read my rules');
+
+    const changed = await db.query(
+      `update public.merchant_rules set category = 'shopping' where merchant = 'swiggy order' returning merchant`
+    );
+    assert.equal(changed.rowCount, 0, 'another account rewrote my rule');
+  });
+
+  await asUser(db, mine, async () => {
+    const seen = await db.query('select merchant, category from public.merchant_rules');
+    assert.equal(seen.rowCount, 1);
+    assert.equal(seen.rows[0].category, 'food');
+  });
+});
+
+test('one merchant holds one category per account', async () => {
+  const mine = await createUser(db, 'rules-upsert@example.com');
+
+  await asUser(db, mine, async () => {
+    await db.query(
+      `insert into public.merchant_rules (user_id, merchant, category) values ($1, 'amazonmumbai', 'other')`,
+      [mine]
+    );
+    await db.query(
+      `insert into public.merchant_rules (user_id, merchant, category) values ($1, 'amazonmumbai', 'shopping')
+       on conflict (user_id, merchant) do update set category = excluded.category`,
+      [mine]
+    );
+
+    const seen = await db.query('select category from public.merchant_rules');
+    assert.equal(seen.rowCount, 1);
+    assert.equal(seen.rows[0].category, 'shopping');
+  });
+});

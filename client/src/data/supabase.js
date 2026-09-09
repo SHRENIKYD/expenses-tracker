@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { assembleSummary, resolvePeriod } from './summary.js';
 import { detectBank, parseStatement } from '../statement.js';
 import { NEAR_DAYS, findDuplicate } from '../duplicates.js';
+import { merchantKey } from '../merchant.js';
 import {
   fromTransaction,
   toAccount,
@@ -492,10 +493,22 @@ export async function previewStatement(file, password) {
     throw error;
   }
 
-  const existing = await neighbours(transactions.map((entry) => entry.date));
+  const [existing, rules] = await Promise.all([
+    neighbours(transactions.map((entry) => entry.date)),
+    listMerchantRules()
+  ]);
+
   const rows = transactions.map((entry) => {
     const duplicate = findDuplicate(entry, existing);
-    return { ...entry, duplicate: Boolean(duplicate), duplicateReason: duplicate?.reason ?? null };
+    // A rule you set yourself outranks the keyword list that guessed.
+    const remembered = rules.get(merchantKey(entry.description));
+    return {
+      ...entry,
+      category: remembered && CATEGORIES[entry.kind].includes(remembered) ? remembered : entry.category,
+      remembered: Boolean(remembered),
+      duplicate: Boolean(duplicate),
+      duplicateReason: duplicate?.reason ?? null
+    };
   });
 
   return {
@@ -532,7 +545,7 @@ function rowErrors(entry) {
   return errors;
 }
 
-export async function importStatement(transactions) {
+export async function importStatement(transactions, options = {}) {
   const incoming = Array.isArray(transactions) ? transactions : [];
   if (incoming.length === 0) throw new Error('No transactions selected.');
   if (incoming.length > 2000) throw new Error('Too many rows (max 2000).');
@@ -571,11 +584,18 @@ export async function importStatement(transactions) {
         category: entry.category,
         date: entry.date,
         source: 'statement',
-        externalRef: entry.reference || null
+        externalRef: entry.reference || null,
+        // One statement belongs to one account, so the whole batch carries it.
+        accountId: options.accountId || null,
+        paymentMethod: options.paymentMethod || null
       }),
       user_id: userId
     });
   }
+
+  // Every imported row teaches the merchant its category, whether that came
+  // from the keyword list or from a correction made in the preview.
+  await saveMerchantRules(accepted.map((entry) => ({ description: entry.description, category: entry.category })));
 
   if (rows.length === 0) return { imported: 0, duplicates, rejected };
 
@@ -595,4 +615,61 @@ export async function importStatement(transactions) {
     else throw new Error(one.error.message);
   }
   return { imported, duplicates, rejected };
+}
+
+/* -------------------------------------------------------- merchant rules */
+
+export async function listMerchantRules() {
+  const rows = unwrap(await client().from('merchant_rules').select('merchant,category'));
+  return new Map(rows.map((row) => [row.merchant, row.category]));
+}
+
+export async function saveMerchantRules(entries) {
+  const userId = await currentUserId();
+  const rules = new Map();
+  for (const entry of entries) {
+    const merchant = merchantKey(entry.description);
+    // The last word on a merchant wins, which is the correction just made.
+    if (merchant) rules.set(merchant, entry.category);
+  }
+  if (rules.size === 0) return { saved: 0 };
+
+  unwrap(
+    await client()
+      .from('merchant_rules')
+      .upsert(
+        [...rules].map(([merchant, category]) => ({ user_id: userId, merchant, category, updated_at: new Date().toISOString() })),
+        { onConflict: 'user_id,merchant' }
+      )
+  );
+  return { saved: rules.size };
+}
+
+export async function forgetMerchantRule(merchant) {
+  unwrap(await client().from('merchant_rules').delete().eq('merchant', merchant));
+}
+
+/* ------------------------------------------------- rows without an account */
+
+// Statements imported before this existed, and anything added without picking
+// an account, sit outside the Accounts page until they are claimed.
+export async function unassignedCount() {
+  const { count, error } = await client()
+    .from('transactions')
+    .select('id', { count: 'exact', head: true })
+    .is('account_id', null);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+export async function assignUnassigned({ accountId, paymentMethod }) {
+  const patch = {};
+  if (accountId) patch.account_id = accountId;
+  if (paymentMethod) patch.payment_method = paymentMethod;
+  if (Object.keys(patch).length === 0) return { updated: 0 };
+
+  const rows = unwrap(
+    await client().from('transactions').update(patch).is('account_id', null).select('id')
+  );
+  return { updated: rows.length };
 }

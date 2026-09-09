@@ -4,6 +4,7 @@ import Filters from '../components/Filters.jsx';
 import ExpenseTable from '../components/ExpenseTable.jsx';
 import ImportExport from '../components/ImportExport.jsx';
 import StatementImport from '../components/StatementImport.jsx';
+import UnassignedRows from '../components/UnassignedRows.jsx';
 import { emptyFilters } from '../useExpensesData.js';
 import { TableSkeleton } from '../components/Skeleton.jsx';
 import { formatMoney } from '../format.js';
@@ -87,8 +88,18 @@ export default function Transactions() {
       </section>
       )}
 
+      <UnassignedRows
+        accounts={accounts}
+        paymentMethods={categories.paymentMethods}
+        onAssigned={handlers.refresh}
+      />
+
       <div className="two-col">
-        <StatementImport onImported={handlers.refresh} />
+        <StatementImport
+          onImported={handlers.refresh}
+          accounts={accounts}
+          categories={categories}
+        />
         <ImportExport onExport={handlers.exportCsv} onImport={handlers.importCsv} />
       </div>
     </>

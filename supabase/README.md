@@ -9,6 +9,7 @@ replaces its summary route, and the tests for all three.
 migrations/0001_schema.sql    tables, indexes, row-level security
 migrations/0002_summary.sql   the dashboard's aggregates as SQL functions
 migrations/0003_receipts.sql  the receipts bucket and the policy that owns it
+migrations/0004_merchant_rules.sql  remembered categories, one row per merchant
 export-data.mjs               moves an existing account's rows across
 test/                         policies and functions, run against real Postgres
 ```
