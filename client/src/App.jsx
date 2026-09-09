@@ -12,7 +12,7 @@ import SettingsPage from './pages/SettingsPage.jsx';
 import AddExpense from './pages/AddExpense.jsx';
 import useExpensesData from './useExpensesData.js';
 import { readSession, writeSession, clearSession } from './session.js';
-import { login, logout, recoverAccount, register, setUnauthorisedHandler } from './api.js';
+import { login, logout, recoverAccount, register, setUnauthorisedHandler } from './data/index.js';
 
 function Workspace({ session, onSignOut }) {
   const data = useExpensesData();

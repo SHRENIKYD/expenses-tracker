@@ -3,7 +3,7 @@ import Icon from '../components/Icon.jsx';
 import PasswordCard from '../components/PasswordCard.jsx';
 import { useOutletContext } from 'react-router-dom';
 import { formatMoney } from '../format.js';
-import { receiptUsage } from '../api.js';
+import { receiptUsage } from '../data/index.js';
 
 export default function SettingsPage() {
   const { settings, session, handlers, onSignOut } = useOutletContext();

@@ -9,7 +9,7 @@ import {
   createGoal,
   removeGoal,
   contributeGoal
-} from './api.js';
+} from './data/index.js';
 import { currentMonth } from './format.js';
 import { defaultRange, monthSelection, rangeQuery } from './range.js';
 import {
@@ -29,7 +29,7 @@ import {
   saveSettings,
   setBudget,
   updateExpense
-} from './api.js';
+} from './data/index.js';
 
 export const emptyFilters = {
   q: '',

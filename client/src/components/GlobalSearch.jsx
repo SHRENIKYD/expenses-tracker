@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon, { CATEGORY_ICON } from './Icon.jsx';
 import useDebouncedValue from '../useDebouncedValue.js';
-import { listExpenses } from '../api.js';
+import { listExpenses } from '../data/index.js';
 import { formatDayFull, formatMoney } from '../format.js';
 
 const LIMIT = 6;

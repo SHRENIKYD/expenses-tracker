@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Icon from './Icon.jsx';
 import RecoveryCodes from './RecoveryCodes.jsx';
-import { changePassword, recoveryCodeCount, regenerateRecoveryCodes } from '../api.js';
+import { changePassword, recoveryCodeCount, regenerateRecoveryCodes } from '../data/index.js';
 
 export default function PasswordCard() {
   const [form, setForm] = useState({ currentPassword: '', newPassword: '' });

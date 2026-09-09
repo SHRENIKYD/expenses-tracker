@@ -76,3 +76,38 @@ ADMIN_URL=postgres://…/postgres npm test     # with the API running locally
 
 It skips itself when either the source database or the API is unreachable, so
 the suite still runs anywhere.
+
+## Pointing the app at Supabase
+
+The client reads three variables. `VITE_DATA_BACKEND` chooses the backend;
+the other two configure it:
+
+| Variable | Where it lives | Value |
+| --- | --- | --- |
+| `VITE_DATA_BACKEND` | repository variable | `supabase`, or anything else for the API |
+| `VITE_SUPABASE_URL` | repository variable | the project URL |
+| `VITE_SUPABASE_ANON_KEY` | repository secret | the publishable (`sb_publishable_…`) key |
+
+The publishable key is meant to reach the browser — it identifies the project,
+it does not grant anything. Row-level security is what keeps one account out of
+another's rows, which is why the policies carry the most tests here. The secret
+key (`sb_secret_…`) bypasses those policies and must never reach the client or
+the repository.
+
+Locally, `client/.env.local` holds the same three names; it is gitignored.
+
+### The cutover
+
+1. Run `migrations/0001_schema.sql`, then `migrations/0002_summary.sql`, in the
+   Supabase SQL editor.
+2. Sign up in the app once so `auth.users` has a row and the `handle_new_user`
+   trigger creates the profile.
+3. Move the data with `export-data.mjs` (above) and run the result in the SQL
+   editor.
+4. Set the three variables, then set `VITE_DATA_BACKEND=supabase` and re-run the
+   Pages workflow. The build fails rather than deploys if the project URL is
+   missing from the bundle.
+
+Going back is the same switch: clear `VITE_DATA_BACKEND` and re-run the
+workflow. Nothing in the Express API is removed until the Supabase side has been
+running on real use.

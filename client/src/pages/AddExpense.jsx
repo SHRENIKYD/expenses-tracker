@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import Icon, { CATEGORY_ICON } from '../components/Icon.jsx';
 import { todayIso, titleCase, formatDayFull } from '../format.js';
-import { uploadReceipt } from '../api.js';
+import { uploadReceipt } from '../data/index.js';
 
 const METHOD_LABEL = {
   upi: 'UPI',

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Icon from './Icon.jsx';
-import { deleteReceipt, fetchReceipt } from '../api.js';
+import { deleteReceipt, fetchReceipt } from '../data/index.js';
 
 export default function ReceiptViewer({ receiptId, name, onClose, onDeleted }) {
   const [file, setFile] = useState(null);

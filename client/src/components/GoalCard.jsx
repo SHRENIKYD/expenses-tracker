@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import { money } from '../dashboard.js';
-import { listContributions } from '../api.js';
+import { listContributions } from '../data/index.js';
 
 export default function GoalCard({ goal, handlers, compact = false }) {
   const [adding, setAdding] = useState(false);

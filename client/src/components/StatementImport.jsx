@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import Icon from './Icon.jsx';
 import { formatMoney, formatDay, titleCase } from '../format.js';
-import { previewStatement, importStatement } from '../api.js';
+import { previewStatement, importStatement } from '../data/index.js';
 
 export default function StatementImport({ onImported }) {
   const fileInput = useRef(null);
