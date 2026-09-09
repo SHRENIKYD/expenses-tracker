@@ -41,10 +41,11 @@ jobs:
           # workflow is the whole cutover, and the whole way back.
           VITE_DATA_BACKEND: ${{ vars.VITE_DATA_BACKEND }}
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          # The publishable key. It is meant to reach the browser; row-level
+          # The publishable key. It is meant to reach the browser — row-level
           # security, not secrecy, is what keeps one account out of another's
-          # rows. It is a secret here only to keep it out of the repository.
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          # rows — so it is a variable rather than a secret. The secret key
+          # (sb_secret_…) bypasses those policies and belongs in neither.
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
 
       - name: The bundle was built for the backend it was configured for
         run: |

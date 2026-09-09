@@ -86,7 +86,7 @@ the other two configure it:
 | --- | --- | --- |
 | `VITE_DATA_BACKEND` | repository variable | `supabase`, or anything else for the API |
 | `VITE_SUPABASE_URL` | repository variable | the project URL |
-| `VITE_SUPABASE_ANON_KEY` | repository secret | the publishable (`sb_publishable_…`) key |
+| `VITE_SUPABASE_ANON_KEY` | repository variable | the publishable (`sb_publishable_…`) key |
 
 The publishable key is meant to reach the browser — it identifies the project,
 it does not grant anything. Row-level security is what keeps one account out of
