@@ -1188,8 +1188,14 @@ tfoot td {
   appearance: auto;
 }
 
+label.card-search,
+label.month-select {
+  flex-direction: row;
+}
+
 .card-search {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 8px;
   height: 34px;
@@ -1205,6 +1211,7 @@ tfoot td {
   background: transparent;
   font-size: 0.84rem;
   width: 175px;
+  height: 100%;
   color: var(--text);
 }
 

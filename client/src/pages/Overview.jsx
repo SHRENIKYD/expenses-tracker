@@ -17,7 +17,8 @@ import {
   formatMoneyTrim,
   formatRelativeDay,
   paymentLabel,
-  titleCase
+  titleCase,
+  todayIso
 } from '../format.js';
 
 const shortMonth = (month) => formatMonth(month).split(' ')[0];
@@ -122,7 +123,12 @@ export default function Overview() {
   const series = period === 'buckets' ? bucketedSeries(daily, buckets.length) : dailySeries(daily);
   const heaviest = daily.length >= 7 ? heaviestWindow(daily, 7) : null;
   const spendPrefix = buildPrefix(daily.map((day) => day.total));
-  const lastWeek = rangeSum(spendPrefix, Math.max(0, daily.length - 7), daily.length);
+  // "The last seven days" means the seven up to today, not the last seven of a
+  // month that still has three weeks of empty future in it.
+  const today = todayIso();
+  const future = daily.findIndex((day) => day.date > today);
+  const upToNow = future === -1 ? daily.length : future;
+  const lastWeek = rangeSum(spendPrefix, Math.max(0, upToNow - 7), upToNow);
   const topGoal = goals[0];
 
   return (
@@ -240,7 +246,8 @@ export default function Overview() {
             {heaviest && heaviest.total > 0 && (
               <p className="chart-foot muted">
                 Heaviest seven days {formatDayFull(heaviest.from)} – {formatDayFull(heaviest.to)} ·{' '}
-                {formatMoney(heaviest.total)} · last seven {formatMoney(lastWeek)}
+                {formatMoney(heaviest.total)}
+                {upToNow > 0 && <> · last seven to date {formatMoney(lastWeek)}</>}
               </p>
             )}
           </section>
