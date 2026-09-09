@@ -7,6 +7,8 @@ import { useOutletContext } from 'react-router-dom';
 import { formatMoney } from '../format.js';
 import { receiptUsage } from '../data/index.js';
 
+const build = import.meta.env.VITE_APP_VERSION || 'dev';
+
 export default function SettingsPage() {
   const { settings, session, handlers, onSignOut, sidebarTheme, setSidebarTheme } = useOutletContext();
   const [form, setForm] = useState({ displayName: '', monthlyBudget: '' });
@@ -109,9 +111,11 @@ export default function SettingsPage() {
           </div>
           <div>
             <dt>Version</dt>
-            {/* The same string the diagnostics carry, so a screenshot of this
-                page and a report from it name the same build. */}
-            <dd>{import.meta.env.VITE_APP_VERSION || 'dev'}</dd>
+            {/* The number, without the commit it was built from. That part is
+                still in the stamp the diagnostics carry, and on hover here, so
+                a build can be identified when it matters without putting a sha
+                on a settings page. */}
+            <dd title={build}>{build.split('+')[0]}</dd>
           </div>
           <div>
             <dt>Receipts stored</dt>
