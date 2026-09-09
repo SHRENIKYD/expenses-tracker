@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Icon from './Icon.jsx';
 import { formatMoney, formatDay, titleCase } from '../format.js';
 import {
@@ -26,10 +26,34 @@ export const setReadingMessages = (on) => localStorage.setItem(SETTING, on ? 'ye
 // and nothing is written until the tick is pressed. Suggestions live in memory
 // only — an unconfirmed message is not written to this device or to the
 // database, and a missed one can be found again by asking for the last week.
-export default function MessageSuggestions({ onAdd, categories }) {
+export default function MessageSuggestions({ onAdd, categories, ledger = 0 }) {
   const [suggestions, setSuggestions] = useState([]);
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState('');
+  // What is already recorded, indexed. Held in a ref so the listeners below are
+  // subscribed once while this is rebuilt every time the ledger moves.
+  const recorded = useRef(buildIndex([]));
+
+  useEffect(() => {
+    if (!available()) return;
+    const since = new Date(Date.now() - 10 * 86400000).toISOString().slice(0, 10);
+    listExpenses({ from: since })
+      .then((rows) =>
+        (recorded.current = buildIndex(
+          rows.map((row) => ({
+            id: row.id,
+            kind: row.kind,
+            description: row.description,
+            amount: row.amount,
+            date: row.date,
+            external_ref: row.externalRef
+          }))
+        ))
+      )
+      .catch(() => {
+        recorded.current = buildIndex([]);
+      });
+  }, [ledger]);
 
   useEffect(() => {
     if (!available() || !readingMessages()) return undefined;
@@ -41,34 +65,20 @@ export default function MessageSuggestions({ onAdd, categories }) {
     // or dismissed before, or the transaction it describes is in the ledger.
     // Without all three the same messages come back on every launch.
     const seen = handled();
-    // Three constant-time checks. The ledger is indexed once when the page
-    // opens, so an alert arriving at midnight costs the same as the first one.
-    let recorded = buildIndex([]);
     const shown = new Set();
 
     const offer = (suggestion) => {
       const mark = fingerprint(suggestion);
       if (seen.has(mark) || shown.has(mark)) return;
-      if (recorded.find(suggestion)) return;
+      // Three constant-time checks, and the index behind the third is rebuilt
+      // whenever the ledger changes — a reset must not leave rows that no
+      // longer exist deciding what may be offered.
+      if (recorded.current.find(suggestion)) return;
       shown.add(mark);
       setSuggestions((current) => [suggestion, ...current]);
     };
 
     (async () => {
-      // What is already recorded around the days the reader looks back over.
-      const since = new Date(Date.now() - 10 * 86400000).toISOString().slice(0, 10);
-      recorded = buildIndex(
-        (await listExpenses({ from: since })).map((row) => ({
-          id: row.id,
-          kind: row.kind,
-          description: row.description,
-          amount: row.amount,
-          date: row.date,
-          external_ref: row.externalRef
-        }))
-      );
-      if (!live) return;
-
       const { granted } = await permission();
       if (granted && live) {
         stops.push(await listen(offer));

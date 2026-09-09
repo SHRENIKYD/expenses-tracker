@@ -139,7 +139,11 @@ export default function Overview() {
 
   return (
     <>
-      <MessageSuggestions onAdd={handlers.create} categories={categories} />
+      <MessageSuggestions
+        onAdd={handlers.create}
+        categories={categories}
+        ledger={summary?.count ?? 0}
+      />
 
       <section className="card hero-card">
         <span className="hero-label">Remaining income</span>
