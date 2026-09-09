@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Icon from '../components/Icon.jsx';
+import { SIDEBAR_THEMES } from '../sidebarThemes.js';
 import PasswordCard from '../components/PasswordCard.jsx';
 import EncryptionCard from '../components/EncryptionCard.jsx';
 import { useOutletContext } from 'react-router-dom';
@@ -7,7 +8,7 @@ import { formatMoney } from '../format.js';
 import { receiptUsage } from '../data/index.js';
 
 export default function SettingsPage() {
-  const { settings, session, handlers, onSignOut } = useOutletContext();
+  const { settings, session, handlers, onSignOut, sidebarTheme, setSidebarTheme } = useOutletContext();
   const [form, setForm] = useState({ displayName: '', monthlyBudget: '' });
   const [saved, setSaved] = useState('');
   const [usage, setUsage] = useState(null);
@@ -67,6 +68,29 @@ export default function SettingsPage() {
           <button type="submit">Save settings</button>
           {saved && <p className="hint">{saved}</p>}
         </form>
+      </section>
+
+      <section className="card">
+        <h2>Appearance</h2>
+        <fieldset className="sidebar-theme-picker">
+          <legend>Sidebar background</legend>
+          <p className="hint">Applies instantly and is remembered on this browser.</p>
+          <div className="sidebar-theme-options">
+            {SIDEBAR_THEMES.map((theme) => (
+              <label key={theme.id} className="sidebar-theme-option">
+                <input
+                  type="radio"
+                  name="sidebar-theme"
+                  value={theme.id}
+                  checked={sidebarTheme === theme.id}
+                  onChange={() => setSidebarTheme(theme.id)}
+                />
+                <span className="sidebar-theme-preview" style={{ backgroundImage: `url("${theme.image}")` }} aria-hidden="true" />
+                <span className="sidebar-theme-label">{theme.label}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
       </section>
 
       <PasswordCard email={session.user.email} />
