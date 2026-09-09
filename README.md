@@ -57,6 +57,10 @@ npm run dev
 
 CSV columns for import and export: `date,description,category,amount`.
 
+`sample-expenses.csv` in the repo root holds four months of demo data (89 rows,
+June–September 2026). Import it from the app's **Import CSV** button to populate an
+empty database.
+
 ## Hosting
 
 ### Client — GitHub Pages

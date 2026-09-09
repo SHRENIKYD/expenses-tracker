@@ -1,0 +1,90 @@
+date,description,category,amount
+2026-06-01,Rent,housing,18000
+2026-06-02,Coffee,food,690.66
+2026-06-03,Electricity bill,utilities,2154.87
+2026-06-04,Kirana store,food,2152.88
+2026-06-05,Internet bill,utilities,799
+2026-06-05,Chai and snacks,food,622.79
+2026-06-05,Bus pass,transport,639.19
+2026-06-06,Mobile recharge,utilities,299
+2026-06-08,Lunch at office,food,295.48
+2026-06-11,Milk and eggs,food,3301.07
+2026-06-11,Lunch at office,food,599.78
+2026-06-11,Cab to airport,transport,1032.07
+2026-06-12,Pharmacy,health,1658.41
+2026-06-14,Coffee,food,733.11
+2026-06-17,Dinner with friends,food,744.12
+2026-06-17,Metro recharge,transport,749.25
+2026-06-18,Milk and eggs,food,2571.3
+2026-06-18,Movie tickets,entertainment,1963.69
+2026-06-20,Lunch at office,food,639.18
+2026-06-23,Chai and snacks,food,511.92
+2026-06-23,Auto fare,transport,1034.76
+2026-06-24,Bedsheets,shopping,3113.61
+2026-06-25,Milk and eggs,food,2190.68
+2026-06-26,Coffee,food,706.04
+2026-06-29,Chai and snacks,food,773.57
+2026-06-29,Petrol,transport,258.36
+2026-07-01,Rent,housing,18000
+2026-07-02,Coffee,food,287.11
+2026-07-03,Electricity bill,utilities,2781.35
+2026-07-04,Milk and eggs,food,1985.45
+2026-07-05,Internet bill,utilities,799
+2026-07-05,Chai and snacks,food,457.25
+2026-07-05,Metro recharge,transport,964.05
+2026-07-06,Mobile recharge,utilities,299
+2026-07-08,Chai and snacks,food,742
+2026-07-09,Online course,education,2641.04
+2026-07-11,Weekly groceries,food,2913.51
+2026-07-11,Coffee,food,156.03
+2026-07-11,Petrol,transport,655.21
+2026-07-12,Doctor consultation,health,2443.91
+2026-07-14,Coffee,food,583.36
+2026-07-17,Chai and snacks,food,277.06
+2026-07-17,Metro recharge,transport,754.18
+2026-07-18,Milk and eggs,food,1501.36
+2026-07-18,Concert ticket,entertainment,1271.56
+2026-07-20,Chai and snacks,food,239.37
+2026-07-23,Street food,food,377.21
+2026-07-23,Auto fare,transport,1094.32
+2026-07-24,Backpack,shopping,2329.68
+2026-07-25,Milk and eggs,food,1495.43
+2026-07-26,Dinner with friends,food,654.14
+2026-07-29,Street food,food,321.14
+2026-07-29,Cab to airport,transport,802.6
+2026-08-01,Rent,housing,18000
+2026-08-02,Chai and snacks,food,614.14
+2026-08-03,Electricity bill,utilities,2511.54
+2026-08-04,Milk and eggs,food,3234.59
+2026-08-05,Internet bill,utilities,799
+2026-08-05,Lunch at office,food,556.03
+2026-08-05,Bus pass,transport,666.42
+2026-08-06,Mobile recharge,utilities,299
+2026-08-08,Coffee,food,634.56
+2026-08-11,Vegetables and fruit,food,1738.28
+2026-08-11,Coffee,food,288.43
+2026-08-11,Petrol,transport,1163.64
+2026-08-12,Pharmacy,health,426.05
+2026-08-14,Chai and snacks,food,718.41
+2026-08-17,Dinner with friends,food,204.61
+2026-08-17,Cab to airport,transport,975.76
+2026-08-18,Vegetables and fruit,food,1795.4
+2026-08-18,Movie tickets,entertainment,1336.78
+2026-08-20,Lunch at office,food,190.81
+2026-08-23,Dinner with friends,food,619.55
+2026-08-23,Metro recharge,transport,1197.56
+2026-08-24,Running shoes,shopping,1296.2
+2026-08-25,Milk and eggs,food,1295.53
+2026-08-26,Chai and snacks,food,391.77
+2026-08-29,Dinner with friends,food,260.2
+2026-08-29,Auto fare,transport,405.6
+2026-09-01,Rent,housing,18500
+2026-09-02,Coffee,food,823.25
+2026-09-03,Electricity bill,utilities,2462.62
+2026-09-04,Weekly groceries,food,1813.84
+2026-09-05,Internet bill,utilities,799
+2026-09-05,Chai and snacks,food,236.29
+2026-09-05,Bus pass,transport,483.94
+2026-09-06,Mobile recharge,utilities,299
+2026-09-08,Dinner with friends,food,164.94
+2026-09-09,Textbooks,education,4674.83
