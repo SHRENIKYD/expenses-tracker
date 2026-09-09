@@ -10,7 +10,7 @@ const NAV = [
   { to: '/transactions', label: 'Transactions', icon: 'swap' },
   { to: '/accounts', label: 'Accounts', icon: 'accounts' },
   { to: '/budgets', label: 'Budgets', icon: 'budget' },
-  { to: '/goals', label: 'Savings goals', icon: 'savings' },
+  { to: '/goals', label: 'Savings goals', icon: 'health' },
   { to: '/reports', label: 'Reports', icon: 'bills' }
 ];
 
@@ -72,7 +72,7 @@ export default function AppShell({ context }) {
       <aside className="sidebar">
         <div className="brand">
           <span className="brand-mark">
-            <Icon name="wallet" size={21} strokeWidth={1.9} />
+            <Icon name="wallet" size={30} strokeWidth={2.4} />
           </span>
           <span className="brand-name">Expense Tracker</span>
         </div>
@@ -85,7 +85,7 @@ export default function AppShell({ context }) {
               end={item.end}
               className={({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')}
             >
-              <Icon name={item.icon} size={20} strokeWidth={1.9} />
+              <Icon name={item.icon} size={24} strokeWidth={1.8} />
               <span>{item.label}</span>
             </NavLink>
           ))}
@@ -115,11 +115,11 @@ export default function AppShell({ context }) {
             <span>Settings</span>
           </NavLink>
 
-          <button type="button" className="sidebar-user" onClick={onSignOut} title="Sign out">
+          <NavLink to="/settings" className="sidebar-user" aria-label="Profile and settings">
             <span className="sidebar-avatar">{initial}</span>
             <span className="sidebar-name">{name || session.user.email}</span>
-            <Icon name="logout" size={16} strokeWidth={1.9} />
-          </button>
+            <Icon name="chevronRight" size={18} strokeWidth={1.9} />
+          </NavLink>
         </div>
       </aside>
 
