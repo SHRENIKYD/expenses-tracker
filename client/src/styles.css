@@ -3159,3 +3159,56 @@ tr.is-duplicate {
  .goal-icon { width:46px; height:60px; flex-basis:46px; }
  .notification-panel { right:-50px; }
 }
+
+/* ---------- collapsible sidebar ---------- */
+.sidebar-toggle {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  flex: 0 0 28px;
+  border: 0;
+  border-radius: 8px;
+  color: #9dc6b1;
+  background: transparent;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.sidebar-toggle:hover { color: #e1eee6; background: #ffffff14; }
+.sidebar-toggle:focus-visible { outline: 2px solid #7fd0a8; outline-offset: 2px; }
+
+/* Collapsed, the rail keeps the icons and drops everything that needs width.
+   The transition is on the flex basis rather than on `width` alone so the main
+   column moves with it in one step. */
+.sidebar { transition: width .18s ease, flex-basis .18s ease; }
+.sidebar.collapsed {
+  width: 76px;
+  flex: 0 0 76px;
+  padding-left: 0;
+  padding-right: 0;
+}
+.sidebar.collapsed .brand { padding: 0; justify-content: center; gap: 0; }
+.sidebar.collapsed .brand-mark { display: none; }
+.sidebar.collapsed .brand-name,
+.sidebar.collapsed .sidebar-motto,
+.sidebar.collapsed .sidebar-name,
+.sidebar.collapsed .sidebar-user svg,
+.sidebar.collapsed .nav-item span { display: none; }
+.sidebar.collapsed .sidebar-toggle { margin: 0; }
+.sidebar.collapsed nav { padding: 0 14px; }
+.sidebar.collapsed .nav-item,
+.sidebar.collapsed .sidebar-foot .nav-item {
+  justify-content: center;
+  gap: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+.sidebar.collapsed .sidebar-foot { padding: 0 14px; }
+.sidebar.collapsed .sidebar-user { justify-content: center; gap: 0; padding: 10px 0; }
+.sidebar.collapsed .sidebar-trees { opacity: .5; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar { transition: none; }
+}

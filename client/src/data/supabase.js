@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { assembleSummary, resolvePeriod } from './summary.js';
+import { detectBank, parseStatement } from '../statement.js';
+import { NEAR_DAYS, findDuplicate } from '../duplicates.js';
 import {
   fromTransaction,
   toAccount,
@@ -143,23 +145,6 @@ export const updateExpense = async (id, patch) =>
 export const deleteExpense = async (id) => {
   unwrap(await client().from('transactions').delete().eq('id', id));
 };
-
-// Rows a statement import produced: inserted in one go, with the unique index on
-// (user_id, external_ref) refusing anything already imported.
-export async function importStatement(transactions) {
-  const userId = await currentUserId();
-  const rows = transactions.map((row) => ({
-    ...fromTransaction({ ...row, source: 'statement' }),
-    user_id: userId
-  }));
-  const inserted = unwrap(
-    await client().from('transactions').upsert(rows, {
-      onConflict: 'user_id,external_ref',
-      ignoreDuplicates: true
-    }).select()
-  );
-  return { imported: inserted.length, skipped: rows.length - inserted.length };
-}
 
 /* -------------------------------------------------------------- accounts */
 
@@ -344,9 +329,14 @@ export async function saveSettings(settings) {
   return { displayName: saved.display_name, monthlyBudget: Number(saved.monthly_budget) };
 }
 
-export const listCategories = async () => ({
+const CATEGORIES = {
   expense: ['food', 'transport', 'housing', 'utilities', 'health', 'entertainment', 'education', 'shopping', 'other'],
-  income: ['salary', 'freelance', 'interest', 'refund', 'other income'],
+  income: ['salary', 'freelance', 'interest', 'refund', 'other income']
+};
+
+export const listCategories = async () => ({
+  expense: CATEGORIES.expense,
+  income: CATEGORIES.income,
   paymentMethods: ['upi', 'card', 'cash', 'bank_transfer']
 });
 
@@ -387,4 +377,211 @@ export async function getSummary(period) {
     applied: unwrap(applied),
     today: new Date().toISOString().slice(0, 10)
   });
+}
+
+/* -------------------------------------------------------------- receipts */
+
+// The file lives in a private bucket under a folder named for its owner, and
+// the transaction keeps the path. That path is the id every caller already
+// passes around, so nothing above this layer changes.
+
+const RECEIPT_BUCKET = 'receipts';
+const RECEIPT_MAX_BYTES = 2 * 1024 * 1024;
+const RECEIPT_TYPES = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+  'application/pdf': 'pdf'
+};
+
+export async function uploadReceipt(file) {
+  const type = (file.type || '').split(';')[0].trim().toLowerCase();
+  if (!RECEIPT_TYPES[type]) {
+    throw new Error(`Receipts must be one of: ${Object.keys(RECEIPT_TYPES).join(', ')}`);
+  }
+  if (!file.size) throw new Error('That file is empty.');
+  if (file.size > RECEIPT_MAX_BYTES) throw new Error('Receipt must be 2MB or smaller.');
+
+  const path = `${await currentUserId()}/${crypto.randomUUID()}.${RECEIPT_TYPES[type]}`;
+  const { error } = await client()
+    .storage.from(RECEIPT_BUCKET)
+    .upload(path, file, { contentType: type, upsert: false });
+  if (error) throw new Error(error.message);
+
+  return { id: path, mimeType: type, byteSize: file.size };
+}
+
+export async function fetchReceipt(id) {
+  const { data, error } = await client().storage.from(RECEIPT_BUCKET).download(id);
+  if (error) throw new Error(/not found/i.test(error.message) ? 'Receipt not found' : error.message);
+  return { url: URL.createObjectURL(data), type: data.type };
+}
+
+export async function deleteReceipt(id) {
+  const { error } = await client().storage.from(RECEIPT_BUCKET).remove([id]);
+  if (error) throw new Error(error.message);
+  // A storage object has no foreign key, so the ON DELETE SET NULL the API
+  // relied on is done here: the transactions that carried it stop pointing at
+  // a file that is gone.
+  unwrap(await client().from('transactions').update({ receipt_path: null }).eq('receipt_path', id));
+}
+
+export async function receiptUsage() {
+  const files = unwrap(
+    await client().storage.from(RECEIPT_BUCKET).list(await currentUserId(), { limit: 1000 })
+  );
+  return {
+    count: files.length,
+    bytes: files.reduce((total, file) => total + (file.metadata?.size ?? 0), 0)
+  };
+}
+
+/* ------------------------------------------------------------ statements */
+
+// The PDF is read on this device and only the rows it yields are sent anywhere.
+// Everything the Express route did — detect the bank, parse, flag duplicates,
+// insert what was chosen — happens here instead.
+
+const STATEMENT_MAX_BYTES = 5 * 1024 * 1024;
+
+const shiftDays = (day, days) =>
+  new Date(new Date(`${day}T00:00:00Z`).getTime() + days * 86400000).toISOString().slice(0, 10);
+
+// The rows already in the ledger around the statement's dates, which is all the
+// comparison needs — not the whole history.
+async function neighbours(dates) {
+  const sorted = [...dates].sort();
+  return unwrap(
+    await client()
+      .from('transactions')
+      .select('id,kind,description,amount,date,external_ref')
+      .gte('date', shiftDays(sorted[0], -NEAR_DAYS))
+      .lte('date', shiftDays(sorted[sorted.length - 1], NEAR_DAYS))
+  );
+}
+
+export async function previewStatement(file, password) {
+  if (!file || !file.size) throw new Error('Upload a PDF statement.');
+  if (file.size > STATEMENT_MAX_BYTES) throw new Error('Statement must be 5MB or smaller.');
+
+  // pdf.js and its worker are a large dependency; loading them only when a
+  // statement is actually opened keeps them out of the initial bundle.
+  const { extractText } = await import('../pdf.js');
+  const { lines, text, pages } = await extractText(await file.arrayBuffer(), password);
+
+  const bank = detectBank(text);
+  const { transactions, skipped } = parseStatement(lines);
+
+  if (transactions.length === 0) {
+    const error = new Error(
+      'No transactions could be read from this statement. Bank layouts differ; if this is a scanned or image-only PDF the text cannot be extracted at all.'
+    );
+    error.details = { bank, pages, skipped: skipped.slice(0, 8) };
+    throw error;
+  }
+
+  const existing = await neighbours(transactions.map((entry) => entry.date));
+  const rows = transactions.map((entry) => {
+    const duplicate = findDuplicate(entry, existing);
+    return { ...entry, duplicate: Boolean(duplicate), duplicateReason: duplicate?.reason ?? null };
+  });
+
+  return {
+    bank,
+    pages,
+    count: rows.length,
+    duplicates: rows.filter((row) => row.duplicate).length,
+    transactions: rows,
+    skipped
+  };
+}
+
+const KINDS = ['income', 'expense'];
+
+function rowErrors(entry) {
+  const errors = [];
+  const categories = CATEGORIES[entry.kind] || [];
+
+  if (!KINDS.includes(entry.kind)) errors.push('kind must be income or expense');
+  if (typeof entry.description !== 'string' || !entry.description.trim()) {
+    errors.push('description is required');
+  } else if (entry.description.length > 200) {
+    errors.push('description is too long');
+  }
+
+  const amount = Number(entry.amount);
+  if (!Number.isFinite(amount) || amount <= 0) errors.push('amount must be positive');
+  else if (amount > 9999999999) errors.push('amount is too large');
+  else if (Math.round(amount * 100) !== amount * 100) errors.push('amount has too many decimals');
+
+  if (!categories.includes(entry.category)) errors.push('category is not one of the known ones');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(entry.date || '')) errors.push('date must be YYYY-MM-DD');
+
+  return errors;
+}
+
+export async function importStatement(transactions) {
+  const incoming = Array.isArray(transactions) ? transactions : [];
+  if (incoming.length === 0) throw new Error('No transactions selected.');
+  if (incoming.length > 2000) throw new Error('Too many rows (max 2000).');
+
+  const accepted = [];
+  const rejected = [];
+  incoming.forEach((entry, position) => {
+    const errors = rowErrors(entry);
+    if (errors.length) rejected.push({ row: position + 1, errors });
+    else accepted.push(entry);
+  });
+
+  if (accepted.length === 0) {
+    const error = new Error('No valid rows.');
+    error.details = { rejected };
+    throw error;
+  }
+
+  const userId = await currentUserId();
+  const existing = await neighbours(accepted.map((entry) => entry.date));
+
+  let duplicates = 0;
+  const rows = [];
+  for (const entry of accepted) {
+    // A reference matches by reference, everything else by amount, direction,
+    // date and narration — the same test the preview showed the user.
+    if (findDuplicate(entry, existing)) {
+      duplicates += 1;
+      continue;
+    }
+    rows.push({
+      ...fromTransaction({
+        kind: entry.kind,
+        description: entry.description,
+        amount: entry.amount,
+        category: entry.category,
+        date: entry.date,
+        source: 'statement',
+        externalRef: entry.reference || null
+      }),
+      user_id: userId
+    });
+  }
+
+  if (rows.length === 0) return { imported: 0, duplicates, rejected };
+
+  const batch = await client().from('transactions').insert(rows).select();
+  if (!batch.error) return { imported: batch.data.length, duplicates, rejected };
+
+  // 23505 is the partial unique index on (user_id, external_ref): the same
+  // statement was imported before. One bad row must not lose the rest, so the
+  // batch is retried row by row and the clashes are counted.
+  if (batch.error.code !== '23505') throw new Error(batch.error.message);
+
+  let imported = 0;
+  for (const row of rows) {
+    const one = await client().from('transactions').insert(row);
+    if (!one.error) imported += 1;
+    else if (one.error.code === '23505') duplicates += 1;
+    else throw new Error(one.error.message);
+  }
+  return { imported, duplicates, rejected };
 }

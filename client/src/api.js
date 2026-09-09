@@ -199,6 +199,9 @@ export const recoveryCodeCount = () => request('/auth/recovery-codes');
 export const regenerateRecoveryCodes = (password) =>
   request('/auth/recovery-codes', { method: 'POST', body: JSON.stringify({ password }) });
 
+export const requestPasswordReset = () =>
+  Promise.reject(new Error('Use a recovery code to get back in.'));
+
 export const recoverAccount = (payload) =>
   request('/auth/recover', { method: 'POST', body: JSON.stringify(payload) });
 

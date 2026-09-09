@@ -29,6 +29,7 @@ const PATHS = {
   filter: 'M3 5h18l-7 8v6l-4 2v-8z',
   calendar: 'M7 3v4M17 3v4M3.5 9h17M4 5h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z',
   chevronRight: 'M9 5l7 7-7 7',
+  panelLeft: 'M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM10 4v16',
   chevronDown: 'M5 9l7 7 7-7',
   back: 'M19 12H5M11 18l-6-6 6-6',
   close: 'M6 6l12 12M18 6L6 18',

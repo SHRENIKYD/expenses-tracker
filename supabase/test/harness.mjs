@@ -40,6 +40,43 @@ const SUPABASE_SHIM = `
   alter default privileges in schema public
     grant select, insert, update, delete on tables to authenticated;
   alter default privileges in schema public grant execute on functions to authenticated;
+
+  -- Storage, reduced to what the receipts migration touches: the bucket
+  -- registry, the object table its policy is written against, and the helper
+  -- that splits a path into folders. Enough for the real policy to be run.
+  create schema if not exists storage;
+
+  create table if not exists storage.buckets (
+    id text primary key,
+    name text not null,
+    public boolean not null default false,
+    file_size_limit bigint,
+    allowed_mime_types text[]
+  );
+
+  create table if not exists storage.objects (
+    id uuid primary key default gen_random_uuid(),
+    bucket_id text not null references storage.buckets (id),
+    name text not null,
+    metadata jsonb not null default '{}'::jsonb,
+    created_at timestamptz not null default now(),
+    unique (bucket_id, name)
+  );
+
+  alter table storage.objects enable row level security;
+
+  create or replace function storage.foldername(name text)
+  returns text[]
+  language sql
+  immutable
+  as $$
+    select parts[1:array_length(parts, 1) - 1]
+    from (select string_to_array(foldername.name, '/') as parts) split;
+  $$;
+
+  grant usage on schema storage to anon, authenticated, service_role;
+  grant select, insert, update, delete on storage.objects to authenticated;
+  grant select on storage.buckets to authenticated;
 `;
 
 export async function freshDatabase(name) {

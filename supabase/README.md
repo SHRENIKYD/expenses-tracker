@@ -8,6 +8,7 @@ replaces its summary route, and the tests for all three.
 ```
 migrations/0001_schema.sql    tables, indexes, row-level security
 migrations/0002_summary.sql   the dashboard's aggregates as SQL functions
+migrations/0003_receipts.sql  the receipts bucket and the policy that owns it
 export-data.mjs               moves an existing account's rows across
 test/                         policies and functions, run against real Postgres
 ```
@@ -59,6 +60,25 @@ ADMIN_URL=postgres://…/postgres npm test
 
 Receipts are not carried: they are bytes in the old database and belong in
 Storage. The script says how many exist rather than dropping them silently.
+
+## What moved into the browser
+
+Two things the API did are now done on the device, because neither needs a
+server once the database enforces ownership itself:
+
+- **Receipts** live in a private Storage bucket, one folder per account. The
+  policy in `0003_receipts.sql` reads the owner out of the path, so the same
+  check covers reading, writing and deleting. `transactions.receipt_path` holds
+  the path, which is the id every caller already passed around.
+- **Bank statements** are parsed where they are chosen. `client/src/pdf.js`
+  reads the PDF with pdf.js in a worker and `client/src/statement.js` — the
+  parser the API ran, unchanged — turns its lines into rows. Only the rows the
+  user ticks are sent anywhere; the PDF itself never leaves the device, and a
+  password-protected statement is opened locally.
+
+Duplicate detection (`client/src/duplicates.js`) is the same test as before: a
+bank reference decides on its own, and everything else has to agree on amount,
+direction, a few days' leeway and the wording.
 
 ## Parity
 

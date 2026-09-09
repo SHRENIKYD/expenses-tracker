@@ -35,6 +35,7 @@ export const login = bind('login');
 export const logout = bind('logout');
 export const recoverAccount = bind('recoverAccount');
 export const changePassword = bind('changePassword');
+export const requestPasswordReset = bind('requestPasswordReset');
 export const recoveryCodeCount = bind('recoveryCodeCount');
 export const regenerateRecoveryCodes = bind('regenerateRecoveryCodes');
 export const listExpenses = bind('listExpenses');

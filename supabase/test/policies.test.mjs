@@ -166,3 +166,54 @@ test('two accounts may hold the same reference as each other', async () => {
   );
   assert.equal(rows[0].count, 2);
 });
+
+test('a receipt in Storage is readable only by the account that owns its folder', async () => {
+  const mine = await createUser(db, 'receipt-owner@example.com');
+  const theirs = await createUser(db, 'receipt-stranger@example.com');
+
+  // Seeded as the table owner, so the object exists to be looked for.
+  await db.query(
+    `insert into storage.objects (bucket_id, name, metadata)
+     values ('receipts', $1, '{"size": 2048}'::jsonb)`,
+    [`${mine}/statement.pdf`]
+  );
+
+  await asUser(db, theirs, async () => {
+    const seen = await db.query(`select name from storage.objects where bucket_id = 'receipts'`);
+    assert.equal(seen.rowCount, 0, 'another account listed my receipts');
+
+    const stolen = await db.query('delete from storage.objects where name = $1 returning name', [
+      `${mine}/statement.pdf`
+    ]);
+    assert.equal(stolen.rowCount, 0, 'another account deleted my receipt');
+  });
+
+  await asUser(db, mine, async () => {
+    const seen = await db.query(`select name from storage.objects where bucket_id = 'receipts'`);
+    assert.equal(seen.rowCount, 1);
+    assert.equal(seen.rows[0].name, `${mine}/statement.pdf`);
+  });
+});
+
+test('a receipt cannot be written into another account’s folder', async () => {
+  const mine = await createUser(db, 'receipt-writer@example.com');
+  const theirs = await createUser(db, 'receipt-target@example.com');
+
+  await asUser(db, mine, async () => {
+    await assert.rejects(
+      db.query(`insert into storage.objects (bucket_id, name) values ('receipts', $1)`, [
+        `${theirs}/planted.pdf`
+      ]),
+      /row-level security/
+    );
+  });
+
+  // The refusal must be about the folder, not about writing at all.
+  await asUser(db, mine, async () => {
+    const written = await db.query(
+      `insert into storage.objects (bucket_id, name) values ('receipts', $1) returning name`,
+      [`${mine}/mine.pdf`]
+    );
+    assert.equal(written.rowCount, 1);
+  });
+});

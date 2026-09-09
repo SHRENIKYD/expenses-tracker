@@ -3,7 +3,7 @@ import Icon from '../components/Icon.jsx';
 import PasswordCard from '../components/PasswordCard.jsx';
 import { useOutletContext } from 'react-router-dom';
 import { formatMoney } from '../format.js';
-import { receiptUsage } from '../data/index.js';
+import { backend, receiptUsage } from '../data/index.js';
 
 export default function SettingsPage() {
   const { settings, session, handlers, onSignOut } = useOutletContext();
@@ -68,7 +68,7 @@ export default function SettingsPage() {
         </form>
       </section>
 
-      <PasswordCard />
+      <PasswordCard email={session.user.email} />
 
       <section className="card">
         <h2>
@@ -90,8 +90,9 @@ export default function SettingsPage() {
           </div>
         </dl>
         <p className="hint">
-          Receipts live in the database, which is capped at 1&nbsp;GB on the free plan. Each file is
-          limited to 2&nbsp;MB.
+          {backend === 'supabase'
+            ? 'Receipts live in Supabase Storage, which is capped at 1\u00a0GB on the free plan. Each file is limited to 2\u00a0MB.'
+            : 'Receipts live in the database, which is capped at 1\u00a0GB on the free plan. Each file is limited to 2\u00a0MB.'}
         </p>
 
         <div className="button-row">

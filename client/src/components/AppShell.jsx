@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { budgetAlert, money } from '../dashboard.js';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Icon from './Icon.jsx';
@@ -44,10 +44,18 @@ const TITLES = {
 
 export default function AppShell({ context }) {
   const [alertsOpen, setAlertsOpen] = useState(false);
+  // The choice is the reader's, and it should survive a reload.
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem('sidebar-collapsed') === 'yes'
+  );
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const page = TITLES[pathname] || TITLES['/'];
+
+  useEffect(() => {
+    localStorage.setItem('sidebar-collapsed', collapsed ? 'yes' : 'no');
+  }, [collapsed]);
   const isTask = pathname === '/add';
 
   const {
@@ -70,12 +78,22 @@ export default function AppShell({ context }) {
 
   return (
     <div className="shell">
-      <aside className="sidebar">
+      <aside className={collapsed ? 'sidebar collapsed' : 'sidebar'}>
         <div className="brand">
           <span className="brand-mark">
             <Icon name="wallet" size={30} strokeWidth={2.4} />
           </span>
           <span className="brand-name">Expense Tracker</span>
+          <button
+            type="button"
+            className="sidebar-toggle"
+            onClick={() => setCollapsed((current) => !current)}
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
+            title={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
+          >
+            <Icon name="panelLeft" size={18} strokeWidth={1.9} />
+          </button>
         </div>
 
         <nav>
@@ -84,6 +102,8 @@ export default function AppShell({ context }) {
               key={item.to}
               to={item.to}
               end={item.end}
+              // Collapsed, the label is gone from view but not from reach.
+              title={item.label}
               className={({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')}
             >
               <Icon name={item.icon} size={24} strokeWidth={1.8} />
