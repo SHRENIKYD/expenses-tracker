@@ -388,3 +388,43 @@ th.numeric .sort {
   font-size: 0.85rem;
   margin: 0 0 16px;
 }
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  font-size: 0.78rem;
+}
+
+.pager-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pager-controls button {
+  padding: 5px 11px;
+  font-size: 0.78rem;
+}
+
+.undo-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  color: var(--text);
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  margin: 0 0 16px;
+}
+
+.undo-bar button {
+  font-size: 0.84rem;
+  font-weight: 600;
+}

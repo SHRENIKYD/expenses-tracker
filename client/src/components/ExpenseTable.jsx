@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { formatMoney, formatDay, titleCase } from '../format.js';
 
 const COLUMNS = [
@@ -8,10 +8,23 @@ const COLUMNS = [
   { key: 'amount', label: 'Amount', numeric: true }
 ];
 
+const PAGE_SIZE = 25;
+
 export default function ExpenseTable({ expenses, categories, sort, order, onSort, onSave, onDelete }) {
+  const [page, setPage] = useState(1);
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  const pageCount = Math.max(Math.ceil(expenses.length / PAGE_SIZE), 1);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, pageCount));
+  }, [pageCount]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [sort, order, expenses.length]);
 
   function startEdit(expense) {
     setEditingId(expense.id);
@@ -39,6 +52,9 @@ export default function ExpenseTable({ expenses, categories, sort, order, onSort
     return <p className="empty">No expenses match these filters.</p>;
   }
 
+  const start = (page - 1) * PAGE_SIZE;
+  const visible = expenses.slice(start, start + PAGE_SIZE);
+
   return (
     <div className="table-scroll">
       <table>
@@ -61,7 +77,7 @@ export default function ExpenseTable({ expenses, categories, sort, order, onSort
           </tr>
         </thead>
         <tbody>
-          {expenses.map((expense) =>
+          {visible.map((expense) =>
             editingId === expense.id ? (
               <tr key={expense.id} className="editing">
                 <td>
@@ -129,6 +145,35 @@ export default function ExpenseTable({ expenses, categories, sort, order, onSort
           )}
         </tbody>
       </table>
+
+      <div className="pager">
+        <span className="muted">
+          {start + 1}–{Math.min(start + PAGE_SIZE, expenses.length)} of {expenses.length}
+        </span>
+        {pageCount > 1 && (
+          <span className="pager-controls">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => setPage(page - 1)}
+              disabled={page === 1}
+            >
+              Previous
+            </button>
+            <span className="muted">
+              Page {page} of {pageCount}
+            </span>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => setPage(page + 1)}
+              disabled={page === pageCount}
+            >
+              Next
+            </button>
+          </span>
+        )}
+      </div>
     </div>
   );
 }

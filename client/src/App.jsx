@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ExpenseForm from './components/ExpenseForm.jsx';
 import ExpenseTable from './components/ExpenseTable.jsx';
 import Filters from './components/Filters.jsx';
@@ -7,6 +7,8 @@ import CategoryChart from './components/CategoryChart.jsx';
 import TrendChart from './components/TrendChart.jsx';
 import Budgets from './components/Budgets.jsx';
 import ImportExport from './components/ImportExport.jsx';
+import DailyChart from './components/DailyChart.jsx';
+import useDebouncedValue from './useDebouncedValue.js';
 import { currentMonth } from './format.js';
 import {
   createExpense,
@@ -35,11 +37,25 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [undoable, setUndoable] = useState(null);
+  const undoTimer = useRef(null);
+
+  const debouncedQuery = useDebouncedValue(filters.q, 300);
+
+  const queryFilters = useMemo(
+    () => ({
+      q: debouncedQuery,
+      category: filters.category,
+      from: filters.from,
+      to: filters.to
+    }),
+    [debouncedQuery, filters.category, filters.from, filters.to]
+  );
 
   const loadExpenses = useCallback(async () => {
-    const rows = await listExpenses({ ...filters, sort, order });
+    const rows = await listExpenses({ ...queryFilters, sort, order });
     setExpenses(rows);
-  }, [filters, sort, order]);
+  }, [queryFilters, sort, order]);
 
   const loadSummary = useCallback(async () => {
     const [nextSummary, nextBudgets] = await Promise.all([getSummary(month), listBudgets()]);
@@ -101,12 +117,44 @@ export default function App() {
       return saved;
     });
 
-  const handleDelete = (id) =>
-    guard(async () => {
+  function clearUndo() {
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    undoTimer.current = null;
+    setUndoable(null);
+  }
+
+  const handleDelete = (id) => {
+    const removed = expenses.find((expense) => expense.id === id);
+    return guard(async () => {
       await deleteExpense(id);
+      await refresh();
+      if (removed) {
+        if (undoTimer.current) clearTimeout(undoTimer.current);
+        setUndoable(removed);
+        undoTimer.current = setTimeout(() => setUndoable(null), 8000);
+      }
+      return true;
+    });
+  };
+
+  const handleUndo = () => {
+    const expense = undoable;
+    clearUndo();
+    return guard(async () => {
+      await createExpense({
+        description: expense.description,
+        amount: expense.amount,
+        category: expense.category,
+        date: expense.date
+      });
       await refresh();
       return true;
     });
+  };
+
+  useEffect(() => () => {
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+  }, []);
 
   const handleBudget = (category, limit) =>
     guard(async () => {
@@ -122,7 +170,7 @@ export default function App() {
       return outcome;
     });
 
-  const handleExport = () => guard(() => exportCsv({ ...filters, sort, order }));
+  const handleExport = () => guard(() => exportCsv({ ...queryFilters, sort, order }));
 
   function handleSort(key) {
     if (sort === key) setOrder(order === 'asc' ? 'desc' : 'asc');
@@ -143,6 +191,17 @@ export default function App() {
       </header>
 
       {error && <p className="error">{error}</p>}
+
+      {undoable && (
+        <p className="undo-bar" role="status">
+          <span>
+            Deleted “{undoable.description}”
+          </span>
+          <button type="button" className="link" onClick={handleUndo}>
+            Undo
+          </button>
+        </p>
+      )}
 
       <main>
         <div className="column">
@@ -165,6 +224,13 @@ export default function App() {
             <div className="card">
               <h2>By category</h2>
               <CategoryChart categories={summary.categories} />
+            </div>
+          )}
+
+          {summary && (
+            <div className="card">
+              <h2>Daily spending</h2>
+              <DailyChart month={summary.month} daily={summary.daily} />
             </div>
           )}
 
