@@ -1,6 +1,13 @@
 const express = require('express');
 const { pool, rowToExpense } = require('../db');
-const { CATEGORIES, EXPENSE_CATEGORIES, INCOME_CATEGORIES, PAYMENT_METHODS, validateExpense, parseFilters } = require('../validate');
+const {
+  CATEGORIES,
+  EXPENSE_CATEGORIES,
+  INCOME_CATEGORIES,
+  PAYMENT_METHODS,
+  validateExpense,
+  parseFilters
+} = require('../validate');
 const { toCsv, csvToExpenses } = require('../csv');
 
 const router = express.Router();
@@ -31,7 +38,9 @@ function buildWhere(filters, userId) {
     const numeric = Number(filters.q);
     if (Number.isFinite(numeric)) {
       params.push(numeric);
-      clauses.push(`(description ILIKE ${like} OR category ILIKE ${like} OR amount = $${params.length})`);
+      clauses.push(
+        `(description ILIKE ${like} OR category ILIKE ${like} OR amount = $${params.length})`
+      );
     } else {
       clauses.push(`(description ILIKE ${like} OR category ILIKE ${like})`);
     }
@@ -51,7 +60,11 @@ async function queryExpenses(filters, userId) {
 }
 
 router.get('/categories', (req, res) =>
-  res.json({ expense: EXPENSE_CATEGORIES, income: INCOME_CATEGORIES, paymentMethods: PAYMENT_METHODS })
+  res.json({
+    expense: EXPENSE_CATEGORIES,
+    income: INCOME_CATEGORIES,
+    paymentMethods: PAYMENT_METHODS
+  })
 );
 
 router.get('/export', async (req, res, next) => {
@@ -75,7 +88,8 @@ router.post('/import', async (req, res, next) => {
     const { errors, records } = csvToExpenses(text);
     if (errors.length) return res.status(400).json({ errors });
     if (records.length === 0) return res.status(400).json({ errors: ['no rows to import'] });
-    if (records.length > 5000) return res.status(400).json({ errors: ['too many rows (max 5000)'] });
+    if (records.length > 5000)
+      return res.status(400).json({ errors: ['too many rows (max 5000)'] });
 
     const rejected = [];
     const accepted = [];
@@ -122,10 +136,20 @@ router.post('/', async (req, res, next) => {
   try {
     const { errors, value } = validateExpense(req.body);
     if (errors.length) return res.status(400).json({ errors });
+    if (
+      value.accountId &&
+      !(
+        await pool.query('SELECT id FROM accounts WHERE id = $1 AND user_id = $2', [
+          value.accountId,
+          req.user.id
+        ])
+      ).rowCount
+    )
+      return res.status(400).json({ error: 'Account not found' });
 
     const { rows } = await pool.query(
-      `INSERT INTO expenses (user_id, kind, description, amount, category, date, payment_method, note, receipt_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      `INSERT INTO expenses (user_id, kind, description, amount, category, date, payment_method, note, receipt_id, account_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
       [
         req.user.id,
         value.kind,
@@ -135,16 +159,20 @@ router.post('/', async (req, res, next) => {
         value.date,
         value.paymentMethod ?? null,
         value.note ?? '',
-        value.receiptId ?? null
+        value.receiptId ?? null,
+        value.accountId ?? null
       ]
     );
     res.status(201).json(rowToExpense(rows[0]));
   } catch (err) {
+    if (err.code === '23503')
+      return res.status(400).json({ error: 'The selected account is no longer available.' });
     next(err);
   }
 });
 
 const COLUMN_FOR = {
+  accountId: 'account_id',
   kind: 'kind',
   description: 'description',
   amount: 'amount',
@@ -169,6 +197,16 @@ router.put('/:id', async (req, res, next) => {
     });
     if (errors.length) return res.status(400).json({ errors });
 
+    if (
+      value.accountId &&
+      !(
+        await pool.query('SELECT id FROM accounts WHERE id = $1 AND user_id = $2', [
+          value.accountId,
+          req.user.id
+        ])
+      ).rowCount
+    )
+      return res.status(400).json({ error: 'Account not found' });
     const fields = Object.keys(value);
     if (fields.length === 0) {
       return res.status(400).json({ errors: ['no updatable fields provided'] });
@@ -188,6 +226,8 @@ router.put('/:id', async (req, res, next) => {
     res.json(rowToExpense(rows[0]));
   } catch (err) {
     if (err.code === '22P02') return res.status(404).json({ error: 'Expense not found' });
+    if (err.code === '23503')
+      return res.status(400).json({ error: 'The selected account is no longer available.' });
     next(err);
   }
 });

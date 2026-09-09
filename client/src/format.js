@@ -11,9 +11,21 @@ const rupeesCompact = new Intl.NumberFormat('en-IN', {
   maximumFractionDigits: 0
 });
 
-const monthLabel = new Intl.DateTimeFormat('en-IN', { month: 'short', year: '2-digit', timeZone: 'UTC' });
-const monthLong = new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-const dayLabel = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', timeZone: 'UTC' });
+const monthLabel = new Intl.DateTimeFormat('en-IN', {
+  month: 'short',
+  year: '2-digit',
+  timeZone: 'UTC'
+});
+const monthLong = new Intl.DateTimeFormat('en-IN', {
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC'
+});
+const dayLabel = new Intl.DateTimeFormat('en-IN', {
+  day: '2-digit',
+  month: 'short',
+  timeZone: 'UTC'
+});
 
 export const formatMoney = (value) => rupees.format(value);
 export const formatMoneyShort = (value) => rupeesCompact.format(value);
@@ -34,7 +46,7 @@ export const todayIso = () => new Date().toISOString().slice(0, 10);
 // last two days — beyond that the actual date is more useful than "5 days ago".
 export function formatRelativeDay(date) {
   const today = new Date();
-  const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
   const value = new Date(`${date}T00:00:00Z`).getTime();
   const days = Math.round((todayUtc - value) / 86400000);
 
@@ -50,7 +62,8 @@ export const PAYMENT_LABEL = {
   bank_transfer: 'Bank transfer'
 };
 
-export const paymentLabel = (method) => (method ? PAYMENT_LABEL[method] || titleCase(method) : null);
+export const paymentLabel = (method) =>
+  method ? PAYMENT_LABEL[method] || titleCase(method) : null;
 
 const longDay = new Intl.DateTimeFormat('en-IN', {
   weekday: 'long',

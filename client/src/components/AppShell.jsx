@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { budgetAlert, money } from '../dashboard.js';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import { formatToday } from '../format.js';
@@ -5,26 +7,62 @@ import { formatToday } from '../format.js';
 const NAV = [
   { to: '/', label: 'Overview', icon: 'chart', end: true },
   { to: '/transactions', label: 'Transactions', icon: 'swap' },
+  { to: '/accounts', label: 'Accounts', icon: 'accounts' },
   { to: '/budgets', label: 'Budgets', icon: 'budget' },
+  { to: '/goals', label: 'Savings goals', icon: 'savings' },
   { to: '/reports', label: 'Reports', icon: 'bills' }
 ];
 
 const TITLES = {
   '/': { title: 'Your money, in focus.', subtitle: 'today' },
-  '/transactions': { title: 'Every rupee, accounted for.', subtitle: 'Search, filter and edit what you have recorded' },
-  '/budgets': { title: 'Limits that hold.', subtitle: 'Budgets and the payments that repeat' },
-  '/reports': { title: 'The longer view.', subtitle: 'Where your money goes over time' },
+  '/accounts': {
+    title: 'Your accounts.',
+    subtitle: 'Balances based on your recorded transactions'
+  },
+  '/goals': {
+    title: 'Make room for your goals.',
+    subtitle: 'Build your savings, one contribution at a time'
+  },
+  '/transactions': {
+    title: 'Every rupee, accounted for.',
+    subtitle: 'Search, filter and edit what you have recorded'
+  },
+  '/budgets': {
+    title: 'Limits that hold.',
+    subtitle: 'Budgets and the payments that repeat'
+  },
+  '/reports': {
+    title: 'The longer view.',
+    subtitle: 'Where your money goes over time'
+  },
   '/settings': { title: 'Settings', subtitle: 'Your account and preferences' },
   '/add': { title: 'Add transaction', subtitle: '' }
 };
 
 export default function AppShell({ context }) {
+  const [alertsOpen, setAlertsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const page = TITLES[pathname] || TITLES['/'];
   const isTask = pathname === '/add';
 
-  const { month, setMonth, error, undoable, handlers, session, onSignOut, settings } = context;
+  const {
+    month,
+    setMonth,
+    error,
+    undoable,
+    handlers,
+    session,
+    onSignOut,
+    settings,
+    filters,
+    setFilters,
+    summary
+  } = context;
+  const pressure = budgetAlert(summary?.categories);
+  const bills = summary?.upcoming || [];
   const name = settings?.displayName || session.user.displayName || '';
   const initial = (name || session.user.email).trim().charAt(0).toUpperCase();
 
@@ -65,13 +103,32 @@ export default function AppShell({ context }) {
           <span className="sidebar-rule" />
         </p>
 
-        <svg className="sidebar-hills" viewBox="0 0 258 150" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M0,150 L52,72 L88,110 L132,44 L176,104 L214,68 L258,120 L258,150 Z" fill="none" stroke="#59a487" strokeWidth="1.4" />
-          <path d="M0,150 L40,104 L74,128 L118,86 L160,124 L206,96 L258,138 L258,150 Z" fill="#1b5540" fillOpacity="0.55" stroke="#4b9077" strokeWidth="1" />
+        <svg
+          className="sidebar-hills"
+          viewBox="0 0 258 150"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M0,150 L52,72 L88,110 L132,44 L176,104 L214,68 L258,120 L258,150 Z"
+            fill="none"
+            stroke="#59a487"
+            strokeWidth="1.4"
+          />
+          <path
+            d="M0,150 L40,104 L74,128 L118,86 L160,124 L206,96 L258,138 L258,150 Z"
+            fill="#1b5540"
+            fillOpacity="0.55"
+            stroke="#4b9077"
+            strokeWidth="1"
+          />
         </svg>
 
         <div className="sidebar-foot">
-          <NavLink to="/settings" className={({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')}>
+          <NavLink
+            to="/settings"
+            className={({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')}
+          >
             <Icon name="settings" size={20} strokeWidth={1.9} />
             <span>Settings</span>
           </NavLink>
@@ -88,7 +145,12 @@ export default function AppShell({ context }) {
         <header className="page-header">
           <div className="page-title">
             {isTask && (
-              <button type="button" className="icon-button" onClick={() => navigate(-1)} aria-label="Go back">
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => navigate(-1)}
+                aria-label="Go back"
+              >
                 <Icon name="back" size={19} />
               </button>
             )}
@@ -104,13 +166,93 @@ export default function AppShell({ context }) {
 
           {!isTask && (
             <div className="header-tools">
-              <span className="avatar" aria-hidden="true">
+              <form
+                className="global-search search-field"
+                role="search"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  setFilters({ ...filters, q: search, from: '', to: '' });
+                  navigate('/transactions');
+                }}
+              >
+                <button type="submit" aria-label="Search">
+                  <Icon name="search" size={18} />
+                </button>
+                <input
+                  aria-label="Search transactions and categories"
+                  placeholder="Search transactions, categories…"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              </form>
+              <div className="alerts-container">
+                <button
+                  className="notification-button"
+                  aria-label="Budget and bill notifications"
+                  aria-expanded={alertsOpen}
+                  onClick={() => setAlertsOpen(!alertsOpen)}
+                >
+                  <Icon name="bell" size={23} />
+                  {(pressure || bills.length > 0) && <i className="notification-dot" />}
+                </button>
+                {alertsOpen && (
+                  <section
+                    className="notification-panel"
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') setAlertsOpen(false);
+                    }}
+                  >
+                    <h2>Notifications</h2>
+                    {pressure && (
+                      <NavLink to="/budgets" onClick={() => setAlertsOpen(false)}>
+                        {pressure.category} budget: {money(pressure.total)} of{' '}
+                        {money(pressure.budget)} used
+                      </NavLink>
+                    )}
+                    {bills.slice(0, 3).map((bill) => (
+                      <NavLink key={bill.id} to="/budgets" onClick={() => setAlertsOpen(false)}>
+                        {bill.description} · {money(bill.amount)} · {bill.date}
+                      </NavLink>
+                    ))}
+                    {!pressure && !bills.length && (
+                      <p className="hint">No budget or bill alerts this month.</p>
+                    )}
+                    <button className="link" onClick={() => setAlertsOpen(false)}>
+                      Close
+                    </button>
+                  </section>
+                )}
+              </div>
+              <NavLink to="/settings" className="avatar" aria-label="Profile and settings">
                 {initial}
-              </span>
+              </NavLink>
+              <button
+                className="icon-button mobile-menu-button"
+                aria-label="Open navigation"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen(!menuOpen)}
+              >
+                <Icon name="list" />
+              </button>
             </div>
           )}
         </header>
 
+        {menuOpen && (
+          <nav className="mobile-menu" aria-label="More navigation">
+            {NAV.map((item) => (
+              <NavLink key={item.to} to={item.to} onClick={() => setMenuOpen(false)}>
+                {item.label}
+              </NavLink>
+            ))}
+            <NavLink to="/settings" onClick={() => setMenuOpen(false)}>
+              Settings
+            </NavLink>
+            <button className="link" onClick={onSignOut}>
+              Sign out
+            </button>
+          </nav>
+        )}
         {!isTask && (
           <div className="page-actions">
             <label className="month-select">
@@ -162,8 +304,12 @@ export default function AppShell({ context }) {
           <Icon name="plus" size={25} strokeWidth={2.3} />
         </NavLink>
 
-        {NAV.slice(2, 4).map((item) => (
-          <NavLink key={item.to} to={item.to} className={({ isActive }) => (isActive ? 'tab active' : 'tab')}>
+        {NAV.filter((item) => ['/budgets', '/reports'].includes(item.to)).map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) => (isActive ? 'tab active' : 'tab')}
+          >
             <Icon name={item.icon} size={21} strokeWidth={1.9} />
             <span>{item.label}</span>
           </NavLink>

@@ -1,5 +1,3 @@
-import { formatMoneyShort } from '../format.js';
-
 const WIDTH = 780;
 const HEIGHT = 320;
 const TOP = 40;
@@ -14,11 +12,11 @@ function niceMax(value) {
   return Math.ceil(value / step) * step;
 }
 
-export default function CashFlowChart({ weekly }) {
+export default function CashFlowChart({ weekly = [], month }) {
   const peak = Math.max(...weekly.flatMap((week) => [week.income, week.expenses]), 0);
   const max = niceMax(peak);
   const plot = FLOOR - TOP;
-  const slot = (WIDTH - AXIS_X) / weekly.length;
+  const slot = (WIDTH - AXIS_X) / Math.max(weekly.length, 1);
   const barWidth = Math.min(52, slot / 3.4);
   const gap = 8;
 
@@ -58,16 +56,40 @@ export default function CashFlowChart({ weekly }) {
             <g key={week.week}>
               {week.income > 0 && (
                 <>
-                  <rect x={incomeX} y={y(week.income)} width={barWidth} height={FLOOR - y(week.income)} rx="6" className="bar-income" />
-                  <text x={incomeX + barWidth / 2} y={y(week.income) - 9} textAnchor="middle" className="bar-label">
+                  <rect
+                    x={incomeX}
+                    y={y(week.income)}
+                    width={barWidth}
+                    height={FLOOR - y(week.income)}
+                    rx="6"
+                    className="bar-income"
+                  />
+                  <text
+                    x={incomeX + barWidth / 2}
+                    y={y(week.income) - 9}
+                    textAnchor="middle"
+                    className="bar-label"
+                  >
                     {Math.round(week.income).toLocaleString('en-IN')}
                   </text>
                 </>
               )}
               {week.expenses > 0 && (
                 <>
-                  <rect x={expenseX} y={y(week.expenses)} width={barWidth} height={FLOOR - y(week.expenses)} rx="6" className="bar-expense" />
-                  <text x={expenseX + barWidth / 2} y={y(week.expenses) - 9} textAnchor="middle" className="bar-label">
+                  <rect
+                    x={expenseX}
+                    y={y(week.expenses)}
+                    width={barWidth}
+                    height={FLOOR - y(week.expenses)}
+                    rx="6"
+                    className="bar-expense"
+                  />
+                  <text
+                    x={expenseX + barWidth / 2}
+                    y={y(week.expenses) - 9}
+                    textAnchor="middle"
+                    className="bar-label"
+                  >
                     {Math.round(week.expenses).toLocaleString('en-IN')}
                   </text>
                 </>
@@ -76,7 +98,11 @@ export default function CashFlowChart({ weekly }) {
                 {week.label}
               </text>
               <text x={centre} y={FLOOR + 41} textAnchor="middle" className="chart-tick">
-                {week.from}–{week.to} {new Date().toLocaleString('en-IN', { month: 'short' })}
+                {week.from}–{week.to}{' '}
+                {new Date(`${month}-01T00:00:00Z`).toLocaleString('en-IN', {
+                  month: 'short',
+                  timeZone: 'UTC'
+                })}
               </text>
             </g>
           );
@@ -84,7 +110,6 @@ export default function CashFlowChart({ weekly }) {
       </svg>
 
       {peak === 0 && <p className="empty">Nothing recorded this month yet.</p>}
-      <p className="chart-foot muted">Peak week {formatMoneyShort(peak)}</p>
     </div>
   );
 }

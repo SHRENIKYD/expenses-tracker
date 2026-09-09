@@ -116,3 +116,28 @@ anything long-lived, move both to a paid plan.
 | `DATABASE_SSL`  | `true` to connect over SSL; anything else disables it        |
 | `CLIENT_ORIGIN` | Origin allowed by CORS (defaults to `http://localhost:5173`) |
 | `PORT`          | API port (defaults to `4000`)                                |
+
+## Green dashboard
+
+The overview uses the selected month's income, expenses, cash flow, category
+breakdown and budget alerts. Transaction searches and CSV exports default to
+that month; explicit date filters on Transactions override the month bounds.
+The header search opens Transactions with the entered query. Notifications show
+budget pressure and unpaid recurring bills from the selected month.
+
+Accounts have a manually entered opening balance and accumulate income minus
+expenses assigned to them. Existing transactions remain unassigned until edited.
+Payment method (UPI, card, cash, bank transfer) is separate from the account.
+Accounts with transactions cannot be deleted until those transactions are
+unassigned. These balances are based on recorded data, not bank synchronization.
+
+Savings goals have a target and a contribution history. Recording a contribution
+tracks money already set aside; it does not transfer money, change an account
+balance, or count as an expense. Each account, goal and contribution belongs to
+the signed-in user. The server creates the new tables and account link on startup
+using its existing idempotent schema setup. Deploy the server changes before the
+client because the dashboard now requests `/api/accounts` and `/api/goals`.
+
+`npm test` includes an in-memory PostgreSQL (PGlite) integration test for schema
+initialization, ownership isolation, account balances, goal contributions and
+month filters. It does not connect to or modify a deployed database.

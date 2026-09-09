@@ -15,6 +15,7 @@ export default function ExpenseTable({
   categories,
   incomeCategories = [],
   paymentMethods = [],
+  accounts = [],
   sort,
   order,
   onSort,
@@ -39,6 +40,7 @@ export default function ExpenseTable({
   function startEdit(expense) {
     setEditingId(expense.id);
     setDraft({
+      accountId: expense.accountId || '',
       description: expense.description,
       amount: String(expense.amount),
       category: expense.category,
@@ -79,10 +81,13 @@ export default function ExpenseTable({
                   aria-label={`Sort by ${column.label}`}
                 >
                   {column.label}
-                  {sort === column.key && <span aria-hidden="true">{order === 'asc' ? ' ▲' : ' ▼'}</span>}
+                  {sort === column.key && (
+                    <span aria-hidden="true">{order === 'asc' ? ' ▲' : ' ▼'}</span>
+                  )}
                 </button>
               </th>
             ))}
+            <th>Account</th>
             <th aria-label="Actions" />
           </tr>
         </thead>
@@ -125,6 +130,20 @@ export default function ExpenseTable({
                     onChange={(event) => setDraft({ ...draft, amount: event.target.value })}
                   />
                 </td>
+                <td>
+                  <select
+                    aria-label="Account"
+                    value={draft.accountId}
+                    onChange={(event) => setDraft({ ...draft, accountId: event.target.value })}
+                  >
+                    <option value="">Unassigned</option>
+                    {accounts.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.name}
+                      </option>
+                    ))}
+                  </select>
+                </td>
                 <td className="actions">
                   <button type="button" onClick={commit} disabled={saving}>
                     {saving ? 'Saving…' : 'Save'}
@@ -147,11 +166,19 @@ export default function ExpenseTable({
                     {formatMoney(expense.amount)}
                   </span>
                 </td>
+                <td data-label="Account">
+                  {accounts.find((account) => account.id === expense.accountId)?.name ||
+                    'Unassigned'}
+                </td>
                 <td className="actions">
                   <button type="button" className="link" onClick={() => startEdit(expense)}>
                     Edit
                   </button>
-                  <button type="button" className="link danger" onClick={() => onDelete(expense.id)}>
+                  <button
+                    type="button"
+                    className="link danger"
+                    onClick={() => onDelete(expense.id)}
+                  >
                     Delete
                   </button>
                 </td>
@@ -165,7 +192,7 @@ export default function ExpenseTable({
             <td className="numeric">
               {formatMoney(expenses.reduce((sum, expense) => sum + expense.amount, 0))}
             </td>
-            <td />
+            <td colSpan="2" />
           </tr>
         </tfoot>
       </table>

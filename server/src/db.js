@@ -113,6 +113,37 @@ const SCHEMA = [
    EXCEPTION WHEN undefined_object THEN NULL; END $$`,
   `DO $$ BEGIN ALTER TABLE settings DROP CONSTRAINT settings_pkey;
    EXCEPTION WHEN undefined_object THEN NULL; END $$`,
+  `CREATE TABLE IF NOT EXISTS accounts (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 80),
+     opening_balance NUMERIC(12,2) NOT NULL DEFAULT 0,
+     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+     UNIQUE(id, user_id)
+   )`,
+  `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS account_id UUID`,
+  `DO $$ BEGIN ALTER TABLE expenses ADD CONSTRAINT expenses_account_owner
+     FOREIGN KEY (account_id, user_id) REFERENCES accounts(id, user_id);
+   EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+  `CREATE INDEX IF NOT EXISTS expenses_account_idx ON expenses(account_id)`,
+  `CREATE TABLE IF NOT EXISTS savings_goals (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 80),
+     target NUMERIC(12,2) NOT NULL CHECK (target > 0),
+     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+     UNIQUE(id, user_id)
+   )`,
+  `CREATE TABLE IF NOT EXISTS goal_contributions (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     goal_id UUID NOT NULL,
+     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),
+     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+     FOREIGN KEY (goal_id, user_id) REFERENCES savings_goals(id, user_id) ON DELETE CASCADE
+   )`,
+  `CREATE INDEX IF NOT EXISTS goals_user_idx ON savings_goals(user_id)`,
+  `CREATE INDEX IF NOT EXISTS contributions_goal_idx ON goal_contributions(goal_id)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS budgets_user_category_idx ON budgets (user_id, category)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS settings_user_key_idx ON settings (user_id, key)`
 ];
@@ -128,9 +159,10 @@ async function init() {
 async function claimOrphanRows(userId) {
   const claimed = {};
   for (const table of ['expenses', 'recurring', 'budgets', 'settings', 'receipts']) {
-    const { rowCount } = await pool.query(`UPDATE ${table} SET user_id = $1 WHERE user_id IS NULL`, [
-      userId
-    ]);
+    const { rowCount } = await pool.query(
+      `UPDATE ${table} SET user_id = $1 WHERE user_id IS NULL`,
+      [userId]
+    );
     if (rowCount > 0) claimed[table] = rowCount;
   }
   return claimed;
@@ -145,6 +177,7 @@ function rowToExpense(row) {
     category: row.category,
     date: row.date instanceof Date ? row.date.toISOString().slice(0, 10) : String(row.date),
     paymentMethod: row.payment_method || null,
+    accountId: row.account_id || null,
     note: row.note || '',
     receiptId: row.receipt_id || null,
     source: row.source || 'manual',

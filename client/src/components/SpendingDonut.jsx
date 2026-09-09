@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { formatMoney, titleCase } from '../format.js';
+import { titleCase } from '../format.js';
+import { money as formatMoney } from '../dashboard.js';
 
 const SIZE = 140;
 const RADIUS = 54;
@@ -14,12 +15,19 @@ const OTHER = '#dfa63f';
 
 function fold(categories) {
   const sorted = [...categories].filter((row) => row.total > 0).sort((a, b) => b.total - a.total);
-  if (sorted.length <= MAX_SLICES) return sorted.map((row, i) => ({ ...row, colour: SHADES[i] }));
+  if (sorted.length <= MAX_SLICES)
+    return sorted.map((row, i) => ({
+      ...row,
+      colour: row.category === 'other' ? OTHER : SHADES[i]
+    }));
 
-  const head = sorted.slice(0, MAX_SLICES - 1).map((row, i) => ({ ...row, colour: SHADES[i] }));
+  const head = sorted.slice(0, MAX_SLICES - 1).map((row, i) => ({
+    ...row,
+    colour: row.category === 'other' ? OTHER : SHADES[i]
+  }));
   const rest = sorted.slice(MAX_SLICES - 1);
   head.push({
-    category: 'other',
+    category: 'other categories',
     total: rest.reduce((sum, row) => sum + row.total, 0),
     count: rest.reduce((sum, row) => sum + row.count, 0),
     overBudget: false,
@@ -53,7 +61,12 @@ export default function SpendingDonut({ categories, total }) {
 
   return (
     <div className="donut-row">
-      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="donut-svg" role="img" aria-label="Share of this month's spending by category">
+      <svg
+        viewBox={`0 0 ${SIZE} ${SIZE}`}
+        className="donut-svg"
+        role="img"
+        aria-label="Share of this month's spending by category"
+      >
         <g transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}>
           {arcs.map((arc) => (
             <circle

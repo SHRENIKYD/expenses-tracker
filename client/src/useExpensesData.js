@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useDebouncedValue from './useDebouncedValue.js';
+import { monthRange } from './dashboard.js';
+import {
+  listAccounts,
+  createAccount,
+  removeAccount,
+  listGoals,
+  createGoal,
+  removeGoal,
+  contributeGoal
+} from './api.js';
 import { currentMonth } from './format.js';
 import {
   applyRecurring,
@@ -23,11 +33,20 @@ import {
 export const emptyFilters = { q: '', category: '', from: '', to: '', kind: '' };
 
 export default function useExpensesData() {
+  const [accounts, setAccounts] = useState([]);
+  const [goals, setGoals] = useState([]);
   const [expenses, setExpenses] = useState([]);
-  const [categories, setCategories] = useState({ expense: ['other'], income: ['salary'], paymentMethods: [] });
+  const [categories, setCategories] = useState({
+    expense: ['other'],
+    income: ['salary'],
+    paymentMethods: []
+  });
   const [budgets, setBudgets] = useState([]);
   const [recurring, setRecurring] = useState([]);
-  const [settings, setSettings] = useState({ displayName: '', monthlyBudget: 0 });
+  const [settings, setSettings] = useState({
+    displayName: '',
+    monthlyBudget: 0
+  });
   const [summary, setSummary] = useState(null);
   const [filters, setFilters] = useState(emptyFilters);
   const [sort, setSort] = useState('date');
@@ -38,6 +57,8 @@ export default function useExpensesData() {
   const [error, setError] = useState('');
   const [undoable, setUndoable] = useState(null);
   const undoTimer = useRef(null);
+  const expensesRequest = useRef(0);
+  const contextRequest = useRef(0);
 
   const debouncedQuery = useDebouncedValue(filters.q, 300);
 
@@ -46,27 +67,36 @@ export default function useExpensesData() {
       q: debouncedQuery,
       category: filters.category,
       kind: filters.kind,
-      from: filters.from,
-      to: filters.to
+      from: filters.from || monthRange(month).from,
+      to: filters.to || monthRange(month).to
     }),
-    [debouncedQuery, filters.category, filters.kind, filters.from, filters.to]
+    [debouncedQuery, filters.category, filters.kind, filters.from, filters.to, month]
   );
 
   const loadExpenses = useCallback(async () => {
-    setExpenses(await listExpenses({ ...queryFilters, sort, order }));
+    const request = ++expensesRequest.current;
+    const rows = await listExpenses({ ...queryFilters, sort, order });
+    if (request === expensesRequest.current) setExpenses(rows);
   }, [queryFilters, sort, order]);
 
   const loadContext = useCallback(async () => {
-    const [nextSummary, nextBudgets, nextRecurring, nextSettings] = await Promise.all([
-      getSummary(month),
-      listBudgets(),
-      listRecurring(),
-      getSettings()
-    ]);
+    const request = ++contextRequest.current;
+    const [nextSummary, nextBudgets, nextRecurring, nextSettings, nextAccounts, nextGoals] =
+      await Promise.all([
+        getSummary(month),
+        listBudgets(),
+        listRecurring(),
+        getSettings(),
+        listAccounts(),
+        listGoals()
+      ]);
+    if (request !== contextRequest.current) return;
     setSummary(nextSummary);
     setBudgets(nextBudgets);
     setRecurring(nextRecurring);
     setSettings(nextSettings);
+    setAccounts(nextAccounts);
+    setGoals(nextGoals);
   }, [month]);
 
   useEffect(() => {
@@ -120,6 +150,36 @@ export default function useExpensesData() {
 
   const handlers = {
     refresh,
+    createAccount: (value) =>
+      guard(async () => {
+        const result = await createAccount(value);
+        await refresh();
+        return result;
+      }),
+    removeAccount: (id) =>
+      guard(async () => {
+        await removeAccount(id);
+        await refresh();
+        return true;
+      }),
+    createGoal: (value) =>
+      guard(async () => {
+        const result = await createGoal(value);
+        await loadContext();
+        return result;
+      }),
+    removeGoal: (id) =>
+      guard(async () => {
+        await removeGoal(id);
+        await loadContext();
+        return true;
+      }),
+    contributeGoal: (id, amount) =>
+      guard(async () => {
+        const result = await contributeGoal(id, amount);
+        await loadContext();
+        return result;
+      }),
     async create(form) {
       setSubmitting(true);
       const created = await guard(async () => {
@@ -160,7 +220,8 @@ export default function useExpensesData() {
           category: expense.category,
           date: expense.date,
           paymentMethod: expense.paymentMethod,
-          note: expense.note
+          note: expense.note,
+          accountId: expense.accountId
         });
         await refresh();
         return true;
@@ -215,6 +276,8 @@ export default function useExpensesData() {
 
   return {
     expenses,
+    accounts,
+    goals,
     categories,
     budgets,
     recurring,
@@ -225,7 +288,11 @@ export default function useExpensesData() {
     sort,
     order,
     month,
-    setMonth,
+    setMonth: (value) => {
+      if (!/^\d{4}-\d{2}$/.test(value)) return;
+      setMonth(value);
+      setFilters((current) => ({ ...current, from: '', to: '' }));
+    },
     loading,
     submitting,
     error,

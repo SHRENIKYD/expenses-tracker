@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import AppShell from './components/AppShell.jsx';
 import SignIn from './components/SignIn.jsx';
+import Accounts from './pages/Accounts.jsx';
+import Goals from './pages/Goals.jsx';
 import Overview from './pages/Overview.jsx';
 import Transactions from './pages/Transactions.jsx';
 import BudgetsPage from './pages/BudgetsPage.jsx';
@@ -20,6 +22,8 @@ function Workspace({ session, onSignOut }) {
     <Routes>
       <Route element={<AppShell context={context} />}>
         <Route index element={<Overview />} />
+        <Route path="accounts" element={<Accounts />} />
+        <Route path="goals" element={<Goals />} />
         <Route path="transactions" element={<Transactions />} />
         <Route path="budgets" element={<BudgetsPage />} />
         <Route path="reports" element={<Reports />} />
