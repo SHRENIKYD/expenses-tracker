@@ -10,7 +10,17 @@ const COLUMNS = [
 
 const PAGE_SIZE = 25;
 
-export default function ExpenseTable({ expenses, categories, sort, order, onSort, onSave, onDelete }) {
+export default function ExpenseTable({
+  expenses,
+  categories,
+  incomeCategories = [],
+  paymentMethods = [],
+  sort,
+  order,
+  onSort,
+  onSave,
+  onDelete
+}) {
   const [page, setPage] = useState(1);
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState(null);
@@ -99,7 +109,7 @@ export default function ExpenseTable({ expenses, categories, sort, order, onSort
                     value={draft.category}
                     onChange={(event) => setDraft({ ...draft, category: event.target.value })}
                   >
-                    {categories.map((category) => (
+                    {(expense.kind === 'income' ? incomeCategories : categories).map((category) => (
                       <option key={category} value={category}>
                         {titleCase(category)}
                       </option>
@@ -131,7 +141,12 @@ export default function ExpenseTable({ expenses, categories, sort, order, onSort
                 <td data-label="Category">
                   <span className="tag">{titleCase(expense.category)}</span>
                 </td>
-                <td className="numeric" data-label="Amount">{formatMoney(expense.amount)}</td>
+                <td className="numeric" data-label="Amount">
+                  <span className={expense.kind === 'income' ? 'amount-in' : 'amount-out'}>
+                    {expense.kind === 'income' ? '+' : '−'}
+                    {formatMoney(expense.amount)}
+                  </span>
+                </td>
                 <td className="actions">
                   <button type="button" className="link" onClick={() => startEdit(expense)}>
                     Edit

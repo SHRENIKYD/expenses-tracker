@@ -37,6 +37,11 @@ jobs:
           VITE_BASE: /${{ github.event.repository.name }}/
           VITE_API_URL: ${{ vars.VITE_API_URL }}
 
+      # GitHub Pages has no SPA fallback: without this, a deep link such as
+      # /expenses-tracker/transactions returns a hard 404 on refresh.
+      - name: Add SPA fallback
+        run: cp client/dist/index.html client/dist/404.html
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: client/dist

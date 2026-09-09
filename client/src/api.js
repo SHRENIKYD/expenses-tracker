@@ -120,3 +120,5 @@ export async function uploadReceipt(file) {
   }
   return payload;
 }
+
+export const receiptUsage = () => request('/receipts/usage');

@@ -1,8 +1,8 @@
 import { titleCase } from '../format.js';
 
-export default function Filters({ categories, filters, onChange, onReset }) {
+export default function Filters({ categories, incomeCategories = [], filters, onChange, onReset }) {
   const update = (field) => (event) => onChange({ ...filters, [field]: event.target.value });
-  const active = filters.q || filters.category || filters.from || filters.to;
+  const active = filters.q || filters.category || filters.kind || filters.from || filters.to;
 
   return (
     <div className="card filters">
@@ -18,14 +18,32 @@ export default function Filters({ categories, filters, onChange, onReset }) {
         </label>
 
         <label>
+          Type
+          <select value={filters.kind} onChange={update('kind')}>
+            <option value="">All</option>
+            <option value="expense">Expense</option>
+            <option value="income">Income</option>
+          </select>
+        </label>
+
+        <label>
           Category
           <select value={filters.category} onChange={update('category')}>
             <option value="">All</option>
-            {categories.map((category) => (
-              <option key={category} value={category}>
-                {titleCase(category)}
-              </option>
-            ))}
+            <optgroup label="Expense">
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {titleCase(category)}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Income">
+              {incomeCategories.map((category) => (
+                <option key={category} value={category}>
+                  {titleCase(category)}
+                </option>
+              ))}
+            </optgroup>
           </select>
         </label>
 
