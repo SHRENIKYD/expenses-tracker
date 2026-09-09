@@ -18,6 +18,8 @@ export default function PhoneHeader({
   onNotifications,
   hasAlerts,
   onPeriod,
+  onMenu,
+  onExport,
   busy
 }) {
   const remaining = summary ? summary.remaining : null;
@@ -40,6 +42,11 @@ export default function PhoneHeader({
           <Icon name="bell" size={18} strokeWidth={1.9} />
           {hasAlerts && <i className="notification-dot" />}
         </button>
+        {/* Settings, accounts and goals are not in the tab bar and were on the
+            sidebar, which a phone never sees. */}
+        <button type="button" className="phone-icon" onClick={onMenu} aria-label="Open navigation">
+          <Icon name="list" size={18} strokeWidth={1.9} />
+        </button>
       </div>
 
       <div className="phone-figure">
@@ -60,6 +67,11 @@ export default function PhoneHeader({
           <button type="button" className="phone-chip" onClick={onPeriod} disabled={busy}>
             {periodLabel}
             <Icon name="chevronDown" size={15} strokeWidth={2.1} />
+          </button>
+
+          <button type="button" className="phone-chip" onClick={onExport}>
+            <Icon name="export" size={14} strokeWidth={2} />
+            Export
           </button>
 
           {summary && showFigure && (

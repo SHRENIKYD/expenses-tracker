@@ -172,6 +172,8 @@ export default function AppShell({ context }) {
             onSearch={() => setPhoneSearch((open) => !open)}
             onNotifications={() => setAlertsOpen(!alertsOpen)}
             onPeriod={() => setPhonePeriod((open) => !open)}
+            onMenu={() => setMenuOpen(!menuOpen)}
+            onExport={handlers.exportCsv}
           />
         )}
 

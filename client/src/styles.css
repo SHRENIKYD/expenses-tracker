@@ -3455,8 +3455,11 @@ select.remembered { border-color: #7fb79a; background: #f1f8f4; }
   .phone-sheet .card-search,
   .phone-sheet .month-select { width: 100%; }
 
-  /* Both are said by the header now. */
+  /* Everything this row held is now in the header — the period and Export — or
+     in the tab bar, where the floating button adds a transaction. An empty row
+     would still cost its margins. */
   .page-header { display: none; }
+  .page-actions { display: none; }
   .hero-card { display: none; }
 }
 
