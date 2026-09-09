@@ -5,11 +5,28 @@ const CATEGORIES = [
   'utilities',
   'health',
   'entertainment',
+  'education',
+  'shopping',
   'other'
 ];
 
+const SORT_COLUMNS = {
+  date: 'date',
+  amount: 'amount',
+  description: 'description',
+  category: 'category'
+};
+
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function isIsoDate(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(value).getTime());
+}
+
+function isIsoMonth(value) {
+  return /^\d{4}-\d{2}$/.test(value) && Number(value.slice(5, 7)) >= 1 && Number(value.slice(5, 7)) <= 12;
 }
 
 function validateExpense(body, { partial = false } = {}) {
@@ -31,6 +48,8 @@ function validateExpense(body, { partial = false } = {}) {
     const amount = Number(input.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
       errors.push('amount must be a positive number');
+    } else if (amount > 9999999999) {
+      errors.push('amount is too large');
     } else {
       value.amount = Math.round(amount * 100) / 100;
     }
@@ -49,11 +68,11 @@ function validateExpense(body, { partial = false } = {}) {
   }
 
   if (input.date !== undefined) {
-    const date = new Date(input.date);
-    if (Number.isNaN(date.getTime())) {
-      errors.push('date must be a valid date');
+    const date = typeof input.date === 'string' ? input.date.slice(0, 10) : '';
+    if (!isIsoDate(date)) {
+      errors.push('date must be a valid YYYY-MM-DD date');
     } else {
-      value.date = date.toISOString().slice(0, 10);
+      value.date = date;
     }
   } else if (!partial) {
     value.date = today();
@@ -62,4 +81,47 @@ function validateExpense(body, { partial = false } = {}) {
   return { errors, value };
 }
 
-module.exports = { CATEGORIES, validateExpense };
+function validateBudget(body) {
+  const errors = [];
+  const value = {};
+  const input = body && typeof body === 'object' ? body : {};
+
+  const limit = Number(input.monthlyLimit);
+  if (!Number.isFinite(limit) || limit < 0) {
+    errors.push('monthlyLimit must be a number of zero or more');
+  } else if (limit > 9999999999) {
+    errors.push('monthlyLimit is too large');
+  } else {
+    value.monthlyLimit = Math.round(limit * 100) / 100;
+  }
+
+  return { errors, value };
+}
+
+function parseFilters(query) {
+  const errors = [];
+  const filters = {};
+
+  if (query.category) {
+    if (!CATEGORIES.includes(query.category)) errors.push('unknown category filter');
+    else filters.category = query.category;
+  }
+
+  for (const key of ['from', 'to']) {
+    if (query[key]) {
+      if (!isIsoDate(query[key])) errors.push(`${key} must be a YYYY-MM-DD date`);
+      else filters[key] = query[key];
+    }
+  }
+
+  if (query.q && String(query.q).trim() !== '') {
+    filters.q = String(query.q).trim().slice(0, 100);
+  }
+
+  filters.sort = SORT_COLUMNS[query.sort] || 'date';
+  filters.order = String(query.order).toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
+  return { errors, filters };
+}
+
+module.exports = { CATEGORIES, validateExpense, validateBudget, parseFilters, isIsoDate, isIsoMonth, today };

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { titleCase, currentMonth } from '../format.js';
 
 const emptyForm = () => ({
   description: '',
@@ -16,12 +17,7 @@ export default function ExpenseForm({ categories, onSubmit, submitting }) {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    const created = await onSubmit({
-      description: form.description,
-      amount: form.amount,
-      category: form.category,
-      date: form.date
-    });
+    const created = await onSubmit(form);
     if (created) setForm(emptyForm());
   }
 
@@ -41,7 +37,7 @@ export default function ExpenseForm({ categories, onSubmit, submitting }) {
       </label>
 
       <label>
-        Amount
+        Amount (₹)
         <input
           type="number"
           min="0.01"
@@ -58,7 +54,7 @@ export default function ExpenseForm({ categories, onSubmit, submitting }) {
         <select value={form.category} onChange={(event) => update('category', event.target.value)}>
           {categories.map((category) => (
             <option key={category} value={category}>
-              {category}
+              {titleCase(category)}
             </option>
           ))}
         </select>
@@ -69,6 +65,7 @@ export default function ExpenseForm({ categories, onSubmit, submitting }) {
         <input
           type="date"
           value={form.date}
+          max={`${currentMonth()}-31`}
           onChange={(event) => update('date', event.target.value)}
           required
         />
