@@ -852,8 +852,8 @@ tfoot td {
 
 /* Sidebar measured against the supplied 272px-wide reference. */
 .sidebar {
-  width: 272px;
-  flex: 0 0 272px;
+  width: 320px;
+  flex: 0 0 320px;
   height: 100vh;
   height: 100dvh;
   position: sticky;
@@ -3316,3 +3316,8 @@ select.remembered { border-color: #7fb79a; background: #f1f8f4; }
 .sidebar-theme-label::before { content: ''; width: 16px; height: 16px; flex-shrink: 0; border: 1px solid #718a7e; border-radius: 50%; }
 .sidebar-theme-option input:checked ~ .sidebar-theme-label::before { background: #287859; border-color: #287859; box-shadow: inset 0 0 0 3px #fff; }
 @media (max-width: 380px) { .sidebar-theme-options { grid-template-columns: 1fr; } }
+
+/* Leave room for page content on smaller laptops and tablets. */
+@media (min-width: 769px) and (max-width: 1100px) {
+  .sidebar:not(.collapsed) { width: 272px; flex-basis: 272px; }
+}
