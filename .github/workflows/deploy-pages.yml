@@ -76,9 +76,22 @@ jobs:
       - name: Deep links fall back to the app
         run: |
           url="${{ needs.deploy.outputs.page_url || 'https://shrenikyd.github.io/expenses-tracker/' }}transactions"
-          code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 3 --retry-delay 5 --retry-all-errors "$url")
+          # Pages answers an unknown path with 404.html — the app itself, under a
+          # 404 status. What matters is that the app is served, not the status.
+          code=$(curl -sS -o /tmp/deep.html -w '%{http_code}' --retry 3 --retry-delay 5 --retry-all-errors "$url")
           echo "GET $url -> $code"
-          test "$code" = "200"
+          grep -q '<div id="root">' /tmp/deep.html
+          grep -q 'manifest.webmanifest' /tmp/deep.html
+
+      - name: The app is installable
+        run: |
+          base="${{ needs.deploy.outputs.page_url || 'https://shrenikyd.github.io/expenses-tracker/' }}"
+          for file in manifest.webmanifest sw.js icon-192.png icon-512.png; do
+            code=$(curl -sS -o /tmp/asset -w '%{http_code}' --retry 3 --retry-delay 5 --retry-all-errors "$base$file")
+            echo "GET $base$file -> $code"
+            test "$code" = "200"
+          done
+          grep -q '"start_url"' /tmp/asset || curl -sS "${base}manifest.webmanifest" | grep -q '"start_url"'
 
       - name: The API the client was built against is awake and migrated
         if: vars.VITE_API_URL != ''
