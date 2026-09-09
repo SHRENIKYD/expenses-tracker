@@ -11,10 +11,15 @@
     <meta name="description" content="Track income, expenses, budgets and savings goals in rupees." />
     <link rel="manifest" href="./manifest.webmanifest" />
     <!-- A tab renders the icon at 16 or 32 css px, where a 192px mark loses its
-         slanted edges to the resampling; this one is drawn for that size. -->
-    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
-    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+         slanted edges to the resampling; this one is drawn for that size.
+
+         The ?v= is not decoration. A browser keeps favicons in a store of its
+         own, keyed by url and untouched by a reload however hard: the same path
+         with new bytes goes on showing the old icon. Bump it when the artwork
+         changes. -->
+    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=3" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png?v=3" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=3" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
