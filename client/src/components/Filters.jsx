@@ -1,8 +1,14 @@
-import { titleCase } from '../format.js';
+import { PAYMENT_LABEL, titleCase } from '../format.js';
 
 export default function Filters({ categories, incomeCategories = [], filters, onChange, onReset }) {
   const update = (field) => (event) => onChange({ ...filters, [field]: event.target.value });
-  const active = filters.q || filters.category || filters.kind || filters.from || filters.to;
+  const active =
+    filters.q ||
+    filters.category ||
+    filters.kind ||
+    filters.paymentMethod ||
+    filters.from ||
+    filters.to;
 
   return (
     <div className="card filters">
@@ -44,6 +50,18 @@ export default function Filters({ categories, incomeCategories = [], filters, on
                 </option>
               ))}
             </optgroup>
+          </select>
+        </label>
+
+        <label>
+          Account
+          <select value={filters.paymentMethod} onChange={update('paymentMethod')}>
+            <option value="">All</option>
+            {Object.entries(PAYMENT_LABEL).map(([method, label]) => (
+              <option key={method} value={method}>
+                {label}
+              </option>
+            ))}
           </select>
         </label>
 

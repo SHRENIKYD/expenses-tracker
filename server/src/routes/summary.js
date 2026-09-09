@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../db');
 const { isIsoMonth } = require('../validate');
+const { countDueSoon } = require('../upcoming');
 
 const router = express.Router();
 
@@ -39,7 +40,8 @@ router.get('/', async (req, res, next) => {
       incomeRows,
       settingsRows,
       recurringRows,
-      weeklyRows
+      weeklyRows,
+      accountRows
     ] = await Promise.all([
       pool.query(
         `SELECT to_char(date, 'YYYY-MM') AS month, COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count
@@ -54,8 +56,10 @@ router.get('/', async (req, res, next) => {
         [userId, month]
       ),
       pool.query(
-        `SELECT to_char(date, 'YYYY-MM-DD') AS day, SUM(amount) AS total
-         FROM expenses WHERE user_id = $1 AND kind = 'expense' AND to_char(date, 'YYYY-MM') = $2
+        `SELECT to_char(date, 'YYYY-MM-DD') AS day,
+                SUM(amount) FILTER (WHERE kind = 'expense') AS spent,
+                SUM(amount) FILTER (WHERE kind = 'income') AS earned
+         FROM expenses WHERE user_id = $1 AND to_char(date, 'YYYY-MM') = $2
          GROUP BY 1 ORDER BY 1`,
         [userId, month]
       ),
@@ -84,6 +88,16 @@ router.get('/', async (req, res, next) => {
          WHERE user_id = $1 AND to_char(date, 'YYYY-MM') = $2
          GROUP BY 1, 2
          ORDER BY 1`,
+        [userId, month]
+      ),
+      // Money in and out per payment method: the Accounts page reads this
+      // instead of pulling every row of the month down to the client.
+      pool.query(
+        `SELECT COALESCE(payment_method, 'unassigned') AS method, kind,
+                SUM(amount) AS total, COUNT(*) AS count
+         FROM expenses
+         WHERE user_id = $1 AND to_char(date, 'YYYY-MM') = $2
+         GROUP BY 1, 2`,
         [userId, month]
       )
     ]);
@@ -179,8 +193,31 @@ router.get('/', async (req, res, next) => {
       .filter((entry) => !appliedDates.has(`${entry.description}|${entry.category}|${entry.date}`))
       .sort((a, b) => a.dayOfMonth - b.dayOfMonth);
 
+    const methods = [...new Set(accountRows.rows.map((row) => row.method))].sort();
+    const accounts = methods.map((method) => {
+      const forMethod = accountRows.rows.filter((row) => row.method === method);
+      const of = (kind) => {
+        const row = forMethod.find((entry) => entry.kind === kind);
+        return row ? { total: Number(row.total), count: Number(row.count) } : { total: 0, count: 0 };
+      };
+      const income = of('income');
+      const spend = of('expense');
+      return {
+        method,
+        income: income.total,
+        expenses: spend.total,
+        count: income.count + spend.count
+      };
+    });
+
+    // The bell only lights up for a bill that is actually close: due today or
+    // within the next week, and not already recorded.
+    const dueSoon = countDueSoon(upcoming, todayIso);
+
     res.json({
       month,
+      accounts,
+      dueSoon,
       income,
       remaining: income - total,
       overallBudget,
@@ -198,7 +235,11 @@ router.get('/', async (req, res, next) => {
       projected,
       change: previousTotal === 0 ? null : (total - previousTotal) / previousTotal,
       categories,
-      daily: daily.rows.map((row) => ({ date: row.day, total: Number(row.total) })),
+      daily: daily.rows.map((row) => ({
+        date: row.day,
+        total: Number(row.spent || 0),
+        income: Number(row.earned || 0)
+      })),
       trend: trendMonths
     });
   } catch (err) {

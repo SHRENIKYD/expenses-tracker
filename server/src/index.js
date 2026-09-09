@@ -11,6 +11,7 @@ const receiptsRouter = require('./routes/receipts');
 const settingsRouter = require('./routes/settings');
 const authRouter = require('./routes/auth');
 const statementsRouter = require('./routes/statements');
+const goalsRouter = require('./routes/goals');
 const { requireUser } = require('./auth');
 
 const app = express();
@@ -36,6 +37,7 @@ app.use('/api/recurring', recurringRouter);
 app.use('/api/receipts', receiptsRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/statements', statementsRouter);
+app.use('/api/goals', goalsRouter);
 
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 

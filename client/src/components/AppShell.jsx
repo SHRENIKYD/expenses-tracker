@@ -1,18 +1,26 @@
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Icon from './Icon.jsx';
+import ForestArt from './ForestArt.jsx';
 import { formatToday } from '../format.js';
 
 const NAV = [
   { to: '/', label: 'Overview', icon: 'chart', end: true },
   { to: '/transactions', label: 'Transactions', icon: 'swap' },
+  { to: '/accounts', label: 'Accounts', icon: 'accounts' },
   { to: '/budgets', label: 'Budgets', icon: 'budget' },
+  { to: '/goals', label: 'Savings goals', icon: 'target' },
   { to: '/reports', label: 'Reports', icon: 'bills' }
 ];
+
+const TABS = [NAV[0], NAV[1], NAV[3], NAV[5]];
 
 const TITLES = {
   '/': { title: 'Your money, in focus.', subtitle: 'today' },
   '/transactions': { title: 'Every rupee, accounted for.', subtitle: 'Search, filter and edit what you have recorded' },
+  '/accounts': { title: 'Where the money sits.', subtitle: 'This month by payment method' },
   '/budgets': { title: 'Limits that hold.', subtitle: 'Budgets and the payments that repeat' },
+  '/goals': { title: 'Saving up for it.', subtitle: 'What you are putting money aside for' },
   '/reports': { title: 'The longer view.', subtitle: 'Where your money goes over time' },
   '/settings': { title: 'Settings', subtitle: 'Your account and preferences' },
   '/add': { title: 'Add transaction', subtitle: '' }
@@ -24,16 +32,27 @@ export default function AppShell({ context }) {
   const page = TITLES[pathname] || TITLES['/'];
   const isTask = pathname === '/add';
 
-  const { month, setMonth, error, undoable, handlers, session, onSignOut, settings } = context;
+  const { month, setMonth, error, undoable, handlers, session, settings, summary, filters, setFilters } =
+    context;
   const name = settings?.displayName || session.user.displayName || '';
   const initial = (name || session.user.email).trim().charAt(0).toUpperCase();
+  const dueSoon = summary?.dueSoon || 0;
+
+  const [search, setSearch] = useState(filters.q);
+  useEffect(() => setSearch(filters.q), [filters.q]);
+
+  function runSearch(event) {
+    event.preventDefault();
+    setFilters((current) => ({ ...current, q: search }));
+    if (pathname !== '/transactions') navigate('/transactions');
+  }
 
   return (
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
           <span className="brand-mark">
-            <Icon name="wallet" size={21} strokeWidth={1.9} />
+            <Icon name="wallet" size={20} strokeWidth={1.9} />
           </span>
           <span className="brand-name">Expense Tracker</span>
         </div>
@@ -65,10 +84,7 @@ export default function AppShell({ context }) {
           <span className="sidebar-rule" />
         </p>
 
-        <svg className="sidebar-hills" viewBox="0 0 258 150" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M0,150 L52,72 L88,110 L132,44 L176,104 L214,68 L258,120 L258,150 Z" fill="none" stroke="#59a487" strokeWidth="1.4" />
-          <path d="M0,150 L40,104 L74,128 L118,86 L160,124 L206,96 L258,138 L258,150 Z" fill="#1b5540" fillOpacity="0.55" stroke="#4b9077" strokeWidth="1" />
-        </svg>
+        <ForestArt />
 
         <div className="sidebar-foot">
           <NavLink to="/settings" className={({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')}>
@@ -76,11 +92,11 @@ export default function AppShell({ context }) {
             <span>Settings</span>
           </NavLink>
 
-          <button type="button" className="sidebar-user" onClick={onSignOut} title="Sign out">
+          <NavLink to="/settings" className="sidebar-user">
             <span className="sidebar-avatar">{initial}</span>
             <span className="sidebar-name">{name || session.user.email}</span>
-            <Icon name="logout" size={16} strokeWidth={1.9} />
-          </button>
+            <Icon name="chevronRight" size={16} strokeWidth={2} />
+          </NavLink>
         </div>
       </aside>
 
@@ -104,6 +120,33 @@ export default function AppShell({ context }) {
 
           {!isTask && (
             <div className="header-tools">
+              <form className="header-search" onSubmit={runSearch} role="search">
+                <Icon name="search" size={17} strokeWidth={1.9} />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search transactions, categories…"
+                  aria-label="Search transactions"
+                />
+              </form>
+
+              <button
+                type="button"
+                className={dueSoon > 0 ? 'icon-button bell due' : 'icon-button bell'}
+                onClick={() => {
+                  navigate('/');
+                  requestAnimationFrame(() =>
+                    document.getElementById('upcoming')?.scrollIntoView({ behavior: 'smooth' })
+                  );
+                }}
+                aria-label={
+                  dueSoon > 0 ? `${dueSoon} bills due within a week` : 'No bills due within a week'
+                }
+              >
+                <Icon name="bell" size={19} strokeWidth={1.9} />
+              </button>
+
               <span className="avatar" aria-hidden="true">
                 {initial}
               </span>
@@ -146,7 +189,7 @@ export default function AppShell({ context }) {
       </div>
 
       <nav className="tabbar">
-        {NAV.slice(0, 2).map((item) => (
+        {TABS.slice(0, 2).map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -162,7 +205,7 @@ export default function AppShell({ context }) {
           <Icon name="plus" size={25} strokeWidth={2.3} />
         </NavLink>
 
-        {NAV.slice(2, 4).map((item) => (
+        {TABS.slice(2).map((item) => (
           <NavLink key={item.to} to={item.to} className={({ isActive }) => (isActive ? 'tab active' : 'tab')}>
             <Icon name={item.icon} size={21} strokeWidth={1.9} />
             <span>{item.label}</span>

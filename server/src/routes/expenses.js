@@ -17,6 +17,10 @@ function buildWhere(filters, userId) {
     params.push(filters.category);
     clauses.push(`category = $${params.length}`);
   }
+  if (filters.paymentMethod) {
+    params.push(filters.paymentMethod);
+    clauses.push(`payment_method = $${params.length}`);
+  }
   if (filters.from) {
     params.push(filters.from);
     clauses.push(`date >= $${params.length}`);

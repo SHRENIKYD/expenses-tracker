@@ -2,10 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useDebouncedValue from './useDebouncedValue.js';
 import { currentMonth } from './format.js';
 import {
+  addToGoal,
   applyRecurring,
   createExpense,
+  createGoal,
   createRecurring,
   deleteExpense,
+  deleteGoal,
   deleteRecurring,
   exportCsv,
   getSettings,
@@ -14,13 +17,14 @@ import {
   listBudgets,
   listCategories,
   listExpenses,
+  listGoals,
   listRecurring,
   saveSettings,
   setBudget,
   updateExpense
 } from './api.js';
 
-export const emptyFilters = { q: '', category: '', from: '', to: '', kind: '' };
+export const emptyFilters = { q: '', category: '', from: '', to: '', kind: '', paymentMethod: '' };
 
 export default function useExpensesData() {
   const [expenses, setExpenses] = useState([]);
@@ -29,6 +33,7 @@ export default function useExpensesData() {
   const [recurring, setRecurring] = useState([]);
   const [settings, setSettings] = useState({ displayName: '', monthlyBudget: 0 });
   const [summary, setSummary] = useState(null);
+  const [goals, setGoals] = useState([]);
   const [filters, setFilters] = useState(emptyFilters);
   const [sort, setSort] = useState('date');
   const [order, setOrder] = useState('desc');
@@ -46,10 +51,18 @@ export default function useExpensesData() {
       q: debouncedQuery,
       category: filters.category,
       kind: filters.kind,
+      paymentMethod: filters.paymentMethod,
       from: filters.from,
       to: filters.to
     }),
-    [debouncedQuery, filters.category, filters.kind, filters.from, filters.to]
+    [
+      debouncedQuery,
+      filters.category,
+      filters.kind,
+      filters.paymentMethod,
+      filters.from,
+      filters.to
+    ]
   );
 
   const loadExpenses = useCallback(async () => {
@@ -57,16 +70,18 @@ export default function useExpensesData() {
   }, [queryFilters, sort, order]);
 
   const loadContext = useCallback(async () => {
-    const [nextSummary, nextBudgets, nextRecurring, nextSettings] = await Promise.all([
+    const [nextSummary, nextBudgets, nextRecurring, nextSettings, nextGoals] = await Promise.all([
       getSummary(month),
       listBudgets(),
       listRecurring(),
-      getSettings()
+      getSettings(),
+      listGoals()
     ]);
     setSummary(nextSummary);
     setBudgets(nextBudgets);
     setRecurring(nextRecurring);
     setSettings(nextSettings);
+    setGoals(nextGoals);
   }, [month]);
 
   useEffect(() => {
@@ -197,6 +212,24 @@ export default function useExpensesData() {
         await refresh();
         return outcome;
       }),
+    addGoal: (goal) =>
+      guard(async () => {
+        const created = await createGoal(goal);
+        await loadContext();
+        return created;
+      }),
+    removeGoal: (id) =>
+      guard(async () => {
+        await deleteGoal(id);
+        await loadContext();
+        return true;
+      }),
+    contribute: (id, amount) =>
+      guard(async () => {
+        const saved = await addToGoal(id, amount);
+        await loadContext();
+        return saved;
+      }),
     importCsv: (text) =>
       guard(async () => {
         const outcome = await importCsv(text);
@@ -220,6 +253,7 @@ export default function useExpensesData() {
     recurring,
     settings,
     summary,
+    goals,
     filters,
     setFilters,
     sort,

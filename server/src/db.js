@@ -114,7 +114,18 @@ const SCHEMA = [
   `DO $$ BEGIN ALTER TABLE settings DROP CONSTRAINT settings_pkey;
    EXCEPTION WHEN undefined_object THEN NULL; END $$`,
   `CREATE UNIQUE INDEX IF NOT EXISTS budgets_user_category_idx ON budgets (user_id, category)`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS settings_user_key_idx ON settings (user_id, key)`
+  `CREATE UNIQUE INDEX IF NOT EXISTS settings_user_key_idx ON settings (user_id, key)`,
+
+  `CREATE TABLE IF NOT EXISTS goals (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+     name TEXT NOT NULL,
+     icon TEXT NOT NULL DEFAULT 'target',
+     target_amount NUMERIC(12,2) NOT NULL CHECK (target_amount > 0),
+     saved_amount NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (saved_amount >= 0),
+     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+   )`,
+  `CREATE INDEX IF NOT EXISTS goals_user_idx ON goals (user_id)`
 ];
 
 async function init() {
@@ -154,6 +165,19 @@ function rowToExpense(row) {
   };
 }
 
+function rowToGoal(row) {
+  const target = Number(row.target_amount);
+  const saved = Number(row.saved_amount);
+  return {
+    id: row.id,
+    name: row.name,
+    icon: row.icon,
+    target,
+    saved,
+    progress: target > 0 ? Math.min(saved / target, 1) : 0
+  };
+}
+
 function rowToRecurring(row) {
   return {
     id: row.id,
@@ -165,4 +189,4 @@ function rowToRecurring(row) {
   };
 }
 
-module.exports = { pool, init, claimOrphanRows, rowToExpense, rowToRecurring };
+module.exports = { pool, init, claimOrphanRows, rowToExpense, rowToRecurring, rowToGoal };

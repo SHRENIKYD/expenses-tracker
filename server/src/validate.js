@@ -13,6 +13,19 @@ const EXPENSE_CATEGORIES = [
 const INCOME_CATEGORIES = ['salary', 'freelance', 'interest', 'refund', 'other income'];
 
 const KINDS = ['expense', 'income'];
+// Icons a goal may carry; each one exists in the client's Icon sprite.
+const GOAL_ICONS = [
+  'target',
+  'savings',
+  'laptop',
+  'transport',
+  'housing',
+  'education',
+  'health',
+  'entertainment',
+  'briefcase',
+  'other'
+];
 const PAYMENT_METHODS = ['upi', 'card', 'cash', 'bank_transfer'];
 
 // Kept for the existing expense-only endpoints and the CSV importer.
@@ -151,6 +164,11 @@ function parseFilters(query) {
     else filters.kind = query.kind;
   }
 
+  if (query.paymentMethod) {
+    if (!PAYMENT_METHODS.includes(query.paymentMethod)) errors.push('unknown paymentMethod filter');
+    else filters.paymentMethod = query.paymentMethod;
+  }
+
   if (query.category) {
     const known = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES];
     if (!known.includes(query.category)) errors.push('unknown category filter');
@@ -193,6 +211,56 @@ function validateRecurring(body, { partial = false } = {}) {
   return { errors, value };
 }
 
+function validateGoal(body, { partial = false } = {}) {
+  const errors = [];
+  const value = {};
+  const input = body && typeof body === 'object' ? body : {};
+
+  if (input.name !== undefined) {
+    const name = typeof input.name === 'string' ? input.name.trim() : '';
+    if (name === '') errors.push('name is required');
+    else value.name = name.slice(0, 60);
+  } else if (!partial) {
+    errors.push('name is required');
+  }
+
+  if (input.target !== undefined) {
+    const target = Number(input.target);
+    if (!Number.isFinite(target) || target <= 0) errors.push('target must be greater than zero');
+    else if (target > 9999999999) errors.push('target is too large');
+    else value.target = Math.round(target * 100) / 100;
+  } else if (!partial) {
+    errors.push('target is required');
+  }
+
+  if (input.saved !== undefined) {
+    const saved = Number(input.saved);
+    if (!Number.isFinite(saved) || saved < 0) errors.push('saved must be zero or more');
+    else if (saved > 9999999999) errors.push('saved is too large');
+    else value.saved = Math.round(saved * 100) / 100;
+  }
+
+  if (input.icon !== undefined) {
+    if (!GOAL_ICONS.includes(input.icon)) errors.push('unknown goal icon');
+    else value.icon = input.icon;
+  } else if (!partial) {
+    value.icon = 'target';
+  }
+
+  return { errors, value };
+}
+
+function validateContribution(body) {
+  const errors = [];
+  const input = body && typeof body === 'object' ? body : {};
+  const amount = Number(input.amount);
+
+  if (!Number.isFinite(amount) || amount <= 0) errors.push('amount must be greater than zero');
+  else if (amount > 9999999999) errors.push('amount is too large');
+
+  return { errors, amount: Math.round(amount * 100) / 100 };
+}
+
 function validateSetting(key, rawValue) {
   const errors = [];
   let value = null;
@@ -218,11 +286,14 @@ module.exports = {
   INCOME_CATEGORIES,
   KINDS,
   PAYMENT_METHODS,
+  GOAL_ICONS,
   categoriesFor,
   validateSetting,
   validateExpense,
   validateBudget,
   validateRecurring,
+  validateGoal,
+  validateContribution,
   parseFilters,
   isIsoDate,
   isIsoMonth,

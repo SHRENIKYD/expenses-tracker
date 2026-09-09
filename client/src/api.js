@@ -141,3 +141,15 @@ export async function previewStatement(file, password) {
 
 export const importStatement = (transactions) =>
   request('/statements/import', { method: 'POST', body: JSON.stringify({ transactions }) });
+
+export const listGoals = () => request('/goals');
+
+export const createGoal = (goal) => request('/goals', { method: 'POST', body: JSON.stringify(goal) });
+
+export const updateGoal = (id, patch) =>
+  request(`/goals/${id}`, { method: 'PUT', body: JSON.stringify(patch) });
+
+export const deleteGoal = (id) => request(`/goals/${id}`, { method: 'DELETE' });
+
+export const addToGoal = (id, amount) =>
+  request(`/goals/${id}/add`, { method: 'POST', body: JSON.stringify({ amount }) });

@@ -4,6 +4,8 @@ import AppShell from './components/AppShell.jsx';
 import SignIn from './components/SignIn.jsx';
 import Overview from './pages/Overview.jsx';
 import Transactions from './pages/Transactions.jsx';
+import Accounts from './pages/Accounts.jsx';
+import SavingsGoals from './pages/SavingsGoals.jsx';
 import BudgetsPage from './pages/BudgetsPage.jsx';
 import Reports from './pages/Reports.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
@@ -21,6 +23,8 @@ function Workspace({ session, onSignOut }) {
       <Route element={<AppShell context={context} />}>
         <Route index element={<Overview />} />
         <Route path="transactions" element={<Transactions />} />
+        <Route path="accounts" element={<Accounts />} />
+        <Route path="goals" element={<SavingsGoals />} />
         <Route path="budgets" element={<BudgetsPage />} />
         <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<SettingsPage />} />

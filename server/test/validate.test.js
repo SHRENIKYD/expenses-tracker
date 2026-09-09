@@ -6,6 +6,8 @@ const {
   validateRecurring,
   validateSetting,
   parseFilters,
+  validateGoal,
+  validateContribution,
   CATEGORIES
 } = require('../src/validate');
 
@@ -125,4 +127,62 @@ test('settings validation bounds the budget and rejects unknown keys', () => {
   assert.ok(validateSetting('monthlyBudget', -5).errors.length);
   assert.ok(validateSetting('somethingElse', 'x').errors.length);
   assert.equal(validateSetting('displayName', '  Shrenik  ').value, 'Shrenik');
+});
+
+test('a goal needs a name and a positive target', () => {
+  assert.deepEqual(validateGoal({ name: 'New laptop', target: 75000 }).value, {
+    name: 'New laptop',
+    target: 75000,
+    icon: 'target'
+  });
+
+  assert.deepEqual(validateGoal({}).errors, ['name is required', 'target is required']);
+  assert.deepEqual(validateGoal({ name: '  ', target: 10 }).errors, ['name is required']);
+  assert.deepEqual(validateGoal({ name: 'x', target: 0 }).errors, [
+    'target must be greater than zero'
+  ]);
+  assert.deepEqual(validateGoal({ name: 'x', target: -5 }).errors, [
+    'target must be greater than zero'
+  ]);
+  assert.deepEqual(validateGoal({ name: 'x', target: 1e11 }).errors, ['target is too large']);
+});
+
+test('a goal rounds money to paise and caps its name', () => {
+  const { value } = validateGoal({ name: 'y'.repeat(200), target: 1000.005, saved: 12.344 });
+  assert.equal(value.name.length, 60);
+  assert.equal(value.target, 1000.01);
+  assert.equal(value.saved, 12.34);
+});
+
+test('a goal only accepts an icon the client can draw', () => {
+  assert.equal(validateGoal({ name: 'x', target: 1, icon: 'laptop' }).value.icon, 'laptop');
+  assert.deepEqual(validateGoal({ name: 'x', target: 1, icon: 'rocket' }).errors, [
+    'unknown goal icon'
+  ]);
+});
+
+test('a partial goal update leaves untouched fields alone', () => {
+  const { errors, value } = validateGoal({ saved: 500 }, { partial: true });
+  assert.deepEqual(errors, []);
+  assert.deepEqual(value, { saved: 500 });
+  assert.deepEqual(validateGoal({ saved: -1 }, { partial: true }).errors, [
+    'saved must be zero or more'
+  ]);
+});
+
+test('a contribution has to be a positive amount', () => {
+  assert.deepEqual(validateContribution({ amount: 2500.567 }), { errors: [], amount: 2500.57 });
+  assert.deepEqual(validateContribution({ amount: 0 }).errors, ['amount must be greater than zero']);
+  assert.deepEqual(validateContribution({ amount: -10 }).errors, [
+    'amount must be greater than zero'
+  ]);
+  assert.deepEqual(validateContribution({}).errors, ['amount must be greater than zero']);
+});
+
+test('the payment method filter only accepts known methods', () => {
+  assert.equal(parseFilters({ paymentMethod: 'upi' }).filters.paymentMethod, 'upi');
+  assert.deepEqual(parseFilters({ paymentMethod: 'crypto' }).errors, [
+    'unknown paymentMethod filter'
+  ]);
+  assert.equal(parseFilters({}).filters.paymentMethod, undefined);
 });

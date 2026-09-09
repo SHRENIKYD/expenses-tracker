@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { formatMoney, titleCase } from '../format.js';
+import { formatMoney, formatMoneyTrim, titleCase } from '../format.js';
 
-const SIZE = 140;
-const RADIUS = 54;
-const STROKE = 26;
+const SIZE = 200;
+const RADIUS = 76;
+const STROKE = 34;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 const MAX_SLICES = 5;
 
-// A single hue stepped light to dark reads as magnitude; the amber slot is
+// A single hue stepped dark to light reads as magnitude; the amber slot is
 // reserved for the folded remainder so it never impersonates a category.
-const SHADES = ['#14563f', '#1f7a58', '#47a583', '#8fc9b0', '#b9dcc9'];
+const SHADES = ['#14563f', '#1f7a58', '#4a9d7c', '#7dbb9e', '#a8d3bd'];
 const OTHER = '#dfa63f';
 
 function fold(categories) {
@@ -40,9 +40,12 @@ export default function SpendingDonut({ categories, total }) {
   const sum = slices.reduce((acc, row) => acc + row.total, 0);
   // The centre label has to stay inside the ring's hole whatever the amount,
   // so it shrinks once the formatted string outgrows the space.
-  const centreLabel = formatMoney(total);
-  const holeWidth = 2 * (RADIUS - STROKE / 2) - 6;
-  const centreSize = Math.min(13.5, holeWidth / (centreLabel.length * 0.62));
+  const centreLabel = formatMoneyTrim(total);
+  // Keep a clear margin between the label and the ring rather than filling the
+  // hole edge to edge.
+  const holeWidth = 2 * (RADIUS - STROKE / 2) - 26;
+  const centreSize = Math.min(22, holeWidth / (centreLabel.length * 0.58));
+
   let offset = 0;
   const arcs = slices.map((row) => {
     const length = (row.total / sum) * CIRCUMFERENCE;
@@ -53,7 +56,12 @@ export default function SpendingDonut({ categories, total }) {
 
   return (
     <div className="donut-row">
-      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="donut-svg" role="img" aria-label="Share of this month's spending by category">
+      <svg
+        viewBox={`0 0 ${SIZE} ${SIZE}`}
+        className="donut-svg"
+        role="img"
+        aria-label="Share of this month's spending by category"
+      >
         <g transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}>
           {arcs.map((arc) => (
             <circle
@@ -63,8 +71,8 @@ export default function SpendingDonut({ categories, total }) {
               r={RADIUS}
               fill="none"
               stroke={arc.colour}
-              strokeWidth={hovered === arc.category ? STROKE + 4 : STROKE}
-              strokeDasharray={`${Math.max(arc.length - 2, 0.5)} ${CIRCUMFERENCE}`}
+              strokeWidth={hovered === arc.category ? STROKE + 5 : STROKE}
+              strokeDasharray={`${Math.max(arc.length - 3, 0.5)} ${CIRCUMFERENCE}`}
               strokeDashoffset={-arc.offset}
               onMouseEnter={() => setHovered(arc.category)}
               onMouseLeave={() => setHovered(null)}
@@ -73,14 +81,14 @@ export default function SpendingDonut({ categories, total }) {
         </g>
         <text
           x={SIZE / 2}
-          y={SIZE / 2 - 2}
+          y={SIZE / 2 - 1}
           textAnchor="middle"
           className="donut-total"
           style={{ fontSize: `${centreSize}px` }}
         >
           {centreLabel}
         </text>
-        <text x={SIZE / 2} y={SIZE / 2 + 14} textAnchor="middle" className="donut-caption">
+        <text x={SIZE / 2} y={SIZE / 2 + 18} textAnchor="middle" className="donut-caption">
           Total spent
         </text>
       </svg>
@@ -99,7 +107,7 @@ export default function SpendingDonut({ categories, total }) {
               {arc.folded ? ` (${arc.folded})` : ''}
               {arc.overBudget && <span className="over-flag"> ⚠</span>}
             </span>
-            <span className="legend-value">{formatMoney(arc.total)}</span>
+            <span className="legend-value">{formatMoneyTrim(arc.total)}</span>
             <span className="legend-pct">{Math.round(arc.share * 100)}%</span>
           </li>
         ))}

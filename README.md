@@ -13,6 +13,7 @@ on PostgreSQL.
 - CSV import and export
 - Bank statement PDF import, with duplicate detection
 - Income as well as expenses, payment methods, receipts and accounts
+- Savings goals with contributions, and an accounts view by payment method
 
 All amounts are formatted as INR with Indian digit grouping (`₹1,23,456.00`).
 
@@ -55,7 +56,12 @@ npm run dev
 | POST   | `/api/expenses/import`     | Bulk import from a CSV body                               |
 | GET    | `/api/budgets`             | All category budgets                                      |
 | PUT    | `/api/budgets/:category`   | Set a monthly limit (`0` clears it)                       |
-| GET    | `/api/summary?month=`      | Month totals, category split, weekly cash flow, daily series, 12-month trend |
+| GET    | `/api/summary?month=`      | Month totals, category split, weekly cash flow, per-account totals, daily series, 12-month trend |
+| GET    | `/api/goals`               | Savings goals                                             |
+| POST   | `/api/goals`               | Create a goal (`name`, `target`, `icon`)                  |
+| PUT    | `/api/goals/:id`           | Update a goal (partial)                                   |
+| POST   | `/api/goals/:id/add`       | Add money to a goal, clamped at the target                |
+| DELETE | `/api/goals/:id`           | Delete a goal                                             |
 
 CSV columns for import and export: `date,description,category,amount`.
 

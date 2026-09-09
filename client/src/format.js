@@ -16,10 +16,27 @@ const monthLong = new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numer
 const dayLabel = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', timeZone: 'UTC' });
 
 export const formatMoney = (value) => rupees.format(value);
+const rupeesWhole = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  maximumFractionDigits: 0
+});
+export const formatMoneyTrim = (value) =>
+  Number.isInteger(value) ? rupeesWhole.format(value) : rupees.format(value);
+
 export const formatMoneyShort = (value) => rupeesCompact.format(value);
 export const formatMonth = (month) => monthLabel.format(new Date(`${month}-01T00:00:00Z`));
 export const formatMonthLong = (month) => monthLong.format(new Date(`${month}-01T00:00:00Z`));
 export const formatDay = (date) => dayLabel.format(new Date(`${date}T00:00:00Z`));
+
+// "09 Sep 2026" — en-GB keeps the three-letter month that en-IN spells "Sept".
+const dayFull = new Intl.DateTimeFormat('en-GB', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC'
+});
+export const formatDayFull = (date) => dayFull.format(new Date(`${date}T00:00:00Z`));
 
 export const formatPercent = (fraction) =>
   `${fraction > 0 ? '+' : ''}${(fraction * 100).toFixed(1)}%`;
