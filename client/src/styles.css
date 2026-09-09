@@ -3672,9 +3672,17 @@ select.remembered { border-color: #7fb79a; background: #f1f8f4; }
 .landing-ribbon-5 { --ribbon-x: -18px; --ribbon-y: 52px; --ribbon-turn: -7deg; animation-delay: 600ms; }
 .landing-wordmark { font-family: Georgia, 'Times New Roman', serif; color: #f6f2e7; font-size: clamp(3rem, 6.5vw, 6.5rem); line-height: 1.12; letter-spacing: -.045em; animation: tessera-reveal 800ms 900ms both; }
 .landing-tagline { margin: 18px 0 0; font-size: 1rem; color: #bdd7c9; animation: tessera-reveal 700ms 1150ms both; }
-.landing-replay { margin-top: 28px; padding: 8px 12px; border: 1px solid #b6d8c54d; border-radius: 20px; background: transparent; color: #d1e6da; font: inherit; font-size: .875rem; cursor: pointer; }
-.landing-replay:hover { background: #ffffff12; }
-.landing-replay:focus-visible { outline: 2px solid #c5e5cf; outline-offset: 4px; }
+/* An animation is decoration, and a setting that says not to animate is not a
+   preference to argue with: the mark simply arrives assembled. */
+@media (prefers-reduced-motion: reduce) {
+  .landing-ribbon,
+  .landing-wordmark,
+  .landing-tagline {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
 @keyframes tessera-assemble {
   from { opacity: 0; transform: translate(var(--ribbon-x), var(--ribbon-y)) rotate(var(--ribbon-turn)); }
   to { opacity: 1; transform: translate(0, 0) rotate(0); }
@@ -3689,10 +3697,5 @@ select.remembered { border-color: #7fb79a; background: #f1f8f4; }
   .landing-brand-mark { width: 112px; margin-bottom: 4px; }
   .landing-wordmark { font-size: 2.75rem; }
   .landing-tagline { margin-top: 8px; }
-  .landing-replay { margin-top: 12px; }
   .signin-landing .signin-card h1 { margin-top: 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .landing-ribbon, .landing-wordmark, .landing-tagline { animation: none; }
-  .landing-replay { display: none; }
 }
