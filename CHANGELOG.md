@@ -27,6 +27,23 @@ The tag builds the client with its own number stamped in, publishes it to
 Pages, and opens a GitHub release with the section below. A tag that disagrees
 with `client/package.json`, or has no section here, fails rather than ships.
 
+## 1.1.0 — 2026-09-09
+
+### Added
+
+- **An Android app.** The same client wrapped by Capacitor: the same WebCrypto
+  vault, the same pdf.js parser, the same rows. A workflow builds a debug APK
+  on demand and attaches it to each release. It is signed with a throwaway key,
+  which is enough to install and use but not to publish.
+- **Two more sidebar themes**, Emerald Marble and Alpine Lake.
+
+### Changed
+
+- The version on the settings page drops the commit it was built from; the
+  stamp still carries it, on the hover and in the diagnostics.
+- A build takes its version from the commit's tag rather than from the ref, so
+  a released commit says so however it was deployed.
+
 ## 1.0.0 — 2026-09-09
 
 The first version that stands on its own: a static client and a database, with
