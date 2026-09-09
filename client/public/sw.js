@@ -1,7 +1,7 @@
 // Bump to retire the previous cache. The app shell is cached so the tracker
 // opens offline; nothing from Supabase is ever stored, since every response is
 // account data behind a bearer token.
-const VERSION = 'v2';
+const VERSION = 'v3';
 const SHELL = `shell-${VERSION}`;
 const ASSETS = `assets-${VERSION}`;
 

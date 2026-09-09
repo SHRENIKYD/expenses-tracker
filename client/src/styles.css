@@ -3294,3 +3294,11 @@ select.remembered { border-color: #7fb79a; background: #f1f8f4; }
   border: 1px dashed #9cc3ae;
   border-radius: 12px;
 }
+
+/* The mark is a little taller than it is wide, so it is fitted rather than
+   stretched into the square the brand row gives it. */
+.brand-glyph {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
