@@ -95,7 +95,15 @@ for.
 
 Duplicates are found two ways: the bank's reference number (UTR/RRN/IMPS), also
 enforced by a partial unique index, and a near match on amount, direction, a date
-within three days and a similar narration. Rows that cannot be read with
+within three days and a similar narration.
+
+That check is a lookup, not a search. `client/src/duplicates.js` indexes the
+recorded rows twice — once on the reference, once on direction, amount and day —
+so a candidate costs a constant seven probes, one per day in the window,
+whatever the ledger holds. Building the index is O(m) once per import or per
+launch; each check is O(1). It used to be a scan per candidate, which made a
+statement of n rows against m recorded ones n × m comparisons, and made the
+message reader re-scan the ledger for every alert. Rows that cannot be read with
 confidence are listed with the reason instead of being imported with a wrong
 value, and a statement that yields nothing says whether it had no text at all (a
 scan) or text in a layout the parser does not know.

@@ -211,3 +211,74 @@ test('a file missing a required column is refused by name', async () => {
   const { errors } = csvToExpenses('date,description\n2026-09-01,Salary\n');
   assert.match(errors[0], /category, amount/);
 });
+
+test('the index answers exactly what the scan did', async () => {
+  const { buildIndex, findDuplicate, NEAR_DAYS } = await import('../src/duplicates.js');
+
+  // A ledger with the awkward cases in it: the same amount on nearby days, the
+  // same amount in both directions, and references that only some rows carry.
+  const rows = [];
+  for (let day = 1; day <= 28; day += 1) {
+    const date = `2026-09-${String(day).padStart(2, '0')}`;
+    rows.push({ id: `a${day}`, kind: 'expense', description: 'Weekly groceries DMart', amount: 500, date, external_ref: day % 3 === 0 ? `REF${day}` : null });
+    rows.push({ id: `b${day}`, kind: 'income', description: 'Salary ACME', amount: 500, date, external_ref: null });
+  }
+
+  const index = buildIndex(rows);
+  const candidates = [
+    { kind: 'expense', description: 'DMART GROCERIES WEEKLY', amount: 500, date: '2026-09-14', reference: null },
+    { kind: 'expense', description: 'Cinema tickets', amount: 500, date: '2026-09-14', reference: null },
+    { kind: 'income', description: 'ACME SALARY', amount: 500, date: '2026-09-02', reference: null },
+    { kind: 'expense', description: 'anything at all', amount: 500, date: '2026-09-09', reference: 'REF9' },
+    { kind: 'expense', description: 'Weekly groceries DMart', amount: 501, date: '2026-09-14', reference: null },
+    // Just outside the window, in both directions.
+    { kind: 'expense', description: 'Weekly groceries DMart', amount: 500, date: '2026-08-28', reference: null },
+    { kind: 'expense', description: 'Weekly groceries DMart', amount: 500, date: '2026-10-02', reference: null }
+  ];
+
+  for (const candidate of candidates) {
+    const scanned = findDuplicate(candidate, rows);
+    const looked = index.find(candidate);
+    assert.deepEqual(looked, scanned, `disagreed on ${candidate.description} ${candidate.date}`);
+  }
+
+  // The window is the window, however it is searched.
+  const edge = { kind: 'expense', description: 'Weekly groceries DMart', amount: 500, date: '2026-09-01', reference: null };
+  assert.ok(index.find(edge));
+  assert.equal(NEAR_DAYS, 3);
+});
+
+test('a lookup does not grow with the ledger', async () => {
+  const { buildIndex } = await import('../src/duplicates.js');
+
+  const rows = (count) =>
+    Array.from({ length: count }, (_, i) => ({
+      id: `r${i}`,
+      kind: 'expense',
+      description: `Shop number ${i}`,
+      // Spread over years, so a scan would have to look at all of them.
+      amount: 100 + (i % 997),
+      date: new Date(Date.UTC(2020, 0, 1 + (i % 2000))).toISOString().slice(0, 10),
+      external_ref: `REF${i}`
+    }));
+
+  const small = buildIndex(rows(200));
+  const large = buildIndex(rows(200000));
+  const candidate = { kind: 'expense', description: 'Nothing like it', amount: 42.5, date: '2026-09-09', reference: 'NOPE' };
+
+  const time = (index) => {
+    const started = process.hrtime.bigint();
+    for (let i = 0; i < 2000; i += 1) index.find(candidate);
+    return Number(process.hrtime.bigint() - started);
+  };
+
+  time(small);
+  time(large);
+  const quick = time(small);
+  const huge = time(large);
+
+  // A thousand times the rows must not cost meaningfully more per lookup. The
+  // bound is loose because this is a timing test; a linear scan would be off by
+  // three orders of magnitude, not by two.
+  assert.ok(huge < quick * 20, `lookups scaled with the ledger: ${quick}ns vs ${huge}ns`);
+});

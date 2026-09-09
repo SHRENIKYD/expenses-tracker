@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { assembleSummary, resolvePeriod } from './summary.js';
 import { detectBank, parseStatement } from '../statement.js';
-import { NEAR_DAYS, findDuplicate } from '../duplicates.js';
+import { NEAR_DAYS, buildIndex } from '../duplicates.js';
 import { merchantKey } from '../merchant.js';
 import { csvToExpenses, toCsv } from '../csv.js';
 import * as vault from './vault.js';
@@ -752,8 +752,13 @@ export async function previewStatement(file, password) {
     listMerchantRules()
   ]);
 
+  // Built once for the whole statement rather than rebuilt per row: a hundred
+  // rows against a thousand recorded ones is a hundred lookups, not a hundred
+  // thousand comparisons.
+  const recorded = buildIndex(existing);
+
   const rows = await Promise.all(transactions.map(async (entry) => {
-    const duplicate = findDuplicate(entry, existing);
+    const duplicate = recorded.find(entry);
     // A rule you set yourself outranks the keyword list that guessed.
     const remembered = rules.get(await ruleKey(entry.description));
     return {
@@ -818,14 +823,14 @@ export async function importStatement(transactions, options = {}) {
     throw error;
   }
 
-  const existing = await neighbours(accepted.map((entry) => entry.date));
+  const recorded = buildIndex(await neighbours(accepted.map((entry) => entry.date)));
 
   let duplicates = 0;
   const rows = [];
   for (const entry of accepted) {
     // A reference matches by reference, everything else by amount, direction,
     // date and narration — the same test the preview showed the user.
-    if (findDuplicate(entry, existing)) {
+    if (recorded.find(entry)) {
       duplicates += 1;
       continue;
     }
