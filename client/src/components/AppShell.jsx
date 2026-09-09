@@ -84,16 +84,6 @@ export default function AppShell({ context }) {
             <Icon name="wallet" size={30} strokeWidth={2.4} />
           </span>
           <span className="brand-name">Expense Tracker</span>
-          <button
-            type="button"
-            className="sidebar-toggle"
-            onClick={() => setCollapsed((current) => !current)}
-            aria-expanded={!collapsed}
-            aria-label={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
-            title={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
-          >
-            <Icon name="panelLeft" size={18} strokeWidth={1.9} />
-          </button>
         </div>
 
         <nav>
@@ -147,6 +137,16 @@ export default function AppShell({ context }) {
       <div className="main">
         <header className="page-header">
           <div className="page-title">
+            <button
+              type="button"
+              className="sidebar-toggle"
+              onClick={() => setCollapsed((current) => !current)}
+              aria-expanded={!collapsed}
+              aria-label={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
+              title={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
+            >
+              <Icon name="panelLeft" size={19} strokeWidth={1.9} />
+            </button>
             {isTask && (
               <button
                 type="button"

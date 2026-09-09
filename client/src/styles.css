@@ -2569,7 +2569,8 @@ button.mint:hover:not(:disabled) {
 }
 
 @media (max-width: 768px) {
-  .sidebar {
+  .sidebar,
+  .sidebar-toggle {
     display: none;
   }
 
@@ -3162,21 +3163,21 @@ tr.is-duplicate {
 
 /* ---------- collapsible sidebar ---------- */
 .sidebar-toggle {
-  margin-left: auto;
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
+  margin-top: 4px;
   padding: 0;
-  flex: 0 0 28px;
-  border: 0;
-  border-radius: 8px;
-  color: #9dc6b1;
-  background: transparent;
+  flex: 0 0 34px;
+  border: 1px solid #dfe8e2;
+  border-radius: 10px;
+  color: #3d6b57;
+  background: #ffffff;
   cursor: pointer;
-  transition: background .15s ease, color .15s ease;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
 }
-.sidebar-toggle:hover { color: #e1eee6; background: #ffffff14; }
+.sidebar-toggle:hover { color: #12402f; border-color: #b9d3c5; background: #f2f8f4; }
 .sidebar-toggle:focus-visible { outline: 2px solid #7fd0a8; outline-offset: 2px; }
 
 /* Collapsed, the rail keeps the icons and drops everything that needs width.
@@ -3190,13 +3191,11 @@ tr.is-duplicate {
   padding-right: 0;
 }
 .sidebar.collapsed .brand { padding: 0; justify-content: center; gap: 0; }
-.sidebar.collapsed .brand-mark { display: none; }
 .sidebar.collapsed .brand-name,
 .sidebar.collapsed .sidebar-motto,
 .sidebar.collapsed .sidebar-name,
 .sidebar.collapsed .sidebar-user svg,
 .sidebar.collapsed .nav-item span { display: none; }
-.sidebar.collapsed .sidebar-toggle { margin: 0; }
 .sidebar.collapsed nav { padding: 0 14px; }
 .sidebar.collapsed .nav-item,
 .sidebar.collapsed .sidebar-foot .nav-item {
