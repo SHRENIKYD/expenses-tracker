@@ -9,7 +9,7 @@ function label(range) {
   return preset ? preset.label : `${formatDayFull(range.from)} – ${formatDayFull(range.to)}`;
 }
 
-export default function RangePicker({ range, onChange }) {
+export default function RangePicker({ range, onChange, busy = false }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState({ from: range.from, to: range.to });
   const box = useRef(null);
@@ -41,14 +41,19 @@ export default function RangePicker({ range, onChange }) {
     <div className="range-picker" ref={box}>
       <button
         type="button"
-        className="month-select range-button"
+        className={busy ? 'month-select range-button busy' : 'month-select range-button'}
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
         aria-haspopup="dialog"
+        aria-busy={busy}
       >
         <Icon name="calendar" size={16} />
         <span>{label(range)}</span>
-        <Icon name="chevronDown" size={15} strokeWidth={2} />
+        {busy ? (
+          <span className="spinner" aria-hidden="true" />
+        ) : (
+          <Icon name="chevronDown" size={15} strokeWidth={2} />
+        )}
       </button>
 
       {open && (

@@ -9,10 +9,23 @@ import { TableSkeleton } from '../components/Skeleton.jsx';
 import { formatMoney } from '../format.js';
 
 export default function Transactions() {
-  const { expenses, accounts, categories, filters, setFilters, sort, order, loading, handlers } =
+  const {
+    expenses,
+    accounts,
+    categories,
+    filters,
+    setFilters,
+    sort,
+    order,
+    loading,
+    periodLoading,
+    handlers
+  } =
     useOutletContext();
 
-  const firstLoad = loading && expenses.length === 0;
+  // A period change reloads the list too, so it gets placeholders rather than
+  // the previous period's rows.
+  const firstLoad = periodLoading || (loading && expenses.length === 0);
 
   const income = expenses.filter((row) => row.kind === 'income').reduce((sum, row) => sum + row.amount, 0);
   const spend = expenses.filter((row) => row.kind !== 'income').reduce((sum, row) => sum + row.amount, 0);

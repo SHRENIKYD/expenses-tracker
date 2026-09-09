@@ -2191,6 +2191,31 @@ button.mint:hover:not(:disabled) {
 }
 
 /* ---------- range picker ---------- */
+.spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2s;
+  }
+}
+
+.range-button.busy {
+  color: var(--accent-strong);
+}
+
 .range-picker {
   position: relative;
 }

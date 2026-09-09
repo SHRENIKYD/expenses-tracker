@@ -15,7 +15,7 @@ on PostgreSQL.
 - Income as well as expenses, payment methods, receipts and accounts
 - Savings goals with contributions, and an accounts view by payment method
 - Installable on a phone: app icon, offline app shell, no store required
-- Skeleton placeholders while the first request is in flight, shaped like the page they stand in for
+- Skeleton placeholders while a period loads, shaped like the page they stand in for
 - Password change and recovery codes for a forgotten password
 
 All amounts are formatted as INR with Indian digit grouping (`₹1,23,456.00`).

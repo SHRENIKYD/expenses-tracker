@@ -7,7 +7,7 @@ import { formatMoney, formatMonthLong } from '../format.js';
 import { CardsSkeleton } from '../components/Skeleton.jsx';
 
 export default function BudgetsPage() {
-  const { summary, categories, budgets, recurring, settings, month, loading, handlers } =
+  const { summary, categories, budgets, recurring, settings, month, loading, periodLoading, handlers } =
     useOutletContext();
   const [limit, setLimit] = useState('');
   const [editing, setEditing] = useState(false);
@@ -33,7 +33,9 @@ export default function BudgetsPage() {
   const left = summary?.budgetLeft;
   const pct = overall > 0 ? Math.round((used / overall) * 100) : null;
 
-  if (!summary && loading) return <CardsSkeleton count={2} label="Loading budgets" />;
+  if (!summary && (loading || periodLoading)) {
+    return <CardsSkeleton count={2} label="Loading budgets" />;
+  }
 
   return (
     <>

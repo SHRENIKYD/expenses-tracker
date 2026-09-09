@@ -63,6 +63,9 @@ export default function useExpensesData() {
   const [sort, setSort] = useState('date');
   const [order, setOrder] = useState('desc');
   const [range, setRange] = useState(defaultRange);
+  // True from the moment a period is chosen until its figures land, so the
+  // pages can show placeholders rather than the previous period's numbers.
+  const [periodLoading, setPeriodLoading] = useState(false);
   // Everything that still thinks in months reads this; a custom window reports
   // the month its range ends in.
   const month = range.mode === 'month' ? range.month : range.to.slice(0, 7);
@@ -138,7 +141,10 @@ export default function useExpensesData() {
         if (!cancelled) setError(err.message);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setPeriodLoading(false);
+        }
       });
     return () => {
       cancelled = true;
@@ -320,7 +326,12 @@ export default function useExpensesData() {
     // The list follows the range by default, so choosing a window narrows both
     // the figures and the transactions behind them. An explicit date filter
     // still wins over it.
+    periodLoading,
     setRange: (next) => {
+      // Drop the old period's figures immediately: showing September's totals
+      // under a July heading, even for a moment, is worse than a placeholder.
+      setSummary(null);
+      setPeriodLoading(true);
       setRange(next);
       // Choosing a period ends an all-dates search: the list goes back to
       // following the range.
@@ -328,6 +339,8 @@ export default function useExpensesData() {
     },
     setMonth: (value) => {
       if (!/^\d{4}-\d{2}$/.test(value)) return;
+      setSummary(null);
+      setPeriodLoading(true);
       setRange(monthSelection(value));
       setFilters((current) => ({ ...current, from: '', to: '', searchAll: false }));
     },

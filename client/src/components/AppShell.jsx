@@ -224,7 +224,7 @@ export default function AppShell({ context }) {
         )}
         {!isTask && (
           <div className="page-actions">
-            <RangePicker range={range} onChange={setRange} />
+            <RangePicker range={range} onChange={setRange} busy={context.periodLoading} />
             <button type="button" className="secondary" onClick={handlers.exportCsv}>
               <Icon name="export" size={16} /> Export
             </button>

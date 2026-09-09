@@ -67,7 +67,8 @@ function budgetRunway(buckets, overallBudget) {
 }
 
 export default function Overview() {
-  const { summary, expenses, accounts, goals, loading, handlers } = useOutletContext();
+  const { summary, expenses, accounts, goals, loading, periodLoading, handlers } =
+    useOutletContext();
   const [period, setPeriod] = useState('buckets');
   const [search, setSearch] = useState('');
   const query = useDebouncedValue(search, 200);
@@ -87,7 +88,11 @@ export default function Overview() {
   }, [expenses, query]);
 
   if (!summary) {
-    return loading ? <OverviewSkeleton /> : <p className="empty">Nothing to show yet.</p>;
+    return loading || periodLoading ? (
+      <OverviewSkeleton />
+    ) : (
+      <p className="empty">Nothing to show yet.</p>
+    );
   }
 
   const {

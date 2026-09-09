@@ -16,9 +16,15 @@ import {
 } from '../format.js';
 
 export default function Reports() {
-  const { summary, loading } = useOutletContext();
+  const { summary, loading, periodLoading } = useOutletContext();
 
-  if (!summary) return loading ? <ReportsSkeleton /> : <p className="empty">Nothing to show yet.</p>;
+  if (!summary) {
+    return loading || periodLoading ? (
+      <ReportsSkeleton />
+    ) : (
+      <p className="empty">Nothing to show yet.</p>
+    );
+  }
 
   const {
     total,
