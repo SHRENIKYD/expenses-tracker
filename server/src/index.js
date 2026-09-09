@@ -6,6 +6,7 @@ const { init } = require('./db');
 const expensesRouter = require('./routes/expenses');
 const budgetsRouter = require('./routes/budgets');
 const summaryRouter = require('./routes/summary');
+const recurringRouter = require('./routes/recurring');
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.use('/api/expenses', expensesRouter);
 app.use('/api/budgets', budgetsRouter);
 app.use('/api/summary', summaryRouter);
+app.use('/api/recurring', recurringRouter);
 
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 

@@ -127,4 +127,32 @@ function parseFilters(query) {
   return { errors, filters };
 }
 
-module.exports = { CATEGORIES, validateExpense, validateBudget, parseFilters, isIsoDate, isIsoMonth, today };
+function validateRecurring(body, { partial = false } = {}) {
+  const { errors, value } = validateExpense({ ...body, date: undefined }, { partial });
+  const input = body && typeof body === 'object' ? body : {};
+
+  if (input.dayOfMonth !== undefined) {
+    const day = Number(input.dayOfMonth);
+    if (!Number.isInteger(day) || day < 1 || day > 28) {
+      errors.push('dayOfMonth must be a whole number from 1 to 28');
+    } else {
+      value.dayOfMonth = day;
+    }
+  } else if (!partial) {
+    errors.push('dayOfMonth is required');
+  }
+
+  delete value.date;
+  return { errors, value };
+}
+
+module.exports = {
+  CATEGORIES,
+  validateExpense,
+  validateBudget,
+  validateRecurring,
+  parseFilters,
+  isIsoDate,
+  isIsoMonth,
+  today
+};

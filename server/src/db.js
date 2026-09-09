@@ -21,6 +21,14 @@ const SCHEMA = [
    )`,
   `CREATE INDEX IF NOT EXISTS expenses_date_idx ON expenses (date DESC)`,
   `CREATE INDEX IF NOT EXISTS expenses_category_idx ON expenses (category)`,
+  `CREATE TABLE IF NOT EXISTS recurring (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     description TEXT NOT NULL,
+     amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),
+     category TEXT NOT NULL,
+     day_of_month SMALLINT NOT NULL CHECK (day_of_month BETWEEN 1 AND 28),
+     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+   )`,
   `CREATE TABLE IF NOT EXISTS budgets (
      category TEXT PRIMARY KEY,
      monthly_limit NUMERIC(12,2) NOT NULL CHECK (monthly_limit >= 0),
@@ -46,4 +54,14 @@ function rowToExpense(row) {
   };
 }
 
-module.exports = { pool, init, rowToExpense };
+function rowToRecurring(row) {
+  return {
+    id: row.id,
+    description: row.description,
+    amount: Number(row.amount),
+    category: row.category,
+    dayOfMonth: row.day_of_month
+  };
+}
+
+module.exports = { pool, init, rowToExpense, rowToRecurring };

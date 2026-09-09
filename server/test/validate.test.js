@@ -1,6 +1,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { validateExpense, validateBudget, parseFilters, CATEGORIES } = require('../src/validate');
+const {
+  validateExpense,
+  validateBudget,
+  validateRecurring,
+  parseFilters,
+  CATEGORIES
+} = require('../src/validate');
 
 test('accepts a well-formed expense and rounds to paise', () => {
   const { errors, value } = validateExpense({
@@ -77,4 +83,21 @@ test('budget rejects negatives and accepts zero as a clear', () => {
 test('every category is lowercase and unique', () => {
   assert.equal(new Set(CATEGORIES).size, CATEGORIES.length);
   assert.deepEqual(CATEGORIES, CATEGORIES.map((c) => c.toLowerCase()));
+});
+
+test('recurring requires a day of month and rejects days above 28', () => {
+  const { errors, value } = validateRecurring({
+    description: 'Rent',
+    amount: 18000,
+    category: 'housing',
+    dayOfMonth: 1
+  });
+  assert.deepEqual(errors, []);
+  assert.equal(value.dayOfMonth, 1);
+  assert.equal(value.date, undefined, 'a template must not carry a date');
+
+  assert.ok(validateRecurring({ description: 'x', amount: 1, dayOfMonth: 31 }).errors.length);
+  assert.ok(validateRecurring({ description: 'x', amount: 1, dayOfMonth: 0 }).errors.length);
+  assert.ok(validateRecurring({ description: 'x', amount: 1, dayOfMonth: 1.5 }).errors.length);
+  assert.ok(validateRecurring({ description: 'x', amount: 1 }).errors.length);
 });

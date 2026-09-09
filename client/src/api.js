@@ -37,6 +37,13 @@ export const updateExpense = (id, patch) =>
 export const deleteExpense = (id) => request(`/expenses/${id}`, { method: 'DELETE' });
 
 export const getSummary = (month) => request(`/summary${toQuery({ month })}`);
+
+export const listRecurring = () => request('/recurring');
+export const createRecurring = (template) =>
+  request('/recurring', { method: 'POST', body: JSON.stringify(template) });
+export const deleteRecurring = (id) => request(`/recurring/${id}`, { method: 'DELETE' });
+export const applyRecurring = (month) =>
+  request('/recurring/apply', { method: 'POST', body: JSON.stringify({ month }) });
 export const listBudgets = () => request('/budgets');
 export const setBudget = (category, monthlyLimit) =>
   request(`/budgets/${category}`, { method: 'PUT', body: JSON.stringify({ monthlyLimit }) });

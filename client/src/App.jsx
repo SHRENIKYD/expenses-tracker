@@ -10,6 +10,7 @@ import ImportExport from './components/ImportExport.jsx';
 import DailyChart from './components/DailyChart.jsx';
 import useDebouncedValue from './useDebouncedValue.js';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
+import Recurring from './components/Recurring.jsx';
 import { currentMonth } from './format.js';
 import {
   createExpense,
@@ -21,7 +22,11 @@ import {
   listCategories,
   listExpenses,
   setBudget,
-  updateExpense
+  updateExpense,
+  listRecurring,
+  createRecurring,
+  deleteRecurring,
+  applyRecurring
 } from './api.js';
 
 const emptyFilters = { q: '', category: '', from: '', to: '' };
@@ -30,6 +35,7 @@ export default function App() {
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState(['other']);
   const [budgets, setBudgets] = useState([]);
+  const [recurring, setRecurring] = useState([]);
   const [summary, setSummary] = useState(null);
   const [filters, setFilters] = useState(emptyFilters);
   const [sort, setSort] = useState('date');
@@ -59,9 +65,14 @@ export default function App() {
   }, [queryFilters, sort, order]);
 
   const loadSummary = useCallback(async () => {
-    const [nextSummary, nextBudgets] = await Promise.all([getSummary(month), listBudgets()]);
+    const [nextSummary, nextBudgets, nextRecurring] = await Promise.all([
+      getSummary(month),
+      listBudgets(),
+      listRecurring()
+    ]);
     setSummary(nextSummary);
     setBudgets(nextBudgets);
+    setRecurring(nextRecurring);
   }, [month]);
 
   useEffect(() => {
@@ -171,6 +182,27 @@ export default function App() {
       return outcome;
     });
 
+  const handleAddRecurring = (template) =>
+    guard(async () => {
+      const created = await createRecurring(template);
+      await loadSummary();
+      return created;
+    });
+
+  const handleDeleteRecurring = (id) =>
+    guard(async () => {
+      await deleteRecurring(id);
+      await loadSummary();
+      return true;
+    });
+
+  const handleApplyRecurring = () =>
+    guard(async () => {
+      const outcome = await applyRecurring(month);
+      await refresh();
+      return outcome;
+    });
+
   const handleExport = () => guard(() => exportCsv({ ...queryFilters, sort, order }));
 
   function handleSort(key) {
@@ -215,6 +247,14 @@ export default function App() {
               onSave={handleBudget}
             />
           )}
+          <Recurring
+            month={month}
+            categories={categories}
+            templates={recurring}
+            onAdd={handleAddRecurring}
+            onDelete={handleDeleteRecurring}
+            onApply={handleApplyRecurring}
+          />
           <ImportExport onExport={handleExport} onImport={handleImport} />
         </div>
 
