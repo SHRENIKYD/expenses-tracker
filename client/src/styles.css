@@ -1,25 +1,34 @@
 :root {
-  --bg: #f4f6f5;
+  --bg: #f5f8f6;
   --card: #ffffff;
-  --text: #14211c;
-  --muted: #6b7671;
-  --border: #e4e9e6;
+  --text: #0f2f24;
+  --muted: #6b7d75;
+  --border: #e6ede9;
+  --line: #eef3f0;
 
-  /* Brand green — validated against the white card surface:
-     inside the lightness band, above the chroma floor, and >= 3:1 contrast. */
-  --accent: #1a7f5a;
-  --accent-strong: #146648;
-  --accent-soft: #e8f4ef;
-  --series: #1a7f5a;
+  /* brand green, validated against the white card surface */
+  --accent: #157a54;
+  --accent-strong: #10603f;
+  --accent-soft: #e6f2ec;
+  --series: #157a54;
 
-  --critical: #d03b3b;
+  /* the sidebar and the leading KPI tile are dark green surfaces */
+  --sidebar: #0e3b2c;
+  --sidebar-deep: #0a2b20;
+  --sidebar-active: #1c5a44;
+  --sidebar-ink: #b9d3c8;
+  --sidebar-dim: #7fb4a0;
+  --kpi-dark: #10442f;
+
+  --critical: #d64545;
   --critical-soft: #fdeceb;
-  --warning-soft: #fdf6e3;
-  --warning-border: #f2e0ae;
+  --warning-soft: #fdf5e3;
+  --warning-border: #f2e3bd;
   --warning-text: #8a6410;
+  --warning-ink: #b98218;
 
-  --radius: 12px;
-  --radius-sm: 8px;
+  --radius: 16px;
+  --radius-sm: 11px;
   color-scheme: light;
 }
 
@@ -31,7 +40,8 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 .app {
@@ -84,8 +94,8 @@ main {
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px;
+  border-radius: var(--radius);
+  padding: 20px;
 }
 
 .card h2 {
@@ -109,9 +119,10 @@ label {
 
 input,
 select {
-  padding: 8px 10px;
+  padding: 10px 13px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
   font-size: 0.9rem;
   color: var(--text);
   background: #fff;
@@ -126,12 +137,14 @@ button:focus-visible {
 }
 
 button {
-  padding: 9px 14px;
+  padding: 11px 17px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--accent);
   color: #fff;
   font-size: 0.88rem;
+  font-weight: 650;
+  font-family: inherit;
   cursor: pointer;
 }
 
@@ -141,9 +154,10 @@ button:disabled {
 }
 
 button.secondary {
-  background: #eef1f6;
+  background: var(--card);
   color: var(--text);
   border: 1px solid var(--border);
+  font-weight: 550;
 }
 
 button.link {
@@ -234,12 +248,15 @@ th.numeric .sort {
 }
 
 .tag {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #eef2ff;
-  color: #3730a3;
-  font-size: 0.74rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 550;
 }
 
 .hero {
@@ -785,17 +802,18 @@ tfoot td {
 }
 
 .sidebar {
-  width: 232px;
-  flex: 0 0 232px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
-  padding: 18px 12px;
+  width: 244px;
+  flex: 0 0 244px;
+  background: linear-gradient(180deg, var(--sidebar) 0%, var(--sidebar-deep) 100%);
+  color: #fff;
+  padding: 22px 14px 18px;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 20px;
   position: sticky;
   top: 0;
   height: 100vh;
+  overflow: hidden;
 }
 
 .brand {
@@ -806,80 +824,135 @@ tfoot td {
 }
 
 .brand-mark {
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  background: var(--accent);
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.14);
   color: #fff;
   display: grid;
   place-items: center;
-  flex: 0 0 32px;
+  flex: 0 0 34px;
 }
 
 .brand-name {
-  font-weight: 650;
-  font-size: 0.98rem;
+  font-weight: 700;
+  font-size: 1rem;
   letter-spacing: -0.01em;
+  color: #fff;
 }
 
 .sidebar nav {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  flex: 1 1 auto;
+  gap: 3px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 9px 11px;
+  gap: 12px;
+  padding: 10px 12px;
   border-radius: var(--radius-sm);
-  color: var(--muted);
+  color: var(--sidebar-ink);
   text-decoration: none;
   font-size: 0.9rem;
   font-weight: 500;
 }
 
 .nav-item:hover {
-  background: #f3f6f4;
-  color: var(--text);
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
 }
 
 .nav-item.active {
-  background: var(--accent-soft);
-  color: var(--accent-strong);
-  font-weight: 600;
+  background: var(--sidebar-active);
+  color: #fff;
+  font-weight: 650;
+}
+
+.sidebar-spacer {
+  flex: 1 1 auto;
+  min-height: 8px;
+}
+
+.sidebar-motto {
+  margin: 0;
+  padding: 0 12px;
+  font-size: 1.24rem;
+  line-height: 1.28;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.sidebar-rule {
+  display: block;
+  width: 34px;
+  height: 2px;
+  margin-top: 14px;
+  background: var(--sidebar-dim);
+}
+
+.sidebar-hills {
+  display: block;
+  width: calc(100% + 28px);
+  margin: 0 -14px;
+  height: 92px;
 }
 
 .sidebar-foot {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px 11px 0;
-  border-top: 1px solid var(--border);
-  font-size: 0.82rem;
+  gap: 4px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .sidebar-user {
-  color: var(--text);
-  font-weight: 550;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.sidebar-foot .link {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0;
-  align-self: flex-start;
+  gap: 10px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--sidebar-ink);
+  font-size: 0.86rem;
+  font-weight: 500;
+  text-align: left;
+}
+
+.sidebar-user:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+}
+
+.sidebar-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex: 0 0 28px;
+  display: grid;
+  place-items: center;
+  background: var(--sidebar-active);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.sidebar-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .main {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 22px 26px 48px;
+  padding: 28px 30px 48px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -895,14 +968,35 @@ tfoot td {
 
 .page-header h1 {
   margin: 0;
-  font-size: 1.7rem;
-  letter-spacing: -0.02em;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  max-width: 22ch;
+  line-height: 1.14;
 }
 
 .page-subtitle {
-  margin: 2px 0 0;
+  margin: 6px 0 0;
   color: var(--muted);
   font-size: 0.88rem;
+}
+
+.header-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-weight: 700;
+  font-size: 1rem;
 }
 
 .page-actions {
@@ -913,13 +1007,14 @@ tfoot td {
 }
 
 .month-select {
+  display: flex;
   flex-direction: row;
   align-items: center;
   gap: 8px;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 7px 11px;
+  padding: 8px 12px;
   color: var(--muted);
 }
 
@@ -938,9 +1033,9 @@ tfoot td {
   background: var(--accent);
   color: #fff;
   border-radius: var(--radius-sm);
-  padding: 10px 16px;
+  padding: 11px 17px;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 650;
   text-decoration: none;
 }
 
@@ -948,60 +1043,211 @@ tfoot td {
   background: var(--accent-strong);
 }
 
-/* ---------- stat tiles ---------- */
-.stat-row {
+/* ---------- KPI tiles ---------- */
+.kpi-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
   gap: 14px;
 }
 
-.stat {
+.kpi {
   display: flex;
-  align-items: flex-start;
-  gap: 13px;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.stat-icon {
-  width: 40px;
-  height: 40px;
+.kpi-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kpi-icon {
+  width: 38px;
+  height: 38px;
   border-radius: 11px;
   display: grid;
   place-items: center;
-  flex: 0 0 40px;
-}
-
-.stat-icon.good {
+  flex: 0 0 38px;
   background: var(--accent-soft);
   color: var(--accent-strong);
 }
 
-.stat-icon.spend {
+.kpi-icon.spend {
   background: var(--critical-soft);
   color: var(--critical);
 }
 
-.stat-body {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.stat-label {
-  font-size: 0.82rem;
+.kpi-label {
+  font-size: 0.84rem;
   color: var(--muted);
+  font-weight: 500;
 }
 
-.stat-value {
-  font-size: 1.4rem;
-  font-weight: 650;
+.kpi-value {
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
-.stat-foot {
+.kpi-foot {
   font-size: 0.76rem;
   color: var(--muted);
+}
+
+.kpi-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.76rem;
+  font-weight: 650;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.kpi-delta.down {
+  background: var(--critical-soft);
+  color: var(--critical);
+}
+
+.kpi.dark {
+  background: var(--kpi-dark);
+  border-color: var(--kpi-dark);
+  color: #fff;
+}
+
+.kpi.dark .kpi-label,
+.kpi.dark .kpi-foot {
+  color: var(--sidebar-dim);
+}
+
+.kpi.dark .kpi-icon {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.kpi.dark .kpi-delta {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+/* ---------- cash flow chart ---------- */
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bar-income {
+  fill: var(--accent);
+}
+
+.bar-expense {
+  fill: #cfe4d9;
+}
+
+.bar-label {
+  font-size: 10px;
+  fill: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.bar-week {
+  font-size: 12px;
+  font-weight: 650;
+  fill: var(--text);
+}
+
+.chart-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.chart-foot {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+}
+
+/* ---------- donut ---------- */
+.donut-row {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.donut-svg .donut-total {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.donut-svg .donut-caption {
+  font-size: 9px;
+}
+
+.donut-svg {
+  width: 168px;
+  height: 168px;
+  flex: 0 0 168px;
+}
+
+.donut-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1 1 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 0.85rem;
+}
+
+.donut-legend li {
+  display: grid;
+  grid-template-columns: 10px 1fr auto auto;
+  align-items: center;
+  gap: 9px;
+}
+
+.donut-legend li.active {
+  color: var(--accent-strong);
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.warning-strip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 16px 0 0;
+  padding: 11px 13px;
+  border-radius: var(--radius-sm);
+  background: var(--warning-soft);
+  border: 1px solid var(--warning-border);
+  color: var(--warning-text);
+  font-size: 0.83rem;
+}
+
+.warning-strip svg {
+  color: var(--warning-ink);
+  flex: 0 0 auto;
 }
 
 /* ---------- overview layout ---------- */
@@ -1172,6 +1418,11 @@ tfoot td {
   gap: 9px;
 }
 
+.amount-in,
+.amount-out {
+  white-space: nowrap;
+}
+
 .amount-in {
   color: var(--accent-strong);
   font-weight: 600;
@@ -1336,7 +1587,7 @@ tfoot td {
 
 @media (max-width: 900px) {
   .overview-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1610,11 +1861,19 @@ tr.is-duplicate {
     display: flex;
   }
 
-  /* The four tiles and the standalone budget card duplicate the hero and
-     budget summary above them on a phone. */
-  .stat-row,
-  .overview-side > .card:first-child {
+  /* The four tiles duplicate the hero and budget summary above them on a phone. */
+  .kpi-row {
     display: none;
+  }
+
+  /* The weekly bars need room to stay legible, so the chart scrolls sideways
+     inside its own card rather than shrinking to an unreadable width. */
+  .chart {
+    overflow-x: auto;
+  }
+
+  .chart svg {
+    min-width: 520px;
   }
 
   .page-header {

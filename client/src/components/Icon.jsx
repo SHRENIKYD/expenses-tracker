@@ -33,7 +33,19 @@ const PATHS = {
   back: 'M19 12H5M11 18l-6-6 6-6',
   camera: 'M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zM12 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
   alert: 'M12 4 2.5 20h19zM12 10v4M12 17h.01',
-  logout: 'M9 21H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4M16 17l5-5-5-5M21 12H9'
+  logout: 'M9 21H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4M16 17l5-5-5-5M21 12H9',
+  swap: 'M4 8h13l-3-3M20 16H7l3 3',
+  accounts: 'M3 6h18v13H3zM3 10h18M7 15h4',
+  budget: 'M4 5h16v14H4zM9 5v14M4 12h5',
+  bell: 'M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6M10.5 20a2 2 0 0 0 3 0',
+  export: 'M12 16V4M8 8l4-4 4 4M4 20h16',
+  laptop: 'M4 5h16v11H4zM2 19h20',
+  target: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zM12 13h.01',
+  savings: 'M4 13a7 7 0 0 1 7-7h3a6 6 0 0 1 6 6v3a4 4 0 0 1-4 4h-8a4 4 0 0 1-4-4zM7 18v2M17 18v2M20 11h1.5M15 9h.01',
+  fuel: 'M5 17h11v2H5zM5 12l1.2-4A2 2 0 0 1 8.1 6.5h5.8A2 2 0 0 1 15.8 8L17 12M5 12h12v5H5zM19 9h2v6h-2',
+  briefcase: 'M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M4 12h16',
+  arrowUpRight: 'M4 17l6-6 4 4 6-7M15 8h6v6',
+  arrowDownRight: 'M20 7l-6 6-4-4-6 7M9 16H3v-6'
 };
 
 // Which glyph represents each spending category.

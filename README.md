@@ -55,7 +55,7 @@ npm run dev
 | POST   | `/api/expenses/import`     | Bulk import from a CSV body                               |
 | GET    | `/api/budgets`             | All category budgets                                      |
 | PUT    | `/api/budgets/:category`   | Set a monthly limit (`0` clears it)                       |
-| GET    | `/api/summary?month=`      | Month totals, category split, daily series, 12-month trend |
+| GET    | `/api/summary?month=`      | Month totals, category split, weekly cash flow, daily series, 12-month trend |
 
 CSV columns for import and export: `date,description,category,amount`.
 

@@ -51,3 +51,12 @@ export const PAYMENT_LABEL = {
 };
 
 export const paymentLabel = (method) => (method ? PAYMENT_LABEL[method] || titleCase(method) : null);
+
+const longDay = new Intl.DateTimeFormat('en-IN', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric'
+});
+
+export const formatToday = () => longDay.format(new Date());

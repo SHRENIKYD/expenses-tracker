@@ -4,6 +4,11 @@ const { isIsoMonth } = require('../validate');
 
 const router = express.Router();
 
+function totalDaysIn(month) {
+  const [year, monthNumber] = month.split('-').map(Number);
+  return new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+}
+
 function currentMonth() {
   return new Date().toISOString().slice(0, 7);
 }
@@ -25,8 +30,17 @@ router.get('/', async (req, res, next) => {
     const previous = shiftMonth(month, -1);
     const trendStart = `${shiftMonth(month, -11)}-01`;
 
-    const [totals, byCategory, daily, trend, budgets, incomeRows, settingsRows, recurringRows] =
-      await Promise.all([
+    const [
+      totals,
+      byCategory,
+      daily,
+      trend,
+      budgets,
+      incomeRows,
+      settingsRows,
+      recurringRows,
+      weeklyRows
+    ] = await Promise.all([
       pool.query(
         `SELECT to_char(date, 'YYYY-MM') AS month, COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count
          FROM expenses WHERE user_id = $1 AND kind = 'expense' AND to_char(date, 'YYYY-MM') IN ($2, $3)
@@ -59,7 +73,19 @@ router.get('/', async (req, res, next) => {
         [userId, month]
       ),
       pool.query('SELECT key, value FROM settings WHERE user_id = $1', [userId]),
-      pool.query('SELECT * FROM recurring WHERE user_id = $1 ORDER BY day_of_month', [userId])
+      pool.query('SELECT * FROM recurring WHERE user_id = $1 ORDER BY day_of_month', [userId]),
+      // Weekly buckets for the cash-flow chart: days 1-7, 8-14, 15-21, then the
+      // rest of the month, so a 28 to 31 day month always yields four columns.
+      pool.query(
+        `SELECT LEAST(((EXTRACT(DAY FROM date)::int - 1) / 7) + 1, 4) AS week,
+                kind,
+                SUM(amount) AS total
+         FROM expenses
+         WHERE user_id = $1 AND to_char(date, 'YYYY-MM') = $2
+         GROUP BY 1, 2
+         ORDER BY 1`,
+        [userId, month]
+      )
     ]);
 
     const totalFor = (target) => {
@@ -110,6 +136,23 @@ router.get('/', async (req, res, next) => {
     const projected = isCurrentMonth && elapsedDays > 0 ? (total / elapsedDays) * totalDays : null;
 
     const income = Number(incomeRows.rows[0].total);
+
+    const weekEnds = [7, 14, 21, totalDaysIn(month)];
+    const weekly = [1, 2, 3, 4].map((week, index) => {
+      const forWeek = weeklyRows.rows.filter((row) => Number(row.week) === week);
+      const of = (kind) => {
+        const row = forWeek.find((entry) => entry.kind === kind);
+        return row ? Number(row.total) : 0;
+      };
+      return {
+        week,
+        label: `W${week}`,
+        from: index === 0 ? 1 : weekEnds[index - 1] + 1,
+        to: weekEnds[index],
+        income: of('income'),
+        expenses: of('expense')
+      };
+    });
     const settings = Object.fromEntries(settingsRows.rows.map((row) => [row.key, row.value]));
     const overallBudget = Number(settings.monthlyBudget ?? 0);
 
@@ -144,6 +187,7 @@ router.get('/', async (req, res, next) => {
       budgetUsed: overallBudget > 0 ? total / overallBudget : null,
       budgetLeft: overallBudget > 0 ? overallBudget - total : null,
       upcoming,
+      weekly,
       total,
       count: countFor(month),
       previousMonth: previous,
