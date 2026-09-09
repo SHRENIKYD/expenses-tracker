@@ -2053,6 +2053,94 @@ button.mint:hover:not(:disabled) {
   padding: 14px;
 }
 
+/* ---------- loading skeletons ---------- */
+.skeleton-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.skeleton {
+  display: block;
+  background: linear-gradient(90deg, #edf2ef 0%, #e2ebe6 40%, #edf2ef 80%);
+  background-size: 300% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -20% 0;
+  }
+}
+
+/* A shimmer that cannot be turned off is a problem for some readers, so it
+   settles into a flat tone instead. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background: #e8eeeb;
+  }
+}
+
+.skeleton-lines,
+.skeleton-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.skeleton-rows {
+  gap: 8px;
+}
+
+.skeleton-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+/* the hero sits on the mint card, where the grey placeholder disappears */
+.hero-card .skeleton {
+  background: linear-gradient(90deg, #ffffff66 0%, #ffffffcc 40%, #ffffff66 80%);
+  background-size: 300% 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-card .skeleton {
+    background: #ffffff99;
+  }
+}
+
+.skeleton-hero-amount {
+  margin: 8px 0 14px;
+}
+
+.skeleton-donut {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.skeleton-donut .skeleton-lines {
+  flex: 1 1 150px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ---------- receipts ---------- */
 .receipt-chip {
   display: inline-grid;

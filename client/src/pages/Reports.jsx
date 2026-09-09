@@ -1,6 +1,7 @@
 import { useOutletContext } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import ErrorBoundary from '../components/ErrorBoundary.jsx';
+import { ReportsSkeleton } from '../components/Skeleton.jsx';
 import KpiTile from '../components/KpiTile.jsx';
 import SpendingDonut from '../components/SpendingDonut.jsx';
 import DailyChart from '../components/DailyChart.jsx';
@@ -8,9 +9,9 @@ import TrendChart from '../components/TrendChart.jsx';
 import { formatMoney, formatMoneyTrim, formatMonthLong, formatPercent } from '../format.js';
 
 export default function Reports() {
-  const { summary } = useOutletContext();
+  const { summary, loading } = useOutletContext();
 
-  if (!summary) return <p className="empty">Loading…</p>;
+  if (!summary) return loading ? <ReportsSkeleton /> : <p className="empty">Nothing to show yet.</p>;
 
   const {
     total,

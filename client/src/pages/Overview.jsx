@@ -7,6 +7,7 @@ import KpiTile from '../components/KpiTile.jsx';
 import GoalCard from '../components/GoalCard.jsx';
 import UpcomingBills from '../components/UpcomingBills.jsx';
 import useDebouncedValue from '../useDebouncedValue.js';
+import { OverviewSkeleton } from '../components/Skeleton.jsx';
 import {
   currentMonth,
   formatDayFull,
@@ -79,7 +80,7 @@ export default function Overview() {
   }, [expenses, query, month]);
 
   if (!summary) {
-    return <p className="empty">{loading ? 'Loading…' : 'Nothing to show yet.'}</p>;
+    return loading ? <OverviewSkeleton /> : <p className="empty">Nothing to show yet.</p>;
   }
 
   const {

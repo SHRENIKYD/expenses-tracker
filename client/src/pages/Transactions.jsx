@@ -5,11 +5,14 @@ import ExpenseTable from '../components/ExpenseTable.jsx';
 import ImportExport from '../components/ImportExport.jsx';
 import StatementImport from '../components/StatementImport.jsx';
 import { emptyFilters } from '../useExpensesData.js';
+import { TableSkeleton } from '../components/Skeleton.jsx';
 import { formatMoney } from '../format.js';
 
 export default function Transactions() {
   const { expenses, accounts, categories, filters, setFilters, sort, order, loading, handlers } =
     useOutletContext();
+
+  const firstLoad = loading && expenses.length === 0;
 
   const income = expenses.filter((row) => row.kind === 'income').reduce((sum, row) => sum + row.amount, 0);
   const spend = expenses.filter((row) => row.kind !== 'income').reduce((sum, row) => sum + row.amount, 0);
@@ -24,6 +27,9 @@ export default function Transactions() {
         onReset={() => setFilters(emptyFilters)}
       />
 
+      {firstLoad && <TableSkeleton />}
+
+      {!firstLoad && (
       <section className="card">
         <div className="card-head">
           <h2>
@@ -50,6 +56,7 @@ export default function Transactions() {
           />
         </div>
       </section>
+      )}
 
       <div className="two-col">
         <StatementImport onImported={handlers.refresh} />

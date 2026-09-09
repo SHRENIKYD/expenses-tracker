@@ -3,11 +3,12 @@ import { useOutletContext } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import GoalCard from '../components/GoalCard.jsx';
 import { formatMoney } from '../format.js';
+import { CardsSkeleton } from '../components/Skeleton.jsx';
 
 const ICONS = ['target', 'savings', 'laptop', 'transport', 'housing', 'education', 'health', 'entertainment', 'briefcase', 'other'];
 
 export default function SavingsGoals() {
-  const { goals, handlers } = useOutletContext();
+  const { goals, loading, handlers } = useOutletContext();
   const [form, setForm] = useState({ name: '', target: '', icon: 'target' });
   const [busy, setBusy] = useState(false);
 
@@ -42,7 +43,9 @@ export default function SavingsGoals() {
           )}
         </div>
 
-        {goals.length === 0 ? (
+        {goals.length === 0 && loading ? (
+          <CardsSkeleton count={2} label="Loading savings goals" />
+        ) : goals.length === 0 ? (
           <p className="empty">Nothing being saved for yet. Add a goal below.</p>
         ) : (
           <div className="portfolio-grid">{goals.map(goal => <GoalCard key={goal.id} goal={goal} handlers={handlers} />)}</div>
