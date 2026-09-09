@@ -242,7 +242,11 @@ export default function Overview() {
                 </select>
               </div>
             </div>
-            <CashFlowChart series={series} monthLabel={periodLabel} />
+            <CashFlowChart
+              series={series}
+              monthLabel={periodLabel}
+              progress={daily.length ? upToNow / daily.length : null}
+            />
             {heaviest && heaviest.total > 0 && (
               <p className="chart-foot muted">
                 Heaviest seven days {formatDayFull(heaviest.from)} – {formatDayFull(heaviest.to)} ·{' '}

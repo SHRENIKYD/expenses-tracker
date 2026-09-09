@@ -1,4 +1,11 @@
-const WIDTH = 760;
+import { useEffect, useRef, useState } from 'react';
+
+// The drawing is laid out in CSS pixels — one viewBox unit per pixel — so the
+// chart fills whatever width the card gives it. Scaling a fixed-width viewBox
+// instead would either letterbox the drawing (dead space either side) or blow
+// the labels up with the card.
+// Narrower than this and the week labels collide, so the card scrolls instead.
+const MIN_WIDTH = 480;
 const HEIGHT = 320;
 const TOP = 34;
 const FLOOR = 262;
@@ -25,7 +32,26 @@ function barPath(x, y, width, height, radius = 4) {
   return `M${x},${y + height} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + width - r},${y} Q${x + width},${y} ${x + width},${y + r} L${x + width},${y + height} Z`;
 }
 
-export default function CashFlowChart({ series, monthLabel }) {
+function useContainerWidth() {
+  const ref = useRef(null);
+  const [width, setWidth] = useState(MIN_WIDTH);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || typeof ResizeObserver === 'undefined') return undefined;
+
+    const observer = new ResizeObserver(([entry]) => {
+      setWidth(Math.max(MIN_WIDTH, Math.round(entry.contentRect.width)));
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  return [ref, width];
+}
+
+export default function CashFlowChart({ series, monthLabel, progress = null }) {
+  const [box, WIDTH] = useContainerWidth();
   const peak = Math.max(...series.flatMap((group) => [group.income, group.expenses]), 0);
   const max = niceMax(peak);
   const plot = FLOOR - TOP;
@@ -40,8 +66,15 @@ export default function CashFlowChart({ series, monthLabel }) {
   }));
 
   return (
-    <div className="chart cashflow">
-      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Income and expenses per period">
+    <div className="chart cashflow" ref={box}>
+      <svg
+        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        width={WIDTH}
+        height={HEIGHT}
+        preserveAspectRatio="xMinYMid meet"
+        role="img"
+        aria-label="Income and expenses per period"
+      >
         {lines.map((line) => (
           <g key={line.value}>
             <line
@@ -56,6 +89,20 @@ export default function CashFlowChart({ series, monthLabel }) {
             </text>
           </g>
         ))}
+
+        {progress !== null && progress > 0 && progress < 1 && (
+          <g className="chart-today">
+            <line
+              x1={AXIS_X + (WIDTH - AXIS_X) * progress}
+              y1={TOP - 12}
+              x2={AXIS_X + (WIDTH - AXIS_X) * progress}
+              y2={FLOOR}
+            />
+            <text x={AXIS_X + (WIDTH - AXIS_X) * progress + 6} y={TOP - 4}>
+              today
+            </text>
+          </g>
+        )}
 
         {series.map((group) => {
           const centre = AXIS_X + slot * (group.index - 1) + slot / 2;
