@@ -4,6 +4,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import ForestArt from './ForestArt.jsx';
 import RangePicker from './RangePicker.jsx';
+import GlobalSearch from './GlobalSearch.jsx';
 import { formatToday } from '../format.js';
 
 const NAV = [
@@ -44,7 +45,6 @@ const TITLES = {
 export default function AppShell({ context }) {
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [search, setSearch] = useState('');
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const page = TITLES[pathname] || TITLES['/'];
@@ -149,25 +149,11 @@ export default function AppShell({ context }) {
 
           {!isTask && (
             <div className="header-tools">
-              <form
-                className="global-search search-field"
-                role="search"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  setFilters({ ...filters, q: search, from: '', to: '' });
-                  navigate('/transactions');
-                }}
-              >
-                <button type="submit" aria-label="Search">
-                  <Icon name="search" size={18} />
-                </button>
-                <input
-                  aria-label="Search transactions and categories"
-                  placeholder="Search transactions, categories…"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                />
-              </form>
+              <GlobalSearch
+                onSeeAll={(value) =>
+                  setFilters({ ...filters, q: value, from: '', to: '', searchAll: true })
+                }
+              />
               <div className="alerts-container">
                 <button
                   className="notification-button"

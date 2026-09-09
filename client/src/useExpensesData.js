@@ -31,7 +31,17 @@ import {
   updateExpense
 } from './api.js';
 
-export const emptyFilters = { q: '', category: '', from: '', to: '', kind: '', paymentMethod: '' };
+export const emptyFilters = {
+  q: '',
+  category: '',
+  from: '',
+  to: '',
+  kind: '',
+  paymentMethod: '',
+  // Set by the header search, which looks across every date rather than the
+  // period on screen.
+  searchAll: false
+};
 
 export default function useExpensesData() {
   const [accounts, setAccounts] = useState([]);
@@ -72,8 +82,8 @@ export default function useExpensesData() {
       category: filters.category,
       kind: filters.kind,
       paymentMethod: filters.paymentMethod,
-      from: filters.from || range.from,
-      to: filters.to || range.to
+      from: filters.searchAll ? filters.from : filters.from || range.from,
+      to: filters.searchAll ? filters.to : filters.to || range.to
     }),
     [
       debouncedQuery,
@@ -82,6 +92,7 @@ export default function useExpensesData() {
       filters.paymentMethod,
       filters.from,
       filters.to,
+      filters.searchAll,
       range.from,
       range.to
     ]
@@ -311,12 +322,14 @@ export default function useExpensesData() {
     // still wins over it.
     setRange: (next) => {
       setRange(next);
-      setFilters((current) => ({ ...current, from: '', to: '' }));
+      // Choosing a period ends an all-dates search: the list goes back to
+      // following the range.
+      setFilters((current) => ({ ...current, from: '', to: '', searchAll: false }));
     },
     setMonth: (value) => {
       if (!/^\d{4}-\d{2}$/.test(value)) return;
       setRange(monthSelection(value));
-      setFilters((current) => ({ ...current, from: '', to: '' }));
+      setFilters((current) => ({ ...current, from: '', to: '', searchAll: false }));
     },
     loading,
     submitting,

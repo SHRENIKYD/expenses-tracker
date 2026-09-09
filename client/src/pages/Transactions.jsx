@@ -19,6 +19,22 @@ export default function Transactions() {
 
   return (
     <>
+      {filters.searchAll && filters.q && (
+        <p className="notice" role="status">
+          <Icon name="search" size={16} strokeWidth={1.9} />
+          <span>
+            Showing every date for “{filters.q}”.{' '}
+            <button
+              type="button"
+              className="link"
+              onClick={() => setFilters({ ...filters, q: '', searchAll: false })}
+            >
+              Back to the selected period
+            </button>
+          </span>
+        </p>
+      )}
+
       <Filters
         categories={categories.expense}
         incomeCategories={categories.income}

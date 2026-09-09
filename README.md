@@ -97,6 +97,13 @@ contain no extractable text and cannot be read at all.
 June–September 2026). Import it from the app's **Import CSV** button to populate an
 empty database.
 
+## Searching
+
+The header search looks across every transaction, not just the selected period:
+typing shows matching rows with their dates and amounts, arrow keys and Enter
+open one, and the Transactions page then says it is showing every date for that
+term with a way back to the period.
+
 ## Periods
 
 The period selector takes a month, a preset (last 7 days, last 30 days, this

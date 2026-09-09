@@ -31,6 +31,7 @@ const PATHS = {
   chevronRight: 'M9 5l7 7-7 7',
   chevronDown: 'M5 9l7 7 7-7',
   back: 'M19 12H5M11 18l-6-6 6-6',
+  close: 'M6 6l12 12M18 6L6 18',
   camera: 'M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zM12 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
   alert: 'M12 4 2.5 20h19zM12 10v4M12 17h.01',
   logout: 'M9 21H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4M16 17l5-5-5-5M21 12H9',

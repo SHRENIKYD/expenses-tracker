@@ -2060,6 +2060,108 @@ button.mint:hover:not(:disabled) {
   padding: 14px;
 }
 
+/* ---------- header search ---------- */
+.global-search-wrap {
+  position: relative;
+}
+
+.global-search-clear {
+  background: transparent;
+  color: var(--muted);
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+.global-search-clear:hover {
+  color: var(--text);
+}
+
+.search-results {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(420px, 86vw);
+  z-index: 30;
+  padding: 6px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 16px 36px rgba(9, 42, 30, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.search-result {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.search-result svg {
+  color: var(--accent-strong);
+  flex: 0 0 auto;
+}
+
+.search-result.active {
+  background: var(--accent-soft);
+}
+
+.search-result-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.search-result-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-result .hint,
+.search-result .amount-in,
+.search-result .amount-out {
+  white-space: nowrap;
+}
+
+.search-empty {
+  margin: 0;
+  padding: 12px 10px;
+}
+
+.search-see-all {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 10px;
+  border: none;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  background: transparent;
+  color: var(--accent-strong);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.search-see-all:hover {
+  background: var(--accent-soft);
+}
+
 /* ---------- range picker ---------- */
 .range-picker {
   position: relative;
@@ -2972,7 +3074,31 @@ tr.is-duplicate {
 .goal-card h2 { display: flex; align-items: center; gap: 10px; }
 .goal-card .link { display: inline-flex; align-items: center; }
 .mobile-menu-button, .mobile-menu { display: none; }
-@media(max-width: 1100px) { .global-search { display:none; } .goal-content { flex-wrap:wrap; } }
+@media (max-width: 1100px) {
+  .global-search {
+    width: auto;
+    flex: 1 1 160px;
+    min-width: 0;
+  }
+
+  .goal-content {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 768px) {
+  .global-search-wrap {
+    flex: 1 1 160px;
+  }
+
+  /* The panel is anchored to the input, which is narrow on a phone; it spans
+     the screen instead so a description is not cut to three letters. */
+  .search-results {
+    left: 0;
+    right: auto;
+    width: calc(100vw - 28px);
+  }
+}
 @media(max-width: 768px) {
  .mobile-menu-button { display:grid; }
  .mobile-menu { display:grid; grid-template-columns:1fr 1fr; gap:10px; background:white; padding:15px; border-radius:10px; }
