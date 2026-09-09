@@ -11,6 +11,10 @@ on:
       version:
         description: 'Version to release, without the v (e.g. 1.0.0)'
         required: true
+      move_tag:
+        description: 'Move the tag if it already exists, onto this commit'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -53,7 +57,17 @@ jobs:
         run: |
           tag="${{ steps.release.outputs.tag }}"
           if git ls-remote --exit-code --tags origin "$tag" >/dev/null 2>&1; then
-            echo "$tag already exists"
+            if [ "${{ inputs.move_tag }}" = "true" ]; then
+              # Only reasonable while nobody has built on the old tag: it
+              # rewrites what a published version points at.
+              git -c user.name='github-actions[bot]' \
+                  -c user.email='github-actions[bot]@users.noreply.github.com' \
+                  tag -fa "$tag" -m "Tessera $tag"
+              git push --force origin "$tag"
+              echo "$tag moved to $GITHUB_SHA"
+            else
+              echo "$tag already exists"
+            fi
           else
             git -c user.name='github-actions[bot]' \
                 -c user.email='github-actions[bot]@users.noreply.github.com' \

@@ -2,6 +2,10 @@ name: Android
 
 on:
   workflow_dispatch:
+    inputs:
+      attach_to:
+        description: 'Attach the apk to this release (e.g. v1.0.0); leave blank to only keep it as an artifact'
+        required: false
   push:
     tags: ['v*']
 
@@ -76,10 +80,12 @@ jobs:
       # An artifact expires and needs a GitHub login to fetch. A release asset
       # is a permanent, public link, which is what a phone actually needs.
       - name: Attach it to the release
-        if: github.ref_type == 'tag'
+        if: github.ref_type == 'tag' || inputs.attach_to != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          release="${{ inputs.attach_to }}"
+          [ -n "$release" ] || release="$GITHUB_REF_NAME"
           cp client/android/app/build/outputs/apk/debug/app-debug.apk \
              "${{ steps.version.outputs.name }}.apk"
-          gh release upload "$GITHUB_REF_NAME" "${{ steps.version.outputs.name }}.apk" --clobber
+          gh release upload "$release" "${{ steps.version.outputs.name }}.apk" --clobber
