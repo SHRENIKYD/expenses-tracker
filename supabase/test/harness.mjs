@@ -45,6 +45,13 @@ const SUPABASE_SHIM = `
 export async function freshDatabase(name) {
   const admin = new pg.Client({ connectionString: process.env.ADMIN_URL });
   await admin.connect();
+  // A previous run killed mid-test can leave a connection behind, and Postgres
+  // will not drop a database anyone is still attached to.
+  await admin.query(
+    `select pg_terminate_backend(pid) from pg_stat_activity
+     where datname = $1 and pid <> pg_backend_pid()`,
+    [name]
+  );
   await admin.query(`drop database if exists ${name}`);
   await admin.query(`create database ${name}`);
   await admin.end();

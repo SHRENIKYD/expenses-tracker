@@ -59,3 +59,20 @@ ADMIN_URL=postgres://…/postgres npm test
 
 Receipts are not carried: they are bytes in the old database and belong in
 Storage. The script says how many exist rather than dropping them silently.
+
+## Parity
+
+`test/parity.test.mjs` is the test that matters most for the move: it loads the
+live rows into the Supabase schema, asks the SQL functions and the client's
+assembler for a month, and compares every figure with what the Express API
+answers for the same month — totals, count, the previous period, the category
+split, all thirty days of the series with their running totals, the twelve-month
+trend, upcoming bills and per-account sums.
+
+```bash
+SOURCE_DATABASE_URL=postgres://…/expenses \
+ADMIN_URL=postgres://…/postgres npm test     # with the API running locally
+```
+
+It skips itself when either the source database or the API is unreachable, so
+the suite still runs anywhere.
