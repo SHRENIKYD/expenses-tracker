@@ -126,23 +126,25 @@ const SCHEMA = [
      FOREIGN KEY (account_id, user_id) REFERENCES accounts(id, user_id);
    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
   `CREATE INDEX IF NOT EXISTS expenses_account_idx ON expenses(account_id)`,
-  `CREATE TABLE IF NOT EXISTS savings_goals (
+  `CREATE TABLE IF NOT EXISTS goals (
      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-     name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 80),
-     target NUMERIC(12,2) NOT NULL CHECK (target > 0),
-     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-     UNIQUE(id, user_id)
+     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+     name TEXT NOT NULL,
+     icon TEXT NOT NULL DEFAULT 'target',
+     target_amount NUMERIC(12,2) NOT NULL CHECK (target_amount > 0),
+     saved_amount NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (saved_amount >= 0),
+     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
    )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS goals_id_owner_idx ON goals(id, user_id)`,
   `CREATE TABLE IF NOT EXISTS goal_contributions (
      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
      goal_id UUID NOT NULL,
      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
      amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),
      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-     FOREIGN KEY (goal_id, user_id) REFERENCES savings_goals(id, user_id) ON DELETE CASCADE
+     FOREIGN KEY (goal_id, user_id) REFERENCES goals(id, user_id) ON DELETE CASCADE
    )`,
-  `CREATE INDEX IF NOT EXISTS goals_user_idx ON savings_goals(user_id)`,
+  `CREATE INDEX IF NOT EXISTS goals_user_idx ON goals(user_id)`,
   `CREATE INDEX IF NOT EXISTS contributions_goal_idx ON goal_contributions(goal_id)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS budgets_user_category_idx ON budgets (user_id, category)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS settings_user_key_idx ON settings (user_id, key)`
@@ -187,6 +189,19 @@ function rowToExpense(row) {
   };
 }
 
+function rowToGoal(row) {
+  const target = Number(row.target_amount);
+  const saved = Number(row.saved_amount);
+  return {
+    id: row.id,
+    name: row.name,
+    icon: row.icon,
+    target,
+    saved,
+    progress: target > 0 ? Math.min(saved / target, 1) : 0
+  };
+}
+
 function rowToRecurring(row) {
   return {
     id: row.id,
@@ -198,4 +213,4 @@ function rowToRecurring(row) {
   };
 }
 
-module.exports = { pool, init, claimOrphanRows, rowToExpense, rowToRecurring };
+module.exports = { pool, init, claimOrphanRows, rowToExpense, rowToRecurring, rowToGoal };

@@ -62,7 +62,7 @@ export default function GoalCard({ goal, handlers, compact = false }) {
         <>
           <div className="goal-content">
             <span className="goal-icon">
-              <Icon name="laptop" size={32} />
+              <Icon name={goal.icon || 'target'} size={32} />
             </span>
             <div className="goal-details">
               <strong>{goal.name}</strong>

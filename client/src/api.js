@@ -181,3 +181,7 @@ export const contributeGoal = (id, amount) =>
     body: JSON.stringify({ amount })
   });
 export const listContributions = (id) => request(`/goals/${id}/contributions`);
+
+export const deleteGoal = removeGoal;
+export const addToGoal = contributeGoal;
+export const updateGoal = (id, patch) => request(`/goals/${id}`, { method: 'PUT', body: JSON.stringify(patch) });

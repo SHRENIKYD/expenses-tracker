@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { budgetAlert, money } from '../dashboard.js';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Icon from './Icon.jsx';
+import ForestArt from './ForestArt.jsx';
 import { formatToday } from '../format.js';
 
 const NAV = [
@@ -103,26 +104,7 @@ export default function AppShell({ context }) {
           <span className="sidebar-rule" />
         </p>
 
-        <svg
-          className="sidebar-hills"
-          viewBox="0 0 258 150"
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          <path
-            d="M0,150 L52,72 L88,110 L132,44 L176,104 L214,68 L258,120 L258,150 Z"
-            fill="none"
-            stroke="#59a487"
-            strokeWidth="1.4"
-          />
-          <path
-            d="M0,150 L40,104 L74,128 L118,86 L160,124 L206,96 L258,138 L258,150 Z"
-            fill="#1b5540"
-            fillOpacity="0.55"
-            stroke="#4b9077"
-            strokeWidth="1"
-          />
-        </svg>
+        <ForestArt />
 
         <div className="sidebar-foot">
           <NavLink

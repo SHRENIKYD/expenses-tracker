@@ -3,7 +3,7 @@ import { Link, useOutletContext } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { money } from '../dashboard.js';
 export default function Accounts() {
-  const { accounts, handlers } = useOutletContext();
+  const { accounts, summary, handlers, setFilters } = useOutletContext();
   const [name, setName] = useState('');
   const [openingBalance, setOpeningBalance] = useState('0');
   const [busy, setBusy] = useState(false);
@@ -91,6 +91,7 @@ export default function Accounts() {
       {!accounts.length && (
         <p className="empty">Add your bank, card, or cash account to track its balance.</p>
       )}
+      {summary?.accounts?.length > 0 && <section className="card"><h2>This month by payment method</h2><div className="portfolio-grid">{summary.accounts.map(method => <div key={method.method}><h3>{method.method.replace('_', ' ')}</h3><p>Income {money(method.income)} · Expenses {money(method.expenses)}</p><Link className="link" to="/transactions" onClick={() => setFilters({q:'',category:'',kind:'',from:'',to:'',paymentMethod:method.method === 'unassigned' ? '' : method.method})}>View transactions</Link></div>)}</div></section>}
     </>
   );
 }

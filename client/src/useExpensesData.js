@@ -30,7 +30,7 @@ import {
   updateExpense
 } from './api.js';
 
-export const emptyFilters = { q: '', category: '', from: '', to: '', kind: '' };
+export const emptyFilters = { q: '', category: '', from: '', to: '', kind: '', paymentMethod: '' };
 
 export default function useExpensesData() {
   const [accounts, setAccounts] = useState([]);
@@ -67,10 +67,11 @@ export default function useExpensesData() {
       q: debouncedQuery,
       category: filters.category,
       kind: filters.kind,
+      paymentMethod: filters.paymentMethod,
       from: filters.from || monthRange(month).from,
       to: filters.to || monthRange(month).to
     }),
-    [debouncedQuery, filters.category, filters.kind, filters.from, filters.to, month]
+    [debouncedQuery, filters.category, filters.kind, filters.paymentMethod, filters.from, filters.to, month]
   );
 
   const loadExpenses = useCallback(async () => {
@@ -273,6 +274,9 @@ export default function useExpensesData() {
       }
     }
   };
+
+  handlers.addGoal = handlers.createGoal;
+  handlers.contribute = handlers.contributeGoal;
 
   return {
     expenses,

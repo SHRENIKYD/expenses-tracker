@@ -1,24 +1,37 @@
-const WIDTH = 780;
+const WIDTH = 760;
 const HEIGHT = 320;
-const TOP = 40;
-const FLOOR = 270;
-const AXIS_X = 52;
+const TOP = 34;
+const FLOOR = 262;
+// wide enough for a seven-figure tick such as 1,00,000
+const AXIS_X = 72;
+const MAX_BAR = 52;
+const GAP = 6;
 
-// Round the axis up to a clean step so the gridline labels are readable numbers.
+// The axis is drawn in quarters, so the top has to be a multiple of four steps
+// or the gridlines read 63,750 instead of 60,000.
 function niceMax(value) {
-  if (value <= 0) return 10000;
-  const magnitude = 10 ** Math.floor(Math.log10(value));
-  const step = magnitude / 2;
-  return Math.ceil(value / step) * step;
+  if (value <= 0) return 40000;
+  const magnitude = 10 ** Math.floor(Math.log10(value / 4));
+  for (const multiple of [1, 2, 2.5, 5, 10]) {
+    const step = multiple * magnitude;
+    if (step * 4 >= value) return step * 4;
+  }
+  return magnitude * 40;
 }
 
-export default function CashFlowChart({ weekly = [], month }) {
-  const peak = Math.max(...weekly.flatMap((week) => [week.income, week.expenses]), 0);
+// A rectangle rounded on its top corners only, the way the reference draws bars.
+function barPath(x, y, width, height, radius = 4) {
+  const r = Math.min(radius, height);
+  return `M${x},${y + height} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + width - r},${y} Q${x + width},${y} ${x + width},${y + r} L${x + width},${y + height} Z`;
+}
+
+export default function CashFlowChart({ series, monthLabel }) {
+  const peak = Math.max(...series.flatMap((group) => [group.income, group.expenses]), 0);
   const max = niceMax(peak);
   const plot = FLOOR - TOP;
-  const slot = (WIDTH - AXIS_X) / Math.max(weekly.length, 1);
-  const barWidth = Math.min(52, slot / 3.4);
-  const gap = 8;
+  const slot = (WIDTH - AXIS_X) / series.length;
+  // Weekly draws the reference's 52px bars; a denser series narrows them to fit.
+  const BAR = Math.max(Math.min(MAX_BAR, slot / 2 - GAP), 3);
 
   const y = (value) => FLOOR - (value / max) * plot;
   const lines = [0, 0.25, 0.5, 0.75, 1].map((fraction) => ({
@@ -27,12 +40,8 @@ export default function CashFlowChart({ weekly = [], month }) {
   }));
 
   return (
-    <div className="chart">
-      <svg
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        role="img"
-        aria-label="Income and expenses for each week of the month"
-      >
+    <div className="chart cashflow">
+      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Income and expenses per period">
         {lines.map((line) => (
           <g key={line.value}>
             <line
@@ -42,74 +51,46 @@ export default function CashFlowChart({ weekly = [], month }) {
               y2={line.y}
               className={line.value === 0 ? 'chart-axis' : 'chart-grid'}
             />
-            <text x={AXIS_X - 10} y={line.y + 4} textAnchor="end" className="chart-tick">
+            <text x={AXIS_X - 12} y={line.y + 4} textAnchor="end" className="chart-tick">
               {Math.round(line.value).toLocaleString('en-IN')}
             </text>
           </g>
         ))}
 
-        {weekly.map((week, index) => {
-          const centre = AXIS_X + slot * index + slot / 2;
-          const incomeX = centre - barWidth - gap / 2;
-          const expenseX = centre + gap / 2;
+        {series.map((group) => {
+          const centre = AXIS_X + slot * (group.index - 1) + slot / 2;
+          const incomeX = centre - BAR - GAP / 2;
+          const expenseX = centre + GAP / 2;
           return (
-            <g key={week.week}>
-              {week.income > 0 && (
+            <g key={group.label}>
+              {group.income > 0 && (
                 <>
-                  <rect
-                    x={incomeX}
-                    y={y(week.income)}
-                    width={barWidth}
-                    height={FLOOR - y(week.income)}
-                    rx="6"
-                    className="bar-income"
-                  />
-                  <text
-                    x={incomeX + barWidth / 2}
-                    y={y(week.income) - 9}
-                    textAnchor="middle"
-                    className="bar-label"
-                  >
-                    {Math.round(week.income).toLocaleString('en-IN')}
+                  <path d={barPath(incomeX, y(group.income), BAR, FLOOR - y(group.income))} className="bar-income" />
+                  <text x={incomeX + BAR / 2} y={y(group.income) - 10} textAnchor="middle" className="bar-label">
+                    {Math.round(group.income).toLocaleString('en-IN')}
                   </text>
                 </>
               )}
-              {week.expenses > 0 && (
+              {group.expenses > 0 && (
                 <>
-                  <rect
-                    x={expenseX}
-                    y={y(week.expenses)}
-                    width={barWidth}
-                    height={FLOOR - y(week.expenses)}
-                    rx="6"
-                    className="bar-expense"
-                  />
-                  <text
-                    x={expenseX + barWidth / 2}
-                    y={y(week.expenses) - 9}
-                    textAnchor="middle"
-                    className="bar-label"
-                  >
-                    {Math.round(week.expenses).toLocaleString('en-IN')}
+                  <path d={barPath(expenseX, y(group.expenses), BAR, FLOOR - y(group.expenses))} className="bar-expense" />
+                  <text x={expenseX + BAR / 2} y={y(group.expenses) - 10} textAnchor="middle" className="bar-label">
+                    {Math.round(group.expenses).toLocaleString('en-IN')}
                   </text>
                 </>
               )}
-              <text x={centre} y={FLOOR + 24} textAnchor="middle" className="bar-week">
-                {week.label}
+              <text x={centre} y={FLOOR + 26} textAnchor="middle" className="bar-period">
+                {group.label}
               </text>
-              <text x={centre} y={FLOOR + 41} textAnchor="middle" className="chart-tick">
-                {week.from}–{week.to}{' '}
-                {new Date(`${month}-01T00:00:00Z`).toLocaleString('en-IN', {
-                  month: 'short',
-                  timeZone: 'UTC'
-                })}
+              <text x={centre} y={FLOOR + 45} textAnchor="middle" className="bar-range">
+                {group.range}
               </text>
             </g>
           );
         })}
       </svg>
 
-      {peak === 0 && <p className="empty">Nothing recorded this month yet.</p>}
+      {peak === 0 && <p className="empty">Nothing recorded in {monthLabel} yet.</p>}
     </div>
   );
 }

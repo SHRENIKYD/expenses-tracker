@@ -4,7 +4,7 @@ import { formatMoney } from '../format.js';
 import { receiptUsage } from '../api.js';
 
 export default function SettingsPage() {
-  const { settings, session, handlers } = useOutletContext();
+  const { settings, session, handlers, onSignOut } = useOutletContext();
   const [form, setForm] = useState({ displayName: '', monthlyBudget: '' });
   const [saved, setSaved] = useState('');
   const [usage, setUsage] = useState(null);
@@ -83,6 +83,12 @@ export default function SettingsPage() {
           Receipts live in the database, which is capped at 1&nbsp;GB on the free plan. Each file is
           limited to 2&nbsp;MB.
         </p>
+
+        <div className="button-row">
+          <button type="button" className="secondary" onClick={onSignOut}>
+            Sign out
+          </button>
+        </div>
       </section>
     </div>
   );

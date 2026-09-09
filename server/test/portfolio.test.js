@@ -54,6 +54,10 @@ require('node:test')(
         201
       );
       const goal = await call('/goals', 'POST', { name: 'Laptop', target: 75000 }, a, 201);
+    const existingGoal = (await pool.query("INSERT INTO goals(user_id,name,target_amount,saved_amount) VALUES ($1,'Existing goal',1000,400) RETURNING id", [a])).rows[0];
+    await call('/goals/' + existingGoal.id + '/contributions', 'POST', { amount: 100 }, a, 201);
+    assert.equal((await call('/goals')).find(row => row.id === existingGoal.id).saved, 500);
+    await call('/goals/' + existingGoal.id, 'DELETE', null, a, 204);
       assert.deepEqual(await call('/accounts', 'GET', null, b), []);
       assert.deepEqual(await call('/goals', 'GET', null, b), []);
       await call('/goals/' + goal.id + '/contributions', 'POST', { amount: 45000 }, b, 404);
