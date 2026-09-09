@@ -3658,3 +3658,41 @@ select.remembered { border-color: #7fb79a; background: #f1f8f4; }
 @media (max-width: 560px) {
   .setting-detail { padding-left: 16px; }
 }
+
+/* Tessera's opening ribbon assembly never delays access to the sign-in form. */
+.signin-landing { gap: clamp(48px, 8vw, 140px); }
+.landing-brand { width: min(44vw, 520px); flex-shrink: 0; text-align: center; }
+.landing-brand-mark { display: block; width: 64%; height: auto; margin: 0 auto 12px; color: #c5e5cf; overflow: visible; }
+.landing-ribbon { transform-box: fill-box; transform-origin: center; animation: tessera-assemble 950ms cubic-bezier(.22, 1, .36, 1) both; }
+.landing-ribbon-0 { --ribbon-x: -38px; --ribbon-y: -32px; --ribbon-turn: -8deg; }
+.landing-ribbon-1 { --ribbon-x: 34px; --ribbon-y: -42px; --ribbon-turn: 7deg; animation-delay: 120ms; }
+.landing-ribbon-2 { --ribbon-x: 48px; --ribbon-y: -18px; --ribbon-turn: 10deg; animation-delay: 240ms; }
+.landing-ribbon-3 { --ribbon-x: -26px; --ribbon-y: 42px; --ribbon-turn: -6deg; animation-delay: 360ms; }
+.landing-ribbon-4 { --ribbon-x: 38px; --ribbon-y: 24px; --ribbon-turn: 8deg; animation-delay: 480ms; }
+.landing-ribbon-5 { --ribbon-x: -18px; --ribbon-y: 52px; --ribbon-turn: -7deg; animation-delay: 600ms; }
+.landing-wordmark { font-family: Georgia, 'Times New Roman', serif; color: #f6f2e7; font-size: clamp(3rem, 6.5vw, 6.5rem); line-height: 1.12; letter-spacing: -.045em; animation: tessera-reveal 800ms 900ms both; }
+.landing-tagline { margin: 18px 0 0; font-size: 1rem; color: #bdd7c9; animation: tessera-reveal 700ms 1150ms both; }
+.landing-replay { margin-top: 28px; padding: 8px 12px; border: 1px solid #b6d8c54d; border-radius: 20px; background: transparent; color: #d1e6da; font: inherit; font-size: .875rem; cursor: pointer; }
+.landing-replay:hover { background: #ffffff12; }
+.landing-replay:focus-visible { outline: 2px solid #c5e5cf; outline-offset: 4px; }
+@keyframes tessera-assemble {
+  from { opacity: 0; transform: translate(var(--ribbon-x), var(--ribbon-y)) rotate(var(--ribbon-turn)); }
+  to { opacity: 1; transform: translate(0, 0) rotate(0); }
+}
+@keyframes tessera-reveal {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 760px) {
+  .signin-landing { flex-direction: column; gap: 28px; padding-top: 28px; }
+  .landing-brand { width: 100%; max-width: 380px; }
+  .landing-brand-mark { width: 112px; margin-bottom: 4px; }
+  .landing-wordmark { font-size: 2.75rem; }
+  .landing-tagline { margin-top: 8px; }
+  .landing-replay { margin-top: 12px; }
+  .signin-landing .signin-card h1 { margin-top: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-ribbon, .landing-wordmark, .landing-tagline { animation: none; }
+  .landing-replay { display: none; }
+}
