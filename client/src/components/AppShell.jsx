@@ -6,7 +6,9 @@ import { SIDEBAR_THEMES, readSidebarTheme, saveSidebarTheme } from '../sidebarTh
 import BrandMark from './BrandMark.jsx';
 import RangePicker from './RangePicker.jsx';
 import GlobalSearch from './GlobalSearch.jsx';
-import { formatToday } from '../format.js';
+import PhoneHeader from './PhoneHeader.jsx';
+import { formatDayFull, formatMonth, formatToday } from '../format.js';
+import { rangeLabel } from '../range.js';
 
 const NAV = [
   { to: '/', label: 'Overview', icon: 'chart', end: true },
@@ -45,6 +47,10 @@ const TITLES = {
 
 export default function AppShell({ context }) {
   const [alertsOpen, setAlertsOpen] = useState(false);
+  // On a phone the search box and the period picker are behind their icons;
+  // both are always present on the desktop header, which has room for them.
+  const [phoneSearch, setPhoneSearch] = useState(false);
+  const [phonePeriod, setPhonePeriod] = useState(false);
   const [sidebarTheme, setSidebarTheme] = useState(readSidebarTheme);
   const theme = SIDEBAR_THEMES.find((item) => item.id === sidebarTheme);
 
@@ -154,6 +160,45 @@ export default function AppShell({ context }) {
       </aside>
 
       <div className="main">
+        {!isTask && (
+          <PhoneHeader
+            initial={initial}
+            summary={summary}
+            periodLabel={rangeLabel(range, { formatMonth, formatDayFull })}
+            title={page.title}
+            showFigure={pathname === '/'}
+            hasAlerts={Boolean(pressure) || bills.length > 0}
+            busy={context.periodLoading}
+            onSearch={() => setPhoneSearch((open) => !open)}
+            onNotifications={() => setAlertsOpen(!alertsOpen)}
+            onPeriod={() => setPhonePeriod((open) => !open)}
+          />
+        )}
+
+        {phoneSearch && (
+          <div className="phone-sheet">
+            <GlobalSearch
+              onSeeAll={(value) => {
+                setFilters({ ...filters, q: value, from: '', to: '', searchAll: true });
+                setPhoneSearch(false);
+              }}
+            />
+          </div>
+        )}
+
+        {phonePeriod && (
+          <div className="phone-sheet">
+            <RangePicker
+              range={range}
+              onChange={(next) => {
+                setRange(next);
+                setPhonePeriod(false);
+              }}
+              busy={context.periodLoading}
+            />
+          </div>
+        )}
+
         <header className="page-header">
           <div className="page-title">
             {isTask && (

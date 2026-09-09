@@ -3321,3 +3321,141 @@ select.remembered { border-color: #7fb79a; background: #f1f8f4; }
 @media (min-width: 769px) and (max-width: 1100px) {
   .sidebar:not(.collapsed) { width: 272px; flex-basis: 272px; }
 }
+
+/* ---------- the phone's header ---------- */
+/* Hidden on anything with room for the real one; the desktop header is
+   untouched, because 1440px can afford to spell things out. */
+.phone-header { display: none; }
+
+@media (max-width: 768px) {
+  .phone-header {
+    display: block;
+    background: linear-gradient(180deg, #10402f 0%, #0b3526 100%);
+    color: #eaf6ef;
+    padding: 12px 16px 18px;
+    margin: 0 0 14px;
+  }
+
+  .phone-header-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .phone-avatar {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    border-radius: 50%;
+    background: #ffffff20;
+    color: #eaf6ef;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .phone-brand {
+    flex: 1;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .phone-icon {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    padding: 0;
+    border: 1px solid #ffffff26;
+    border-radius: 11px;
+    color: #cfe6da;
+    background: #ffffff14;
+    cursor: pointer;
+  }
+  .phone-icon .notification-dot {
+    position: absolute;
+    top: 6px;
+    right: 7px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #8fe0b4;
+  }
+
+  .phone-figure { margin-top: 18px; }
+  .phone-figure-label { font-size: 12.5px; color: #a9cbba; }
+  .phone-figure-amount {
+    margin: 3px 0 0;
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: -0.8px;
+    line-height: 1.12;
+  }
+  .phone-figure-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.6px;
+  }
+  /* The figure holds its height while the period loads, so the page does not
+     jump when the number arrives. */
+  .phone-figure-wait {
+    display: inline-block;
+    width: 60%;
+    height: 30px;
+    border-radius: 8px;
+    background: #ffffff1f;
+  }
+
+  .phone-figure-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 12px;
+    margin-top: 14px;
+  }
+  .phone-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    height: 32px;
+    padding: 0 13px;
+    border: 1px solid #ffffff2e;
+    border-radius: 999px;
+    background: #ffffff1a;
+    color: #eaf6ef;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .phone-chip:disabled { opacity: 0.6; }
+  .phone-figure-split {
+    display: flex;
+    gap: 13px;
+    font-size: 12px;
+    color: #a9cbba;
+    white-space: nowrap;
+  }
+  .phone-figure-split span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* The search box and the period picker drop out of the header and open in a
+     sheet under it. */
+  .phone-sheet {
+    padding: 0 16px 14px;
+    margin-top: -6px;
+  }
+  .phone-sheet .card-search,
+  .phone-sheet .month-select { width: 100%; }
+
+  /* Both are said by the header now. */
+  .page-header { display: none; }
+  .hero-card { display: none; }
+}

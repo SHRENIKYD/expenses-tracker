@@ -60,3 +60,11 @@ export const rangeQuery = (range) =>
   range.mode === 'month' ? { month: range.month } : { from: range.from, to: range.to };
 
 export const defaultRange = () => monthSelection(currentMonth());
+
+// What a range is called, wherever it is shown: the picker's own button, and
+// the chip on the phone header.
+export function rangeLabel(range, { formatMonth, formatDayFull }) {
+  if (range.mode === 'month') return formatMonth(range.month);
+  const preset = PRESETS.find((entry) => entry.id === range.preset);
+  return preset ? preset.label : `${formatDayFull(range.from)} – ${formatDayFull(range.to)}`;
+}

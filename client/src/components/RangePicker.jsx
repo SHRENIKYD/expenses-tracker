@@ -1,13 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from './Icon.jsx';
-import { PRESETS, customRange, monthSelection } from '../range.js';
+import { PRESETS, customRange, monthSelection, rangeLabel } from '../range.js';
 import { formatDayFull, formatMonth } from '../format.js';
 
-function label(range) {
-  if (range.mode === 'month') return formatMonth(range.month);
-  const preset = PRESETS.find((entry) => entry.id === range.preset);
-  return preset ? preset.label : `${formatDayFull(range.from)} – ${formatDayFull(range.to)}`;
-}
+const label = (range) => rangeLabel(range, { formatMonth, formatDayFull });
 
 export default function RangePicker({ range, onChange, busy = false }) {
   const [open, setOpen] = useState(false);
