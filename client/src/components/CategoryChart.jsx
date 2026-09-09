@@ -1,79 +1,100 @@
 import { useState } from 'react';
-import { formatMoney, formatMoneyShort, titleCase } from '../format.js';
+import { formatMoney, titleCase } from '../format.js';
 
-const ROW_HEIGHT = 30;
-const BAR_HEIGHT = 14;
-const LABEL_WIDTH = 104;
+const SIZE = 180;
+const RADIUS = 70;
+const STROKE = 26;
+const GAP = 2;
+const MAX_SLICES = 6;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+
+function fold(categories) {
+  const sorted = [...categories].filter((row) => row.total > 0).sort((a, b) => b.total - a.total);
+  if (sorted.length <= MAX_SLICES + 1) return sorted.map((row, i) => ({ ...row, slot: i }));
+
+  const head = sorted.slice(0, MAX_SLICES).map((row, i) => ({ ...row, slot: i }));
+  const rest = sorted.slice(MAX_SLICES);
+  head.push({
+    category: 'other categories',
+    total: rest.reduce((sum, row) => sum + row.total, 0),
+    count: rest.reduce((sum, row) => sum + row.count, 0),
+    budget: null,
+    overBudget: false,
+    slot: MAX_SLICES,
+    folded: rest.length
+  });
+  return head;
+}
 
 export default function CategoryChart({ categories }) {
   const [hovered, setHovered] = useState(null);
 
-  if (categories.length === 0) {
+  const slices = fold(categories);
+  if (slices.length === 0) {
     return <p className="empty">No spending in this month yet.</p>;
   }
 
-  const rows = [...categories].sort((a, b) => b.total - a.total);
-  const max = Math.max(...rows.map((row) => row.total), 1);
-  const height = rows.length * ROW_HEIGHT;
+  const total = slices.reduce((sum, row) => sum + row.total, 0);
+  let offset = 0;
+
+  const arcs = slices.map((row) => {
+    const length = (row.total / total) * CIRCUMFERENCE;
+    const arc = { ...row, length, offset };
+    offset += length;
+    return arc;
+  });
+
+  const active = hovered === null ? null : arcs.find((arc) => arc.category === hovered);
 
   return (
-    <div className="chart">
-      <svg
-        viewBox={`0 0 420 ${height}`}
-        role="img"
-        aria-label="Spending by category for the selected month"
-        preserveAspectRatio="xMinYMin meet"
-      >
-        {rows.map((row, index) => {
-          const y = index * ROW_HEIGHT;
-          const width = Math.max((row.total / max) * (420 - LABEL_WIDTH - 74), 2);
-          return (
-            <g
-              key={row.category}
-              onMouseEnter={() => setHovered(row.category)}
-              onMouseLeave={() => setHovered(null)}
-            >
-              <rect x="0" y={y} width="420" height={ROW_HEIGHT} fill="transparent" />
-              <text x="0" y={y + ROW_HEIGHT / 2} dominantBaseline="middle" className="chart-label">
-                {titleCase(row.category)}
-              </text>
-              <rect
-                x={LABEL_WIDTH}
-                y={y + (ROW_HEIGHT - BAR_HEIGHT) / 2}
-                width={width}
-                height={BAR_HEIGHT}
-                rx="4"
-                className={row.overBudget ? 'bar bar-over' : 'bar'}
+    <div className="donut-wrap">
+      <div className="donut">
+        <svg viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label="Share of this month's spending by category">
+          <g transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}>
+            {arcs.map((arc) => (
+              <circle
+                key={arc.category}
+                cx={SIZE / 2}
+                cy={SIZE / 2}
+                r={RADIUS}
+                fill="none"
+                strokeWidth={hovered === arc.category ? STROKE + 4 : STROKE}
+                strokeDasharray={`${Math.max(arc.length - GAP, 0.5)} ${CIRCUMFERENCE - Math.max(arc.length - GAP, 0.5)}`}
+                strokeDashoffset={-arc.offset}
+                className={`slice slice-${arc.slot}`}
+                onMouseEnter={() => setHovered(arc.category)}
+                onMouseLeave={() => setHovered(null)}
               />
-              <text
-                x={LABEL_WIDTH + width + 8}
-                y={y + ROW_HEIGHT / 2}
-                dominantBaseline="middle"
-                className="chart-value"
-              >
-                {formatMoneyShort(row.total)}
-                {row.overBudget && ' \u26a0 over'}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+            ))}
+          </g>
+          <text x={SIZE / 2} y={SIZE / 2 - 4} textAnchor="middle" className="donut-total">
+            {active ? `${Math.round((active.total / total) * 100)}%` : formatMoney(total)}
+          </text>
+          <text x={SIZE / 2} y={SIZE / 2 + 14} textAnchor="middle" className="donut-caption">
+            {active ? titleCase(active.category) : 'this month'}
+          </text>
+        </svg>
+      </div>
 
-      {hovered && (
-        <div className="chart-tip" role="status">
-          {(() => {
-            const row = rows.find((entry) => entry.category === hovered);
-            return (
-              <>
-                <strong>{titleCase(row.category)}</strong> {formatMoney(row.total)} ·{' '}
-                {row.count} {row.count === 1 ? 'entry' : 'entries'}
-                {row.budget !== null && ` · budget ${formatMoney(row.budget)}`}
-                {row.overBudget && ' · ⚠ Over budget'}
-              </>
-            );
-          })()}
-        </div>
-      )}
+      <ul className="legend">
+        {arcs.map((arc) => (
+          <li
+            key={arc.category}
+            onMouseEnter={() => setHovered(arc.category)}
+            onMouseLeave={() => setHovered(null)}
+            className={hovered === arc.category ? 'active' : undefined}
+          >
+            <span className={`swatch slice-${arc.slot}`} aria-hidden="true" />
+            <span className="legend-name">
+              {titleCase(arc.category)}
+              {arc.folded ? ` (${arc.folded})` : ''}
+              {arc.overBudget && <span className="over-flag"> ⚠ over</span>}
+            </span>
+            <span className="legend-value">{formatMoney(arc.total)}</span>
+            <span className="legend-pct">{Math.round((arc.total / total) * 100)}%</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

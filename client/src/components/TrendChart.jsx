@@ -1,64 +1,70 @@
 import { useState } from 'react';
 import { formatMoney, formatMoneyShort, formatMonth } from '../format.js';
+import { buildArea } from './areaPath.js';
 
 const WIDTH = 420;
-const HEIGHT = 140;
-const AXIS = 18;
+const HEIGHT = 150;
+const FLOOR = 128;
 
 export default function TrendChart({ trend }) {
   const [hovered, setHovered] = useState(null);
 
-  const max = Math.max(...trend.map((point) => point.total), 1);
-  const slot = WIDTH / trend.length;
-  const barWidth = Math.max(slot - 2, 4);
-  const plot = HEIGHT - AXIS;
+  const all = trend.map((point, index) => ({ ...point, index, value: point.total }));
+  const firstWithData = all.findIndex((point) => point.value > 0);
+  const plotted = firstWithData === -1 ? [] : all.slice(firstWithData);
+
+  const { line, area, coords, max, step } = buildArea(plotted, {
+    width: WIDTH,
+    floor: FLOOR,
+    count: all.length
+  });
+
+  const coordFor = (index) => coords.find((coord) => coord.index === index);
+  const active = hovered === null ? null : all[hovered];
+  const activeCoord = active ? coordFor(active.index) : null;
 
   return (
     <div className="chart">
-      <svg
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        role="img"
-        aria-label="Total spending for each of the last twelve months"
-      >
-        <line x1="0" y1={plot} x2={WIDTH} y2={plot} className="chart-axis" />
-        {trend.map((point, index) => {
-          const barHeight = point.total === 0 ? 0 : Math.max((point.total / max) * (plot - 6), 3);
-          const x = index * slot + 1;
-          return (
-            <g
-              key={point.month}
-              onMouseEnter={() => setHovered(point.month)}
+      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Total spending for each of the last twelve months">
+        <path d={area} className="area-fill" />
+        <path d={line} className="area-line" />
+        <line x1="0" y1={FLOOR} x2={WIDTH} y2={FLOOR} className="chart-axis" />
+
+        {activeCoord && (
+          <>
+            <line x1={activeCoord.x} y1="0" x2={activeCoord.x} y2={FLOOR} className="crosshair" />
+            <circle cx={activeCoord.x} cy={activeCoord.y} r="5" className="area-marker" />
+          </>
+        )}
+
+        {all.map((point, index) => (
+          <g key={point.month}>
+            <rect
+              x={index * step - step / 2}
+              y="0"
+              width={Math.max(step, 4)}
+              height={FLOOR}
+              fill="transparent"
+              onMouseEnter={() => setHovered(index)}
               onMouseLeave={() => setHovered(null)}
-            >
-              <rect x={x} y="0" width={barWidth} height={HEIGHT} fill="transparent" />
-              {barHeight > 0 && (
-                <rect
-                  x={x}
-                  y={plot - barHeight}
-                  width={barWidth}
-                  height={barHeight}
-                  rx="4"
-                  className={hovered === point.month ? 'bar bar-active' : 'bar'}
-                />
-              )}
-              {index % 2 === (trend.length - 1) % 2 && (
-                <text x={x + barWidth / 2} y={HEIGHT - 5} textAnchor="middle" className="chart-tick">
-                  {formatMonth(point.month)}
-                </text>
-              )}
-            </g>
-          );
-        })}
+            />
+            {index % 2 === (all.length - 1) % 2 && (
+              <text x={index * step} y={HEIGHT - 4} textAnchor="middle" className="chart-tick">
+                {formatMonth(point.month)}
+              </text>
+            )}
+          </g>
+        ))}
       </svg>
 
       <div className="chart-tip" role="status">
-        {hovered ? (
+        {active ? (
           <>
-            <strong>{formatMonth(hovered)}</strong>{' '}
-            {formatMoney(trend.find((point) => point.month === hovered).total)}
+            <strong>{formatMonth(active.month)}</strong>{' '}
+            {active.index < firstWithData ? 'no data' : formatMoney(active.total)}
           </>
         ) : (
-          <span className="muted">Peak {formatMoneyShort(max)} · hover a bar for detail</span>
+          <span className="muted">Peak {formatMoneyShort(max)} · hover for detail</span>
         )}
       </div>
     </div>
