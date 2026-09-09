@@ -3279,3 +3279,18 @@ select.remembered { border-color: #7fb79a; background: #f1f8f4; }
   .statement-destination { flex-direction: column; align-items: stretch; }
   .statement-destination select { min-width: 0; width: 100%; }
 }
+
+/* ---------- recovery key ---------- */
+.recovery-key {
+  margin: 10px 0 14px;
+  padding: 14px 16px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 18px;
+  letter-spacing: 1.5px;
+  text-align: center;
+  word-break: break-all;
+  color: #0f3c2c;
+  background: #eef6f1;
+  border: 1px dashed #9cc3ae;
+  border-radius: 12px;
+}

@@ -10,6 +10,7 @@ migrations/0001_schema.sql    tables, indexes, row-level security
 migrations/0002_summary.sql   the dashboard's aggregates as SQL functions
 migrations/0003_receipts.sql  the receipts bucket and the policy that owns it
 migrations/0004_merchant_rules.sql  remembered categories, one row per merchant
+migrations/0005_encryption.sql  vaults, sealed columns, diagnostics
 export-data.mjs               moves an existing account's rows across
 test/                         policies and functions, run against real Postgres
 ```
@@ -133,9 +134,24 @@ Going back is the same switch: clear `VITE_DATA_BACKEND` and re-run the
 workflow. Nothing in the Express API is removed until the Supabase side has been
 running on real use.
 
+## After encryption
+
+0005 changes what this schema is for. `transactions` keeps `date`, `account_id`
+and its owner readable and moves everything else into `secret`; the aggregate
+functions from 0002 are dropped, because a function that sums an empty column
+answers zero rather than failing, and a wrong total is worse than an error.
+`client/src/data/aggregate.js` does that arithmetic now, and
+`client/test/aggregate.test.js` is what `test/functions.test.mjs` used to be.
+
+`test/encryption.test.mjs` covers what the database still guarantees: a vault
+belongs to one account, a row cannot be stored half-sealed, a sealed row keeps
+no plaintext column, the blind index still refuses a repeated statement, and a
+diagnostic cannot carry content.
+
 ## Leftovers from the move
 
-`export-data.mjs` and `test/parity.test.mjs` both reach for the Express API and
-the database behind it. That code is no longer in this repository, but the
-deployed API and its database may still be running: keep these until the last of
-the old data has been carried across, then delete them.
+`export-data.mjs` reaches for the Express API's database. That code is no longer
+in this repository, but the deployed database may still be running: keep it
+until the last of the old data has been carried across, then delete it. Note
+that data moved this way arrives in the clear and has to be sealed afterwards,
+from Settings → Encryption.

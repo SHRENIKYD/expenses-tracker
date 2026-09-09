@@ -97,6 +97,49 @@ the batch.
 June–September 2026). CSV columns are `date,description,category,amount,kind`;
 `kind` is optional and read from the category when it is missing.
 
+## Encryption
+
+Transactions and receipts are encrypted in the browser before they are stored.
+The database holds ciphertext, a date, an account id and an owner — enough to
+fetch a period, and nothing that says what was bought or for how much. A copy of
+the database is unreadable without the key, which never leaves the device.
+
+The shape is envelope encryption. A random data key encrypts every row
+(AES-GCM-256, a fresh iv each time, the row's id authenticated alongside so a
+blob cannot be moved between rows). That key is stored twice, wrapped by a key
+derived from the password (PBKDF2-SHA256, 310,000 iterations) and by one derived
+from a recovery key shown once at sign-up. Changing the password rewraps the
+data key and touches no row; losing both the password and the recovery key means
+the data is unreadable permanently, by anyone, which is what makes the guarantee
+worth having.
+
+Two things follow from it:
+
+- **The dashboard's arithmetic moved into the browser.** SQL cannot sum a column
+  it cannot read, so the aggregate functions were dropped and
+  `client/src/data/aggregate.js` does the work over decrypted rows. Search,
+  sorting and category filters run there too.
+- **The duplicate check survives as a blind index.** A bank reference is stored
+  as an HMAC under the same key, so the unique index still refuses a statement
+  imported twice while the digest says nothing about the reference.
+
+The key lives in memory, and in `sessionStorage` so a reload does not ask again.
+A fresh tab asks for the password. Nothing is written to `localStorage`.
+
+## Debugging without reading anything
+
+`public.diagnostics` holds codes, row identifiers, key versions and counts.
+`detail` is constrained to numbers and booleans — not by length, since a
+description can be one word, but by type, which the database can enforce. The
+client scrubs the same way before sending.
+
+Settings → Encryption runs the checks that actually need the key, in the page
+that has it: how many rows are sealed, how many are still readable, and which
+ones will not open. The report it offers for download carries those identifiers
+and codes and no content. There is deliberately no mechanism that lets anyone
+but the account holder read a transaction — a key held for support would make
+the encryption decorative.
+
 ## Signing in
 
 Email and password, through Supabase Auth. A forgotten password is reset by a

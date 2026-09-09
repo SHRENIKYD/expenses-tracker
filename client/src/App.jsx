@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import AppShell from './components/AppShell.jsx';
 import SignIn from './components/SignIn.jsx';
+import Unlock from './components/Unlock.jsx';
 import Goals from './pages/SavingsGoals.jsx';
 import Overview from './pages/Overview.jsx';
 import Transactions from './pages/Transactions.jsx';
@@ -12,7 +13,17 @@ import SettingsPage from './pages/SettingsPage.jsx';
 import AddExpense from './pages/AddExpense.jsx';
 import useExpensesData from './useExpensesData.js';
 import { readSession, writeSession, clearSession } from './session.js';
-import { login, logout, register, setUnauthorisedHandler } from './data/index.js';
+import {
+  loadVault,
+  login,
+  logout,
+  onLockChange,
+  register,
+  setUnauthorisedHandler,
+  unlockVault,
+  unlockVaultWithRecoveryKey,
+  vaultState
+} from './data/index.js';
 
 function Workspace({ session, onSignOut }) {
   const data = useExpensesData();
@@ -38,9 +49,19 @@ function Workspace({ session, onSignOut }) {
 export default function App() {
   const [session, setSession] = useState(() => readSession());
 
+  const [lock, setLock] = useState(vaultState);
+
   useEffect(() => {
     setUnauthorisedHandler(() => setSession(null));
+    return onLockChange(() => setLock(vaultState()));
   }, []);
+
+  // A restored session has no key with it: the vault row is fetched so the tab
+  // knows whether it is locked, and a key cached for this tab is adopted.
+  useEffect(() => {
+    if (!session) return;
+    loadVault().then(setLock).catch(() => setLock(vaultState()));
+  }, [session]);
 
   async function handleAuth(mode, payload) {
     const call = mode === 'register' ? register : login;
@@ -61,6 +82,17 @@ export default function App() {
 
   if (!session) {
     return <SignIn onSubmit={handleAuth} onAuthenticated={setSession} />;
+  }
+
+  if (lock.exists && !lock.unlocked) {
+    return (
+      <Unlock
+        email={session.user.email}
+        onUnlock={unlockVault}
+        onUnlockWithKey={unlockVaultWithRecoveryKey}
+        onSignOut={handleSignOut}
+      />
+    );
   }
 
   return (

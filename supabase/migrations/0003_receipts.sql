@@ -11,7 +11,9 @@ values (
   'receipts',
   false,
   2097152,
-  array['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf']
+  -- Encrypted receipts are uploaded as opaque bytes; the extension records
+  -- what the file really is, so the viewer can still show it.
+  array['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf', 'application/octet-stream']
 )
 on conflict (id) do update
 set public = excluded.public,

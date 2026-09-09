@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import RecoveryKey from './RecoveryKey.jsx';
 import { requestPasswordReset } from '../data/index.js';
 
 export default function SignIn({ onAuthenticated, onSubmit }) {
@@ -9,6 +10,10 @@ export default function SignIn({ onAuthenticated, onSubmit }) {
   const isRegister = mode === 'register';
   const isRecover = mode === 'recover';
   const [sent, setSent] = useState('');
+  // Registration makes the encryption key and hands back the one way back in if
+  // the password is ever forgotten. The account is not usable until it is seen.
+  const [recoveryKey, setRecoveryKey] = useState(null);
+  const [pending, setPending] = useState(null);
   const update = (field) => (event) => setForm({ ...form, [field]: event.target.value });
 
   async function handleSubmit(event) {
@@ -25,12 +30,33 @@ export default function SignIn({ onAuthenticated, onSubmit }) {
       const payload = isRegister
         ? { email: form.email, password: form.password, displayName: form.displayName }
         : { email: form.email, password: form.password };
-      onAuthenticated(await onSubmit(mode, payload));
+      const result = await onSubmit(mode, payload);
+      if (isRegister && result.recoveryKey) {
+        setRecoveryKey(result.recoveryKey);
+        setPending(result);
+        return;
+      }
+      onAuthenticated(result);
     } catch (err) {
       setError(err.message);
     } finally {
       setBusy(false);
     }
+  }
+
+  if (recoveryKey) {
+    return (
+      <div className="signin">
+        <div className="card signin-card">
+          <h1>Save your recovery key</h1>
+          <RecoveryKey
+            value={recoveryKey}
+            note="Your transactions are encrypted before they are stored, so nobody but you can read them — not even from the database. This key is the only way in if you forget your password. It is shown once."
+            onDone={() => onAuthenticated(pending)}
+          />
+        </div>
+      </div>
+    );
   }
 
   return (

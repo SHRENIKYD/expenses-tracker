@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Icon from '../components/Icon.jsx';
 import PasswordCard from '../components/PasswordCard.jsx';
+import EncryptionCard from '../components/EncryptionCard.jsx';
 import { useOutletContext } from 'react-router-dom';
 import { formatMoney } from '../format.js';
 import { receiptUsage } from '../data/index.js';
@@ -69,6 +70,8 @@ export default function SettingsPage() {
       </section>
 
       <PasswordCard email={session.user.email} />
+
+      <EncryptionCard />
 
       <section className="card">
         <h2>

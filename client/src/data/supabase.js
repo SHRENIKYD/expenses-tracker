@@ -4,6 +4,17 @@ import { detectBank, parseStatement } from '../statement.js';
 import { NEAR_DAYS, findDuplicate } from '../duplicates.js';
 import { merchantKey } from '../merchant.js';
 import { csvToExpenses, toCsv } from '../csv.js';
+import * as vault from './vault.js';
+import {
+  accountBalances,
+  accountTotals,
+  categoryTotals,
+  dailySeries,
+  monthlyTrend,
+  periodTotals,
+  summaryWindow
+} from './aggregate.js';
+import { makeReporter } from '../diagnostics.js';
 import {
   fromTransaction,
   toAccount,
@@ -35,6 +46,69 @@ function client() {
 function unwrap({ data, error }) {
   if (error) throw new Error(error.message);
   return data;
+}
+
+// Diagnostics carry codes and counts, never content — see ../diagnostics.js.
+const report = makeReporter({
+  appVersion: import.meta.env.VITE_APP_VERSION || 'dev',
+  insert: async (entry) =>
+    unwrap(await client().from('diagnostics').insert({ ...entry, user_id: await currentUserId() }))
+});
+
+// A row is either sealed or from before the vault existed. Both are read here,
+// so no page has to know which it is looking at.
+async function toDomain(row) {
+  if (!row.secret) return toTransaction(row);
+
+  const fields = await vault.open(row);
+  return toTransaction({
+    ...row,
+    kind: fields.kind,
+    description: fields.description,
+    amount: fields.amount,
+    category: fields.category,
+    payment_method: fields.paymentMethod ?? null,
+    note: fields.note ?? '',
+    source: fields.source ?? 'manual',
+    external_ref: fields.externalRef ?? null
+  });
+}
+
+// One unreadable row must not blank the page: it is reported and left out, and
+// the Data health panel in Settings lists what was left out and why.
+async function openAll(rows) {
+  const opened = [];
+  for (const row of rows) {
+    try {
+      opened.push(await toDomain(row));
+    } catch (err) {
+      report(err.code === 'locked' ? 'row.sealed_without_key' : 'row.decrypt_failed', {
+        rowId: row.id,
+        keyVersion: row.key_version,
+        bytes: row.secret ? row.secret.length : 0
+      });
+      if (err.code === 'locked') throw err;
+    }
+  }
+  return opened;
+}
+
+// Written rows carry the plaintext columns only while there is no vault; once
+// there is one, they carry ciphertext and nothing else.
+async function forStorage(entry) {
+  if (!vault.isUnlocked()) return fromTransaction(entry);
+
+  const sealed = await vault.seal(entry);
+  return {
+    id: sealed.id,
+    date: entry.date,
+    account_id: entry.accountId ?? null,
+    receipt_path: entry.receiptId ?? null,
+    secret: sealed.secret,
+    iv: sealed.iv,
+    key_version: sealed.key_version,
+    ref_hash: sealed.ref_hash
+  };
 }
 
 async function currentUserId() {
@@ -77,18 +151,154 @@ export async function register({ email, password, displayName }) {
     // The project has email confirmation on, so there is no session to return.
     throw new Error('Check your email to confirm the account, then sign in.');
   }
-  return session(data);
+
+  // The vault is made here, in the browser, and only its wrapped form is sent.
+  const { vault: envelope, recoveryKey } = await vault.create(password);
+  unwrap(
+    await client()
+      .from('vaults')
+      .insert({ user_id: data.user.id, key_version: envelope.keyVersion, ...envelope })
+  );
+
+  return { ...session(data), recoveryKey };
 }
 
 export async function login({ email, password }) {
   const data = unwrap(await client().auth.signInWithPassword({ email, password }));
-  const profile = unwrap(
-    await client().from('profiles').select('display_name').eq('id', data.user.id).maybeSingle()
-  );
+  const [profile] = await Promise.all([
+    unwrap(
+      await client().from('profiles').select('display_name').eq('id', data.user.id).maybeSingle()
+    ),
+    loadVault(password)
+  ]);
   return session(data, profile || {});
 }
 
+/** Fetch the vault row and, given the password, open it. */
+export async function loadVault(password) {
+  const stored = unwrap(
+    await client().from('vaults').select('key_version,password,recovery').maybeSingle()
+  );
+  if (!stored) {
+    // An account from before encryption existed. Its rows are still readable;
+    // Settings offers to seal them.
+    await vault.adopt(null);
+    report('vault.missing');
+    return { exists: false, unlocked: false };
+  }
+
+  const envelope = {
+    keyVersion: stored.key_version,
+    password: stored.password,
+    recovery: stored.recovery
+  };
+  const cached = await vault.adopt(envelope);
+  if (cached || !password) return { exists: true, unlocked: cached };
+
+  try {
+    await vault.unlock(password);
+  } catch {
+    report('vault.unlock_failed', { keyVersion: stored.key_version });
+    return { exists: true, unlocked: false };
+  }
+  return { exists: true, unlocked: true };
+}
+
+/** Turn encryption on for an account that predates it, and seal what it holds. */
+export async function protectData(password) {
+  if (vault.currentEnvelope()) throw new Error('Your data is already protected.');
+
+  const userId = await currentUserId();
+  const { vault: envelope, recoveryKey } = await vault.create(password);
+  unwrap(
+    await client()
+      .from('vaults')
+      .insert({ user_id: userId, key_version: envelope.keyVersion, ...envelope })
+  );
+
+  return { recoveryKey, ...(await sealExisting()) };
+}
+
+/**
+ * Seal every row still held in the clear. Written one row at a time so an
+ * interruption leaves a half-sealed account that this can simply finish, rather
+ * than a batch that half-applied.
+ */
+export async function sealExisting() {
+  const rows = unwrap(await client().from('transactions').select('*').is('secret', null));
+
+  let sealed = 0;
+  for (const row of rows) {
+    const { id, ...columns } = await forStorage(toTransaction(row));
+    unwrap(
+      await client()
+        .from('transactions')
+        .update({
+          ...columns,
+          // The plaintext goes, or sealing it would have achieved nothing.
+          description: null,
+          amount: null,
+          category: null,
+          kind: null,
+          payment_method: null,
+          note: null,
+          source: null,
+          external_ref: null
+        })
+        .eq('id', row.id)
+    );
+    sealed += 1;
+  }
+
+  return { sealed };
+}
+
+/**
+ * What can be said about the data without reading it: how much is sealed, how
+ * much is not, and which rows will not open. Run in the browser, where the key
+ * is, so it can actually check rather than assume.
+ */
+export async function dataHealth() {
+  const rows = unwrap(await client().from('transactions').select('id,date,secret,iv,key_version'));
+
+  const failures = [];
+  let sealed = 0;
+  let readable = 0;
+
+  for (const row of rows) {
+    if (!row.secret) {
+      readable += 1;
+      continue;
+    }
+    sealed += 1;
+    try {
+      await vault.open(row);
+    } catch (err) {
+      failures.push({ id: row.id, keyVersion: row.key_version, code: err.code || 'decrypt_failed' });
+      report('row.decrypt_failed', { rowId: row.id, keyVersion: row.key_version });
+    }
+  }
+
+  return { total: rows.length, sealed, readable, failures };
+}
+
+export async function recentDiagnostics(limit = 50) {
+  return unwrap(
+    await client()
+      .from('diagnostics')
+      .select('at,code,row_id,key_version,app_version,detail')
+      .order('at', { ascending: false })
+      .limit(limit)
+  );
+}
+
+export const vaultState = () => ({ exists: Boolean(vault.currentEnvelope()), unlocked: vault.isUnlocked() });
+export const unlockVault = (password) => vault.unlock(password);
+export const unlockVaultWithRecoveryKey = (key) => vault.unlockWithKey(key);
+export const onLockChange = vault.onLockChange;
+
 export const logout = async () => {
+  vault.forget();
   unwrap(await client().auth.signOut());
 };
 
@@ -101,48 +311,94 @@ export const changePassword = async (currentPassword, newPassword) => {
   const { data } = await client().auth.getUser();
   // Re-authenticating first means a borrowed session cannot change the password.
   unwrap(await client().auth.signInWithPassword({ email: data.user.email, password: currentPassword }));
+
+  // The data key is rewrapped, not replaced: no row is touched, and a password
+  // change cannot lose anything. It is written before the password changes, so
+  // a failure here leaves the old password still opening the vault.
+  if (vault.isUnlocked()) {
+    const envelope = await vault.rewrap(newPassword);
+    unwrap(await client().from('vaults').update({ password: envelope.password }).eq('user_id', data.user.id));
+  }
+
   unwrap(await client().auth.updateUser({ password: newPassword }));
   return { changed: true };
 };
 
+/** A fresh recovery key, replacing the old one. Shown once. */
+export async function reissueRecoveryKey() {
+  const { vault: envelope, recoveryKey } = await vault.newRecovery();
+  const userId = await currentUserId();
+  unwrap(await client().from('vaults').update({ recovery: envelope.recovery }).eq('user_id', userId));
+  return { recoveryKey };
+}
+
 /* ---------------------------------------------------------- transactions */
 
 export async function listExpenses(filters = {}) {
+  // Only the columns the database can still reason about are filtered there.
   let query = client().from('transactions').select('*');
-
-  if (filters.kind) query = query.eq('kind', filters.kind);
-  if (filters.category) query = query.eq('category', filters.category);
-  if (filters.paymentMethod) query = query.eq('payment_method', filters.paymentMethod);
   if (filters.from) query = query.gte('date', filters.from);
   if (filters.to) query = query.lte('date', filters.to);
-  if (filters.q) {
-    const term = `%${filters.q}%`;
-    query = query.or(`description.ilike.${term},category.ilike.${term},note.ilike.${term}`);
-  }
+  query = query.order('date', { ascending: false });
 
-  const column = { date: 'date', amount: 'amount', description: 'description', category: 'category' }[
-    filters.sort
-  ] || 'date';
-  query = query.order(column, { ascending: String(filters.order).toLowerCase() === 'asc' });
+  const rows = await openAll(unwrap(await query));
 
-  return unwrap(await query).map(toTransaction);
+  // The rest is decided here, because the database cannot read it.
+  const term = filters.q ? String(filters.q).toLowerCase() : '';
+  const matching = rows.filter(
+    (row) =>
+      (!filters.kind || row.kind === filters.kind) &&
+      (!filters.category || row.category === filters.category) &&
+      (!filters.paymentMethod || row.paymentMethod === filters.paymentMethod) &&
+      (!term ||
+        row.description.toLowerCase().includes(term) ||
+        row.category.toLowerCase().includes(term) ||
+        (row.note || '').toLowerCase().includes(term))
+  );
+
+  const column = ['date', 'amount', 'description', 'category'].includes(filters.sort)
+    ? filters.sort
+    : 'date';
+  const direction = String(filters.order).toLowerCase() === 'asc' ? 1 : -1;
+  return matching.sort((a, b) => {
+    const left = a[column];
+    const right = b[column];
+    if (left === right) return 0;
+    return (left > right ? 1 : -1) * direction;
+  });
 }
 
-export const createExpense = async (expense) =>
-  toTransaction(
+export async function createExpense(expense) {
+  const row = await forStorage(expense);
+  return toDomain(
     unwrap(
       await client()
         .from('transactions')
-        .insert({ ...fromTransaction(expense), user_id: await currentUserId() })
+        .insert({ ...row, user_id: await currentUserId() })
         .select()
         .single()
     )
   );
+}
 
-export const updateExpense = async (id, patch) =>
-  toTransaction(
-    unwrap(await client().from('transactions').update(fromTransaction(patch)).eq('id', id).select().single())
+export async function updateExpense(id, patch) {
+  if (!vault.isUnlocked()) {
+    return toTransaction(
+      unwrap(await client().from('transactions').update(fromTransaction(patch)).eq('id', id).select().single())
+    );
+  }
+
+  // A sealed row is one blob, so a partial edit means opening it, merging, and
+  // sealing it again under the same id.
+  const stored = unwrap(await client().from('transactions').select('*').eq('id', id).single());
+  const merged = { ...(await toDomain(stored)), ...patch, id };
+  const row = await forStorage(merged);
+  const { id: _unchanged, ...columns } = row;
+
+  return toDomain(
+    unwrap(await client().from('transactions').update(columns).eq('id', id).select().single())
   );
+}
 
 export const deleteExpense = async (id) => {
   unwrap(await client().from('transactions').delete().eq('id', id));
@@ -150,8 +406,14 @@ export const deleteExpense = async (id) => {
 
 /* -------------------------------------------------------------- accounts */
 
-export const listAccounts = async () =>
-  unwrap(await client().from('account_balances').select('*').order('name')).map(toAccount);
+export async function listAccounts() {
+  // account_balances summed a column the database can no longer read.
+  const [accounts, rows] = await Promise.all([
+    unwrap(await client().from('accounts').select('*').order('name')).map(toAccount),
+    listExpenses({})
+  ]);
+  return accountBalances(accounts, rows);
+}
 
 export const createAccount = async ({ name, openingBalance }) =>
   toAccount(
@@ -352,31 +614,35 @@ export async function getSummary(period) {
   const { from, to } = resolvePeriod(query);
 
   const db = client();
-  const [daily, totals, categories, accounts, trend, budgets, profile, recurring, applied] =
-    await Promise.all([
-      db.rpc('daily_series', { from_date: from, to_date: to }),
-      db.rpc('period_totals', { from_date: from, to_date: to }),
-      db.rpc('category_totals', { from_date: from, to_date: to }),
-      db.rpc('account_totals', { from_date: from, to_date: to }),
-      db.rpc('monthly_trend', { anchor: to }),
-      db.from('budgets').select('*'),
-      db.from('profiles').select('display_name,monthly_budget').single(),
-      db.from('recurring').select('*'),
-      db.from('transactions').select('description,category,date').gte('date', from).lte('date', to)
-    ]);
+  // One window covers the range, the period before it and the twelve-month
+  // trend, so the rows are fetched and decrypted once.
+  const start = summaryWindow(from, to);
+
+  const [rows, budgets, profile, recurring] = await Promise.all([
+    listExpenses({ from: start, to }),
+    db.from('budgets').select('*'),
+    db.from('profiles').select('display_name,monthly_budget').single(),
+    db.from('recurring').select('*')
+  ]);
+
+  const inRange = rows.filter((row) => row.date >= from && row.date <= to);
 
   return assembleSummary({
     from,
     to,
-    daily: unwrap(daily),
-    totals: unwrap(totals),
-    categories: unwrap(categories),
-    accounts: unwrap(accounts),
-    trend: unwrap(trend),
+    daily: dailySeries(rows, from, to),
+    totals: periodTotals(rows, from, to),
+    categories: categoryTotals(rows, from, to),
+    accounts: accountTotals(rows, from, to),
+    trend: monthlyTrend(rows, to),
     budgets: unwrap(budgets),
     profile: unwrap(profile),
     recurring: unwrap(recurring),
-    applied: unwrap(applied),
+    applied: inRange.map((row) => ({
+      description: row.description,
+      category: row.category,
+      date: row.date
+    })),
     today: new Date().toISOString().slice(0, 10)
   });
 }
@@ -405,19 +671,47 @@ export async function uploadReceipt(file) {
   if (!file.size) throw new Error('That file is empty.');
   if (file.size > RECEIPT_MAX_BYTES) throw new Error('Receipt must be 2MB or smaller.');
 
-  const path = `${await currentUserId()}/${crypto.randomUUID()}.${RECEIPT_TYPES[type]}`;
+  // The extension records what the file is, so the viewer can show it; the
+  // bytes themselves are sealed, so the store holds nothing viewable.
+  const path = `${await currentUserId()}/${crypto.randomUUID()}.${RECEIPT_TYPES[type]}${
+    vault.isUnlocked() ? '.enc' : ''
+  }`;
+
+  const body = vault.isUnlocked()
+    ? new Blob([await vault.sealBytes(path, await file.arrayBuffer())])
+    : file;
+
   const { error } = await client()
     .storage.from(RECEIPT_BUCKET)
-    .upload(path, file, { contentType: type, upsert: false });
-  if (error) throw new Error(error.message);
+    .upload(path, body, {
+      contentType: vault.isUnlocked() ? 'application/octet-stream' : type,
+      upsert: false
+    });
+  if (error) {
+    report('storage.upload_failed', { bytes: file.size });
+    throw new Error(error.message);
+  }
 
   return { id: path, mimeType: type, byteSize: file.size };
 }
 
+const MIME_BY_EXTENSION = Object.fromEntries(
+  Object.entries(RECEIPT_TYPES).map(([type, extension]) => [extension, type])
+);
+
 export async function fetchReceipt(id) {
   const { data, error } = await client().storage.from(RECEIPT_BUCKET).download(id);
-  if (error) throw new Error(/not found/i.test(error.message) ? 'Receipt not found' : error.message);
-  return { url: URL.createObjectURL(data), type: data.type };
+  if (error) {
+    report('storage.fetch_failed');
+    throw new Error(/not found/i.test(error.message) ? 'Receipt not found' : error.message);
+  }
+
+  if (!id.endsWith('.enc')) return { url: URL.createObjectURL(data), type: data.type };
+
+  const extension = id.slice(0, -4).split('.').pop();
+  const type = MIME_BY_EXTENSION[extension] || 'application/octet-stream';
+  const plain = await vault.openBytes(id, await data.arrayBuffer());
+  return { url: URL.createObjectURL(new Blob([plain], { type })), type };
 }
 
 export async function deleteReceipt(id) {
@@ -454,13 +748,19 @@ const shiftDays = (day, days) =>
 // comparison needs — not the whole history.
 async function neighbours(dates) {
   const sorted = [...dates].sort();
-  return unwrap(
-    await client()
-      .from('transactions')
-      .select('id,kind,description,amount,date,external_ref')
-      .gte('date', shiftDays(sorted[0], -NEAR_DAYS))
-      .lte('date', shiftDays(sorted[sorted.length - 1], NEAR_DAYS))
-  );
+  const rows = await listExpenses({
+    from: shiftDays(sorted[0], -NEAR_DAYS),
+    to: shiftDays(sorted[sorted.length - 1], NEAR_DAYS)
+  });
+  // findDuplicate reads rows as the database used to return them.
+  return rows.map((row) => ({
+    id: row.id,
+    kind: row.kind,
+    description: row.description,
+    amount: row.amount,
+    date: row.date,
+    external_ref: row.externalRef
+  }));
 }
 
 export async function previewStatement(file, password) {
@@ -499,10 +799,10 @@ export async function previewStatement(file, password) {
     listMerchantRules()
   ]);
 
-  const rows = transactions.map((entry) => {
+  const rows = await Promise.all(transactions.map(async (entry) => {
     const duplicate = findDuplicate(entry, existing);
     // A rule you set yourself outranks the keyword list that guessed.
-    const remembered = rules.get(merchantKey(entry.description));
+    const remembered = rules.get(await ruleKey(entry.description));
     return {
       ...entry,
       category: remembered && CATEGORIES[entry.kind].includes(remembered) ? remembered : entry.category,
@@ -510,7 +810,7 @@ export async function previewStatement(file, password) {
       duplicate: Boolean(duplicate),
       duplicateReason: duplicate?.reason ?? null
     };
-  });
+  }));
 
   return {
     bank,
@@ -578,7 +878,7 @@ export async function importStatement(transactions, options = {}) {
       continue;
     }
     rows.push({
-      ...fromTransaction({
+      ...(await forStorage({
         kind: entry.kind,
         description: entry.description,
         amount: entry.amount,
@@ -589,7 +889,7 @@ export async function importStatement(transactions, options = {}) {
         // One statement belongs to one account, so the whole batch carries it.
         accountId: options.accountId || null,
         paymentMethod: options.paymentMethod || null
-      }),
+      })),
       user_id: userId
     });
   }
@@ -620,6 +920,14 @@ export async function importStatement(transactions, options = {}) {
 
 /* -------------------------------------------------------- merchant rules */
 
+// The merchant is stored as a digest under the user's own key, so the rules say
+// nothing about where they shop to anyone who can read the table.
+const ruleKey = async (description) => {
+  const merchant = merchantKey(description);
+  if (!merchant) return '';
+  return vault.isUnlocked() ? vault.referenceDigest(`merchant:${merchant}`) : merchant;
+};
+
 export async function listMerchantRules() {
   const rows = unwrap(await client().from('merchant_rules').select('merchant,category'));
   return new Map(rows.map((row) => [row.merchant, row.category]));
@@ -629,7 +937,7 @@ export async function saveMerchantRules(entries) {
   const userId = await currentUserId();
   const rules = new Map();
   for (const entry of entries) {
-    const merchant = merchantKey(entry.description);
+    const merchant = await ruleKey(entry.description);
     // The last word on a merchant wins, which is the correction just made.
     if (merchant) rules.set(merchant, entry.category);
   }
@@ -664,15 +972,24 @@ export async function unassignedCount() {
 }
 
 export async function assignUnassigned({ accountId, paymentMethod }) {
-  const patch = {};
-  if (accountId) patch.account_id = accountId;
-  if (paymentMethod) patch.payment_method = paymentMethod;
-  if (Object.keys(patch).length === 0) return { updated: 0 };
+  if (!accountId && !paymentMethod) return { updated: 0 };
 
-  const rows = unwrap(
-    await client().from('transactions').update(patch).is('account_id', null).select('id')
-  );
-  return { updated: rows.length };
+  // account_id is a column the database still owns, so it moves in one
+  // statement. The payment method is inside the sealed blob, so those rows are
+  // opened and sealed again one at a time.
+  if (!paymentMethod || !vault.isUnlocked()) {
+    const patch = {};
+    if (accountId) patch.account_id = accountId;
+    if (paymentMethod) patch.payment_method = paymentMethod;
+    const rows = unwrap(
+      await client().from('transactions').update(patch).is('account_id', null).select('id')
+    );
+    return { updated: rows.length };
+  }
+
+  const pending = unwrap(await client().from('transactions').select('id').is('account_id', null));
+  for (const row of pending) await updateExpense(row.id, { accountId, paymentMethod });
+  return { updated: pending.length };
 }
 
 /* ------------------------------------------------------------------- csv */
@@ -722,17 +1039,19 @@ export async function importCsv(text) {
     await client()
       .from('transactions')
       .insert(
-        accepted.map((entry) => ({
-          ...fromTransaction({
-            kind: entry.kind,
-            description: entry.description,
-            amount: entry.amount,
-            category: entry.category,
-            date: entry.date,
-            source: 'csv'
-          }),
-          user_id: userId
-        }))
+        await Promise.all(
+          accepted.map(async (entry) => ({
+            ...(await forStorage({
+              kind: entry.kind,
+              description: entry.description,
+              amount: entry.amount,
+              category: entry.category,
+              date: entry.date,
+              source: 'csv'
+            })),
+            user_id: userId
+          }))
+        )
       )
       .select('id')
   );
