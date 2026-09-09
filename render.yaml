@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: expenses-tracker-api
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: server
+    buildCommand: npm ci
+    startCommand: node src/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: CLIENT_ORIGIN
+        value: https://shrenikyd.github.io
+      - key: DATA_FILE
+        value: ./data/expenses.json

@@ -74,13 +74,32 @@ One-time repo setup:
 The workflow sets Vite's `base` to `/<repo-name>/` automatically, so assets resolve
 correctly on a project page.
 
-### API — not GitHub Pages
+### API — Render
 
-Pages serves static files only, so `server/` must run elsewhere (Render, Fly.io,
-Railway, a VPS, etc.). Wherever it runs, set:
+`render.yaml` is a Render Blueprint for the Express server.
 
-- `CLIENT_ORIGIN` to the Pages URL (`https://<user>.github.io`) so CORS allows the client
-- `DATA_FILE` to a path on persistent storage — the JSON store is wiped on redeploy otherwise
+1. Render dashboard → **New → Blueprint** → connect this repo. Render reads
+   `render.yaml` and creates the `expenses-tracker-api` web service.
+2. Copy the service URL Render assigns (for example
+   `https://expenses-tracker-api.onrender.com`).
+3. In GitHub → **Settings → Secrets and variables → Actions → Variables**, add
+   `VITE_API_URL` = that URL with `/api` appended, then re-run the Pages workflow
+   so the client is rebuilt against it.
 
-Until `VITE_API_URL` points at a running API, the deployed page loads but shows a
-fetch error, because there is no backend behind it.
+The blueprint already sets `CLIENT_ORIGIN` to `https://shrenikyd.github.io`, so CORS
+admits the Pages origin, and `healthCheckPath` to `/api/health`.
+
+**Free-plan caveats.** Free Render instances have no persistent disk and spin down
+after inactivity, so `server/data/expenses.json` resets whenever the service
+restarts or redeploys. For durable storage, move to a paid instance type and add a
+disk to `render.yaml`:
+
+```yaml
+    plan: starter
+    disk:
+      name: expenses-data
+      mountPath: /var/data
+      sizeGB: 1
+```
+
+then change `DATA_FILE` to `/var/data/expenses.json`.
