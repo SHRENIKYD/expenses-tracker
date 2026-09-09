@@ -8,6 +8,8 @@ import android.content.IntentFilter;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
+import android.content.ComponentName;
+import android.provider.Settings;
 import android.telephony.SmsMessage;
 
 import com.getcapacitor.JSArray;
@@ -40,8 +42,73 @@ public class SmsPlugin extends Plugin {
 
     static final String SMS = "sms";
     private static final String RECEIVED = "smsReceived";
+    private static final String POSTED = "notificationPosted";
 
     private BroadcastReceiver receiver;
+
+    // The notification listener is a service the system starts, so it cannot
+    // hold a reference to the plugin; it finds it here instead. Null whenever
+    // the app is not running, which is exactly when nothing should be
+    // delivered.
+    private static SmsPlugin active;
+    private static boolean watchingNotifications = false;
+
+    @Override
+    public void load() {
+        active = this;
+    }
+
+    static void deliverNotification(String from, String title, String text, long at) {
+        SmsPlugin plugin = active;
+        if (plugin == null || !watchingNotifications) return;
+
+        JSObject event = new JSObject();
+        event.put("app", from);
+        event.put("title", title);
+        event.put("body", text);
+        event.put("at", at);
+        plugin.notifyListeners(POSTED, event);
+    }
+
+    /** Whether the user has given this app notification access in Android settings. */
+    @PluginMethod
+    public void notificationAccess(PluginCall call) {
+        String enabled = Settings.Secure.getString(
+            getContext().getContentResolver(),
+            "enabled_notification_listeners"
+        );
+        ComponentName mine = new ComponentName(getContext(), TesseraNotificationListener.class);
+
+        boolean granted =
+            enabled != null
+                && (enabled.contains(mine.flattenToString())
+                    || enabled.contains(mine.flattenToShortString()));
+
+        JSObject result = new JSObject();
+        result.put("granted", granted);
+        call.resolve(result);
+    }
+
+    /** Android has no dialog for this one: it opens its own settings screen. */
+    @PluginMethod
+    public void openNotificationAccess(PluginCall call) {
+        Intent intent = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        getContext().startActivity(intent);
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void startNotifications(PluginCall call) {
+        watchingNotifications = true;
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void stopNotifications(PluginCall call) {
+        watchingNotifications = false;
+        call.resolve();
+    }
 
     @PluginMethod
     public void checkPermission(PluginCall call) {
@@ -163,6 +230,8 @@ public class SmsPlugin extends Plugin {
     @Override
     protected void handleOnDestroy() {
         unregister();
+        watchingNotifications = false;
+        active = null;
     }
 
     private void unregister() {

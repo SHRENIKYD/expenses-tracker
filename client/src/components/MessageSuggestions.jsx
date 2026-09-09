@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import Icon from './Icon.jsx';
 import { formatMoney, formatDay, titleCase } from '../format.js';
-import { available, listen, permission, recent } from '../data/messages.js';
+import {
+  available,
+  listen,
+  listenNotifications,
+  notificationAccess,
+  permission,
+  recent
+} from '../data/messages.js';
 import { suggestCategory } from '../statement.js';
 
 const SETTING = 'tessera.read-messages';
@@ -24,32 +31,34 @@ export default function MessageSuggestions({ onAdd, categories }) {
   useEffect(() => {
     if (!available() || !readingMessages()) return undefined;
 
-    let stop = () => {};
+    const stops = [];
     let live = true;
+
+    // An alert can reach both sources — the SMS itself and the notification
+    // the messaging app posts for it — so everything goes through the same
+    // check and the second copy is dropped.
+    const offer = (suggestion) =>
+      setSuggestions((current) =>
+        current.some((entry) => same(entry, suggestion)) ? current : [suggestion, ...current]
+      );
 
     (async () => {
       const { granted } = await permission();
-      if (!granted || !live) return;
+      if (granted && live) {
+        stops.push(await listen(offer));
 
-      stop = await listen((suggestion) =>
-        setSuggestions((current) =>
-          // The same alert can arrive twice; its reference, or its shape,
-          // says so.
-          current.some((entry) => same(entry, suggestion)) ? current : [suggestion, ...current]
-        )
-      );
+        const missed = await recent(3);
+        if (!live) return;
+        for (const suggestion of missed) offer(suggestion);
+      }
 
-      const missed = await recent(3);
       if (!live) return;
-      setSuggestions((current) => [
-        ...current,
-        ...missed.filter((entry) => !current.some((seen) => same(seen, entry)))
-      ]);
+      if (await notificationAccess()) stops.push(await listenNotifications(offer));
     })().catch((err) => setError(err.message));
 
     return () => {
       live = false;
-      stop();
+      for (const stop of stops) stop();
     };
   }, []);
 

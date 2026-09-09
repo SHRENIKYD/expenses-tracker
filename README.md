@@ -180,10 +180,36 @@ npm run build:app     # builds with a relative base and copies it into android/
 npm run open:android  # opens Android Studio, if you have it
 ```
 
-`.github/workflows/android.yml` builds a debug APK on demand (Actions → Android →
-Run workflow) and on every release tag; it lands as an artifact on the run. That
-APK is signed with a throwaway debug key — enough to install and use, not enough
-for the Play Store, which needs a keystore of your own.
+`.github/workflows/android.yml` builds an APK on demand (Actions → Android → Run
+workflow) and on every release tag; it lands as an artifact on the run and, for
+a tag, as a file on the release.
+
+### Signing
+
+Without a keystore the build is debug-signed. That installs and runs, but
+Android regenerates the debug key, so each build has a different signature and
+refuses to install over the last one — you have to uninstall first, and on
+Android 13+ re-grant restricted permissions each time.
+
+To fix that permanently, make a key once and give it to the repository:
+
+```bash
+keytool -genkeypair -v -keystore tessera.jks -alias tessera \
+        -keyalg RSA -keysize 4096 -validity 10000
+base64 -w0 tessera.jks     # macOS: base64 -i tessera.jks
+```
+
+Then **Settings → Secrets and variables → Actions → Secrets**:
+
+| Secret | Value |
+| --- | --- |
+| `ANDROID_KEYSTORE` | the base64 above |
+| `ANDROID_KEYSTORE_PASSWORD` | the store password |
+| `ANDROID_KEY_ALIAS` | `tessera` |
+| `ANDROID_KEY_PASSWORD` | the key password |
+
+Keep `tessera.jks` somewhere safe and off the repository. Losing it means no
+future build can update an installed app — only a reinstall.
 
 Two differences from the web build: the base is relative, since the app serves
 itself from the root of a WebView, and the service worker is left out, because
@@ -209,10 +235,20 @@ statement reminder, an advertisement with a number in it, and any message whose
 direction is unclear — because a wrong direction is the one mistake a total will
 not reveal. `client/test/sms.test.js` holds those cases.
 
-The permissions are `RECEIVE_SMS` and `READ_SMS`, requested only when the
-feature is switched on. Note that Google Play restricts them to apps that are
-the device's default SMS handler, so a build using this cannot be listed there;
-it is for the APK you install yourself.
+There are two sources, and either is enough:
+
+- **SMS.** `RECEIVE_SMS` and `READ_SMS`, asked for only when the feature is
+  switched on. Android treats these as restricted: a sideloaded build has to be
+  unlocked through **App info → ⋮ → Allow restricted settings** before the
+  permission can even be granted, and Play Protect warns before installing.
+  Google Play restricts them to default SMS handlers, so a build using them
+  cannot be listed there.
+- **Notifications.** A `NotificationListenerService`, granted on Android's own
+  screen. Not restricted, so a sideloaded build needs no unlocking, and it also
+  catches alerts posted by your bank's app rather than as SMS.
+
+With both on, whichever arrives first becomes the suggestion; the second copy is
+recognised and dropped.
 
 ## Releases
 

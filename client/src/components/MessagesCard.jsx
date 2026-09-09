@@ -1,18 +1,35 @@
 import { useEffect, useState } from 'react';
 import Icon from './Icon.jsx';
-import { available, permission, request } from '../data/messages.js';
+import {
+  available,
+  notificationAccess,
+  openNotificationAccess,
+  permission,
+  request
+} from '../data/messages.js';
 import { readingMessages, setReadingMessages } from './MessageSuggestions.jsx';
 
 // Turning the message reader on, and saying plainly what it does.
 export default function MessagesCard() {
   const [on, setOn] = useState(readingMessages);
   const [granted, setGranted] = useState(false);
+  const [notifications, setNotifications] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const check = () => {
     permission()
       .then((state) => setGranted(state.granted))
       .catch(() => setGranted(false));
+    notificationAccess().then(setNotifications).catch(() => setNotifications(false));
+  };
+
+  useEffect(() => {
+    check();
+    // Notification access is granted on Android's own screen, so the answer
+    // only changes while this page is in the background.
+    const recheck = () => document.visibilityState === 'visible' && check();
+    document.addEventListener('visibilitychange', recheck);
+    return () => document.removeEventListener('visibilitychange', recheck);
   }, []);
 
   if (!available()) {
@@ -79,6 +96,25 @@ export default function MessagesCard() {
           ? 'On. New alerts appear on the Overview, and the last three days are checked when the app opens.'
           : 'Off. Nothing is read.'}
       </p>
+
+      <div className="recovery-block">
+        <h3>Notifications</h3>
+        <p className="hint">
+          The same alerts, read from the notification shade instead. Android does not restrict
+          this one, so it needs none of the unlocking that SMS does on a sideloaded app — and it
+          catches alerts from your bank’s own app, not only from SMS. Either source is enough;
+          both together simply mean whichever arrives first is the one you see.
+        </p>
+        {notifications ? (
+          <p className="hint">
+            Granted. Bank and payment notifications are read on this phone.
+          </p>
+        ) : (
+          <button type="button" className="secondary" onClick={() => openNotificationAccess()}>
+            Give notification access
+          </button>
+        )}
+      </div>
     </section>
   );
 }

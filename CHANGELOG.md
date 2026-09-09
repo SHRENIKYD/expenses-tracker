@@ -38,7 +38,11 @@ move it, not on every change.
 
 - **Bank messages on Android.** Alerts are read on the device and offered as
   transactions to confirm; nothing is recorded automatically, and the message is
-  shown beside the reading so a misreading is obvious. Off by default.
+  shown beside the reading so a misreading is obvious. Off by default. Two
+  sources — SMS, and the notification shade, which Android does not restrict and
+  which also sees alerts from bank apps.
+- **Release signing**, when the repository has a keystore: every build shares a
+  signature and installs over the last instead of demanding an uninstall.
 
 ### Changed
 

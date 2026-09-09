@@ -67,16 +67,43 @@ jobs:
         run: npx cap sync android
         working-directory: client
 
+      # A keystore of your own, if the repository has one: same signature every
+      # build, so an apk installs over the last instead of demanding an
+      # uninstall. Without the secrets the build is debug-signed and still
+      # works — it just cannot update in place.
+      - name: Take out the signing key
+        id: signing
+        if: ${{ secrets.ANDROID_KEYSTORE != '' }}
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+        run: |
+          printf '%s' "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/tessera.jks"
+          echo "path=$RUNNER_TEMP/tessera.jks" >> "$GITHUB_OUTPUT"
+
       - name: Build the apk
-        run: ./gradlew assembleDebug --no-daemon
+        env:
+          TESSERA_KEYSTORE: ${{ steps.signing.outputs.path }}
+          TESSERA_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          TESSERA_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          TESSERA_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$TESSERA_KEYSTORE" ]; then
+            echo "building a signed release apk"
+            ./gradlew assembleRelease --no-daemon
+            cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/tessera.apk
+          else
+            echo "no keystore configured; building a debug apk"
+            ./gradlew assembleDebug --no-daemon
+            cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/tessera.apk
+          fi
         working-directory: client/android
 
       # A debug apk is signed with a throwaway key: enough to install and use,
       # not enough for the Play Store. Publishing needs a keystore of your own.
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.version.outputs.name }}-debug-apk
-          path: client/android/app/build/outputs/apk/debug/app-debug.apk
+          name: ${{ steps.version.outputs.name }}-apk
+          path: client/android/app/build/outputs/apk/tessera.apk
           if-no-files-found: error
 
       # An artifact expires and needs a GitHub login to fetch. A release asset
@@ -88,6 +115,6 @@ jobs:
         run: |
           release="${{ inputs.attach_to }}"
           [ -n "$release" ] || release="$GITHUB_REF_NAME"
-          cp client/android/app/build/outputs/apk/debug/app-debug.apk \
+          cp client/android/app/build/outputs/apk/tessera.apk \
              "${{ steps.version.outputs.name }}.apk"
           gh release upload "$release" "${{ steps.version.outputs.name }}.apk" --clobber
