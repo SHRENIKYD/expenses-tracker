@@ -178,6 +178,11 @@ rather than ships.
 Every other build carries `<version>+<short sha>`, which is what the diagnostics
 report, so a screenshot of a problem names the code that produced it.
 
+A tag pushed by the release workflow does not itself trigger a deploy: GitHub
+suppresses events raised with the default token so workflows cannot recurse. Run
+the deploy against the tag afterwards, or tag from your own machine, where the
+push triggers it normally.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs the client tests and build, and the Supabase

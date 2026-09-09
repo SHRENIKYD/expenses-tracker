@@ -14,6 +14,13 @@ git commit -am 'Release 1.1.0' && git tag v1.1.0 && git push --follow-tags
 Or from the Releases page on GitHub: draft a release, give it the tag, publish.
 The workflow rewrites its notes from the section below either way.
 
+One wrinkle worth knowing: a tag pushed by the workflow itself does not trigger
+other workflows — GitHub suppresses events raised with the default token, so
+workflows cannot recurse. A release cut from the Actions tab therefore needs the
+deploy run against the tag (Actions → Deploy client to GitHub Pages → Run
+workflow → choose the tag), or the published build carries `<version>+<sha>`
+rather than the tag. A tag pushed from your own machine triggers it normally.
+
 The tag builds the client with its own number stamped in, publishes it to
 Pages, and opens a GitHub release with the section below. A tag that disagrees
 with `client/package.json`, or has no section here, fails rather than ships.
