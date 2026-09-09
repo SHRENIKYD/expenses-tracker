@@ -5,6 +5,13 @@
 // PDF itself never leaves the device, and no server is needed to read it.
 //
 // Reading the PDF lives in ./pdf.js, so this half stays pure and testable.
+//
+// Two layouts are handled. An account statement prints the transaction and the
+// balance it left behind, and the direction of the money follows from the
+// change in that balance. A card statement prints one amount and no balance at
+// all, so direction comes from the Cr marker instead — and, because a credit on
+// a card is usually a bill payment rather than income, those rows are reported
+// rather than imported.
 
 const BANKS = [
   { code: 'hdfc', name: 'HDFC Bank', match: /hdfc\s*bank/i },
@@ -126,9 +133,30 @@ function findOpeningBalance(lines) {
   return null;
 }
 
+// A card statement's rows carry one amount; an account statement's carry the
+// amount and the balance. Counting them is more reliable than looking for a
+// bank's name, since the same bank issues both.
+function looksLikeCard(lines) {
+  let single = 0;
+  let several = 0;
+
+  for (const line of lines) {
+    const head = leadingDate(line);
+    if (!head) continue;
+    MONEY.lastIndex = 0;
+    const amounts = head.rest.match(MONEY);
+    if (!amounts) continue;
+    if (amounts.length === 1) single += 1;
+    else several += 1;
+  }
+
+  return single >= 3 && single > several;
+}
+
 function parseStatement(lines) {
   const transactions = [];
   const skipped = [];
+  const card = looksLikeCard(lines);
   let previousBalance = findOpeningBalance(lines);
 
   const isContinuation = (line) => {
@@ -148,6 +176,51 @@ function parseStatement(lines) {
 
     const amounts = head.rest.match(MONEY);
     if (!amounts || amounts.length === 0) continue;
+
+    if (card) {
+      if (amounts.length > 1) {
+        skipped.push({ line: line.slice(0, 120), reason: 'more than one amount on the row' });
+        continue;
+      }
+
+      const amount = toNumber(amounts[0]);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        skipped.push({ line: line.slice(0, 120), reason: 'amount could not be read' });
+        continue;
+      }
+
+      // A credit on a card is a bill payment far more often than income, and
+      // importing one would cancel out the very spending it paid for. It is
+      // reported so it can be added by hand if it really belongs in the ledger.
+      if (/\bCr\b\.?/i.test(head.rest)) {
+        skipped.push({ line: line.slice(0, 120), reason: 'a credit — a payment or a refund' });
+        continue;
+      }
+
+      // The row leads with a separator and the time of the purchase; neither
+      // belongs in the description.
+      const raw = head.rest
+        .slice(0, head.rest.indexOf(amounts[0]))
+        .replace(/^[|\s]+/, '')
+        .replace(/^\d{1,2}:\d{2}\s*/, '');
+      const description = cleanDescription(raw);
+
+      if (!description) {
+        skipped.push({ line: line.slice(0, 120), reason: 'no description' });
+        continue;
+      }
+
+      transactions.push({
+        date: head.date,
+        description,
+        amount: Math.round(amount * 100) / 100,
+        kind: 'expense',
+        category: suggestCategory(description, 'expense'),
+        reference: extractReference(head.rest),
+        balance: null
+      });
+      continue;
+    }
 
     if (amounts.length === 1) {
       skipped.push({ line: line.slice(0, 120), reason: 'only one amount on the row' });

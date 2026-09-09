@@ -107,3 +107,61 @@ test('the comparison window is symmetric and counts whole days', () => {
   assert.equal(daysApart('2026-09-04', '2026-09-01'), NEAR_DAYS);
   assert.equal(similarity('', 'anything'), 0);
 });
+
+// A credit card statement: one amount per row, no running balance, the time of
+// the purchase in the row, and credits marked Cr.
+const CARD = [
+  'DUPLICATE Millennia Credit Card Statement',
+  'HDFC Bank Credit Cards',
+  'Statement Date 22 Jan, 2026',
+  'Date Transaction Description Amount (in Rs.)',
+  '22/12/2025| 00:00 IGST-VPS2635769053851-RATE 18.0 -29 (Ref# 09999999981222003692662) 138.42',
+  '23/12/2025| 18:13 AMAZONMUMBAI 515.90',
+  '23/12/2025| 18:30 SWIGGY BANGALORE 341.05',
+  '05/01/2026| 00:00 PAYMENT RECEIVED THANK YOU 12,000.00 Cr'
+];
+
+test('a card statement is read without a balance column', () => {
+  const { transactions } = parseStatement(CARD);
+
+  assert.deepEqual(
+    transactions.map((row) => [row.date, row.kind, row.amount]),
+    [
+      ['2025-12-22', 'expense', 138.42],
+      ['2025-12-23', 'expense', 515.9],
+      ['2025-12-23', 'expense', 341.05]
+    ]
+  );
+});
+
+test('the time and the leading separator stay out of the description', () => {
+  const [, amazon, swiggy] = parseStatement(CARD).transactions;
+
+  assert.equal(amazon.description, 'AMAZONMUMBAI');
+  assert.equal(amazon.category, 'shopping');
+  assert.equal(swiggy.category, 'food');
+});
+
+test('a credit on a card is reported, not imported as income', () => {
+  const { transactions, skipped } = parseStatement(CARD);
+
+  assert.ok(!transactions.some((row) => row.kind === 'income'));
+  assert.equal(skipped.length, 1);
+  assert.match(skipped[0].line, /PAYMENT RECEIVED/);
+  assert.match(skipped[0].reason, /a credit/);
+});
+
+test('a card row keeps its reference, so a second import is a no-op', () => {
+  const [igst] = parseStatement(CARD).transactions;
+
+  assert.equal(igst.reference, '09999999981222003692662');
+});
+
+test('an account statement is still read as one, balance and all', () => {
+  // The two layouts are told apart by the rows themselves, so adding cards must
+  // not change how an account statement is read.
+  const { transactions } = parseStatement(STATEMENT);
+  assert.equal(transactions.length, 3);
+  assert.equal(transactions[1].kind, 'income');
+  assert.equal(transactions[1].balance, 101550);
+});
