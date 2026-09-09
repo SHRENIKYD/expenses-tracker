@@ -10,7 +10,7 @@ function rowToBudget(row) {
 
 router.get('/', async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM budgets ORDER BY category');
+    const { rows } = await pool.query('SELECT * FROM budgets WHERE user_id = $1 ORDER BY category', [req.user.id]);
     res.json(rows.map(rowToBudget));
   } catch (err) {
     next(err);
@@ -27,15 +27,19 @@ router.put('/:category', async (req, res, next) => {
     if (errors.length) return res.status(400).json({ errors });
 
     if (value.monthlyLimit === 0) {
-      await pool.query('DELETE FROM budgets WHERE category = $1', [req.params.category]);
+      await pool.query('DELETE FROM budgets WHERE category = $1 AND user_id = $2', [
+        req.params.category,
+        req.user.id
+      ]);
       return res.status(204).end();
     }
 
     const { rows } = await pool.query(
-      `INSERT INTO budgets (category, monthly_limit) VALUES ($1, $2)
-       ON CONFLICT (category) DO UPDATE SET monthly_limit = EXCLUDED.monthly_limit, updated_at = now()
+      `INSERT INTO budgets (user_id, category, monthly_limit) VALUES ($1, $2, $3)
+       ON CONFLICT (user_id, category)
+       DO UPDATE SET monthly_limit = EXCLUDED.monthly_limit, updated_at = now()
        RETURNING *`,
-      [req.params.category, value.monthlyLimit]
+      [req.user.id, req.params.category, value.monthlyLimit]
     );
     res.json(rowToBudget(rows[0]));
   } catch (err) {

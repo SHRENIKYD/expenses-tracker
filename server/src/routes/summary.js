@@ -16,6 +16,7 @@ function shiftMonth(month, delta) {
 
 router.get('/', async (req, res, next) => {
   try {
+    const userId = req.user.id;
     const month = req.query.month ? String(req.query.month) : currentMonth();
     if (!isIsoMonth(month)) {
       return res.status(400).json({ errors: ['month must be in YYYY-MM format'] });
@@ -28,36 +29,37 @@ router.get('/', async (req, res, next) => {
       await Promise.all([
       pool.query(
         `SELECT to_char(date, 'YYYY-MM') AS month, COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count
-         FROM expenses WHERE kind = 'expense' AND to_char(date, 'YYYY-MM') IN ($1, $2)
+         FROM expenses WHERE user_id = $1 AND kind = 'expense' AND to_char(date, 'YYYY-MM') IN ($2, $3)
          GROUP BY 1`,
-        [month, previous]
+        [userId, month, previous]
       ),
       pool.query(
         `SELECT category, SUM(amount) AS total, COUNT(*) AS count
-         FROM expenses WHERE kind = 'expense' AND to_char(date, 'YYYY-MM') = $1
+         FROM expenses WHERE user_id = $1 AND kind = 'expense' AND to_char(date, 'YYYY-MM') = $2
          GROUP BY category ORDER BY SUM(amount) DESC`,
-        [month]
+        [userId, month]
       ),
       pool.query(
         `SELECT to_char(date, 'YYYY-MM-DD') AS day, SUM(amount) AS total
-         FROM expenses WHERE kind = 'expense' AND to_char(date, 'YYYY-MM') = $1
+         FROM expenses WHERE user_id = $1 AND kind = 'expense' AND to_char(date, 'YYYY-MM') = $2
          GROUP BY 1 ORDER BY 1`,
-        [month]
+        [userId, month]
       ),
       pool.query(
         `SELECT to_char(date, 'YYYY-MM') AS month, SUM(amount) AS total
-         FROM expenses WHERE kind = 'expense' AND date >= $1::date AND to_char(date, 'YYYY-MM') <= $2
+         FROM expenses
+         WHERE user_id = $1 AND kind = 'expense' AND date >= $2::date AND to_char(date, 'YYYY-MM') <= $3
          GROUP BY 1 ORDER BY 1`,
-        [trendStart, month]
+        [userId, trendStart, month]
       ),
-      pool.query('SELECT * FROM budgets'),
+      pool.query('SELECT * FROM budgets WHERE user_id = $1', [userId]),
       pool.query(
         `SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count
-         FROM expenses WHERE kind = 'income' AND to_char(date, 'YYYY-MM') = $1`,
-        [month]
+         FROM expenses WHERE user_id = $1 AND kind = 'income' AND to_char(date, 'YYYY-MM') = $2`,
+        [userId, month]
       ),
-      pool.query('SELECT key, value FROM settings'),
-      pool.query('SELECT * FROM recurring ORDER BY day_of_month')
+      pool.query('SELECT key, value FROM settings WHERE user_id = $1', [userId]),
+      pool.query('SELECT * FROM recurring WHERE user_id = $1 ORDER BY day_of_month', [userId])
     ]);
 
     const totalFor = (target) => {
@@ -116,8 +118,8 @@ router.get('/', async (req, res, next) => {
       (
         await pool.query(
           `SELECT description, category, to_char(date, 'YYYY-MM-DD') AS day
-           FROM expenses WHERE to_char(date, 'YYYY-MM') = $1`,
-          [month]
+           FROM expenses WHERE user_id = $1 AND to_char(date, 'YYYY-MM') = $2`,
+          [userId, month]
         )
       ).rows.map((row) => `${row.description}|${row.category}|${row.day}`)
     );

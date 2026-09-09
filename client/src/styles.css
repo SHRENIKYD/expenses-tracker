@@ -723,3 +723,44 @@ tfoot td {
   padding-top: 12px;
   border-top: 1px solid var(--border);
 }
+
+.signin {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.signin-card {
+  width: 100%;
+  max-width: 380px;
+}
+
+.signin-card h1 {
+  font-size: 1.35rem;
+  margin: 0 0 4px;
+}
+
+.signin-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.signin-card button[type='submit'] {
+  margin-top: 4px;
+}
+
+.signin-switch {
+  margin-top: 14px;
+}
+
+.account-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}

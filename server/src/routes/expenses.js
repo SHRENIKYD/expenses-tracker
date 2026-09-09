@@ -5,9 +5,9 @@ const { toCsv, csvToExpenses } = require('../csv');
 
 const router = express.Router();
 
-function buildWhere(filters) {
-  const clauses = [];
-  const params = [];
+function buildWhere(filters, userId) {
+  const params = [userId];
+  const clauses = ['user_id = $1'];
 
   if (filters.kind) {
     params.push(filters.kind);
@@ -37,11 +37,11 @@ function buildWhere(filters) {
     }
   }
 
-  return { text: clauses.length ? `WHERE ${clauses.join(' AND ')}` : '', params };
+  return { text: `WHERE ${clauses.join(' AND ')}`, params };
 }
 
-async function queryExpenses(filters) {
-  const where = buildWhere(filters);
+async function queryExpenses(filters, userId) {
+  const where = buildWhere(filters, userId);
   const { rows } = await pool.query(
     `SELECT * FROM expenses ${where.text}
      ORDER BY ${filters.sort} ${filters.order}, created_at DESC`,
@@ -59,7 +59,7 @@ router.get('/export', async (req, res, next) => {
     const { errors, filters } = parseFilters(req.query);
     if (errors.length) return res.status(400).json({ errors });
 
-    const expenses = await queryExpenses(filters);
+    const expenses = await queryExpenses(filters, req.user.id);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="expenses.csv"');
     res.send(toCsv(expenses));
@@ -93,8 +93,8 @@ router.post('/import', async (req, res, next) => {
     await client.query('BEGIN');
     for (const expense of accepted) {
       await client.query(
-        `INSERT INTO expenses (description, amount, category, date) VALUES ($1, $2, $3, $4)`,
-        [expense.description, expense.amount, expense.category, expense.date]
+        `INSERT INTO expenses (user_id, description, amount, category, date) VALUES ($1, $2, $3, $4, $5)`,
+        [req.user.id, expense.description, expense.amount, expense.category, expense.date]
       );
     }
     await client.query('COMMIT');
@@ -112,7 +112,7 @@ router.get('/', async (req, res, next) => {
   try {
     const { errors, filters } = parseFilters(req.query);
     if (errors.length) return res.status(400).json({ errors });
-    res.json(await queryExpenses(filters));
+    res.json(await queryExpenses(filters, req.user.id));
   } catch (err) {
     next(err);
   }
@@ -124,9 +124,10 @@ router.post('/', async (req, res, next) => {
     if (errors.length) return res.status(400).json({ errors });
 
     const { rows } = await pool.query(
-      `INSERT INTO expenses (kind, description, amount, category, date, payment_method, note, receipt_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      `INSERT INTO expenses (user_id, kind, description, amount, category, date, payment_method, note, receipt_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
       [
+        req.user.id,
         value.kind,
         value.description,
         value.amount,
@@ -156,7 +157,10 @@ const COLUMN_FOR = {
 
 router.put('/:id', async (req, res, next) => {
   try {
-    const current = await pool.query('SELECT kind FROM expenses WHERE id = $1', [req.params.id]);
+    const current = await pool.query('SELECT kind FROM expenses WHERE id = $1 AND user_id = $2', [
+      req.params.id,
+      req.user.id
+    ]);
     if (current.rowCount === 0) return res.status(404).json({ error: 'Expense not found' });
 
     const { errors, value } = validateExpense(req.body, {
@@ -172,11 +176,11 @@ router.put('/:id', async (req, res, next) => {
 
     const assignments = fields.map((field, position) => `${COLUMN_FOR[field]} = $${position + 1}`);
     const params = fields.map((field) => value[field]);
-    params.push(req.params.id);
+    params.push(req.params.id, req.user.id);
 
     const { rows } = await pool.query(
       `UPDATE expenses SET ${assignments.join(', ')}, updated_at = now()
-       WHERE id = $${params.length} RETURNING *`,
+       WHERE id = $${params.length - 1} AND user_id = $${params.length} RETURNING *`,
       params
     );
 
@@ -190,7 +194,10 @@ router.put('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   try {
-    const { rowCount } = await pool.query('DELETE FROM expenses WHERE id = $1', [req.params.id]);
+    const { rowCount } = await pool.query('DELETE FROM expenses WHERE id = $1 AND user_id = $2', [
+      req.params.id,
+      req.user.id
+    ]);
     if (rowCount === 0) return res.status(404).json({ error: 'Expense not found' });
     res.status(204).end();
   } catch (err) {

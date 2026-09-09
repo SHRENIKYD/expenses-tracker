@@ -1,10 +1,31 @@
+import { readSession, clearSession } from './session.js';
+
 const BASE = import.meta.env.VITE_API_URL || '/api';
+
+// Set by App so a 401 anywhere drops the user back to the sign-in screen.
+let onUnauthorised = () => {};
+export const setUnauthorisedHandler = (handler) => {
+  onUnauthorised = handler;
+};
+
+export function authHeaders(extra = {}) {
+  const session = readSession();
+  return session ? { ...extra, Authorization: `Bearer ${session.token}` } : extra;
+}
 
 async function request(path, options = {}) {
   const response = await fetch(`${BASE}${path}`, {
-    headers: options.body instanceof FormData ? undefined : { 'Content-Type': 'application/json' },
-    ...options
+    ...options,
+    headers: authHeaders({ 'Content-Type': 'application/json', ...(options.headers || {}) })
   });
+
+  // A 401 from the auth endpoints means bad credentials, not an expired session;
+  // only the latter should bounce the user out and clear stored state.
+  if (response.status === 401 && !path.startsWith('/auth/')) {
+    clearSession();
+    onUnauthorised();
+    throw new Error('Your session has expired. Please sign in again.');
+  }
 
   if (response.status === 204) return null;
 
@@ -49,7 +70,9 @@ export const setBudget = (category, monthlyLimit) =>
   request(`/budgets/${category}`, { method: 'PUT', body: JSON.stringify({ monthlyLimit }) });
 
 export async function exportCsv(filters = {}) {
-  const response = await fetch(`${BASE}/expenses/export${toQuery(filters)}`);
+  const response = await fetch(`${BASE}/expenses/export${toQuery(filters)}`, {
+    headers: authHeaders()
+  });
   if (!response.ok) throw new Error(`Export failed (${response.status})`);
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);
@@ -65,12 +88,35 @@ export async function exportCsv(filters = {}) {
 export async function importCsv(text) {
   const response = await fetch(`${BASE}/expenses/import`, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/csv' },
+    headers: authHeaders({ 'Content-Type': 'text/csv' }),
     body: text
   });
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
     throw new Error(payload?.errors?.join(', ') || payload?.error || `Import failed (${response.status})`);
+  }
+  return payload;
+}
+
+export const register = (credentials) =>
+  request('/auth/register', { method: 'POST', body: JSON.stringify(credentials) });
+export const login = (credentials) =>
+  request('/auth/login', { method: 'POST', body: JSON.stringify(credentials) });
+export const logout = () => request('/auth/logout', { method: 'POST' });
+
+export const getSettings = () => request('/settings');
+export const saveSettings = (settings) =>
+  request('/settings', { method: 'PUT', body: JSON.stringify(settings) });
+
+export async function uploadReceipt(file) {
+  const response = await fetch(`${BASE}/receipts`, {
+    method: 'POST',
+    headers: authHeaders({ 'Content-Type': file.type }),
+    body: file
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(payload?.errors?.join(', ') || payload?.error || `Upload failed (${response.status})`);
   }
   return payload;
 }

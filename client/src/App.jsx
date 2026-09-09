@@ -10,6 +10,8 @@ import ImportExport from './components/ImportExport.jsx';
 import DailyChart from './components/DailyChart.jsx';
 import useDebouncedValue from './useDebouncedValue.js';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
+import SignIn from './components/SignIn.jsx';
+import { readSession, writeSession, clearSession } from './session.js';
 import Recurring from './components/Recurring.jsx';
 import { currentMonth } from './format.js';
 import {
@@ -26,12 +28,46 @@ import {
   listRecurring,
   createRecurring,
   deleteRecurring,
-  applyRecurring
+  applyRecurring,
+  login,
+  register,
+  logout,
+  setUnauthorisedHandler
 } from './api.js';
 
 const emptyFilters = { q: '', category: '', from: '', to: '' };
 
 export default function App() {
+  const [session, setSession] = useState(() => readSession());
+
+  useEffect(() => {
+    setUnauthorisedHandler(() => setSession(null));
+  }, []);
+
+  async function handleAuth(mode, payload) {
+    const result = mode === 'register' ? await register(payload) : await login(payload);
+    writeSession(result);
+    return result;
+  }
+
+  async function handleSignOut() {
+    try {
+      await logout();
+    } catch {
+      // the token may already be invalid; clearing locally is what matters
+    }
+    clearSession();
+    setSession(null);
+  }
+
+  if (!session) {
+    return <SignIn onSubmit={handleAuth} onAuthenticated={setSession} />;
+  }
+
+  return <Dashboard session={session} onSignOut={handleSignOut} />;
+}
+
+function Dashboard({ session, onSignOut }) {
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState(['other']);
   const [incomeCategories, setIncomeCategories] = useState(['salary']);
@@ -222,10 +258,16 @@ export default function App() {
     <div className="app">
       <header>
         <h1>Expenses Tracker</h1>
-        <label className="month-picker">
-          Month
-          <input type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
-        </label>
+        <div className="account-bar">
+          <span>{session.user.displayName || session.user.email}</span>
+          <button type="button" className="link" onClick={onSignOut}>
+            Sign out
+          </button>
+          <label className="month-picker">
+            Month
+            <input type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
+          </label>
+        </div>
       </header>
 
       {error && <p className="error">{error}</p>}

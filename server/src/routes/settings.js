@@ -8,7 +8,7 @@ const DEFAULTS = { displayName: '', monthlyBudget: '0' };
 
 router.get('/', async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT key, value FROM settings');
+    const { rows } = await pool.query('SELECT key, value FROM settings WHERE user_id = $1', [req.user.id]);
     const stored = Object.fromEntries(rows.map((row) => [row.key, row.value]));
     res.json({
       displayName: stored.displayName ?? DEFAULTS.displayName,
@@ -38,13 +38,13 @@ router.put('/', async (req, res, next) => {
 
     for (const [key, value] of writes) {
       await pool.query(
-        `INSERT INTO settings (key, value) VALUES ($1, $2)
-         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
-        [key, value]
+        `INSERT INTO settings (user_id, key, value) VALUES ($1, $2, $3)
+         ON CONFLICT (user_id, key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+        [req.user.id, key, value]
       );
     }
 
-    const { rows } = await pool.query('SELECT key, value FROM settings');
+    const { rows } = await pool.query('SELECT key, value FROM settings WHERE user_id = $1', [req.user.id]);
     const stored = Object.fromEntries(rows.map((row) => [row.key, row.value]));
     res.json({
       displayName: stored.displayName ?? DEFAULTS.displayName,

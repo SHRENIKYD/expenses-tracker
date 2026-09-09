@@ -6,7 +6,10 @@ const router = express.Router();
 
 router.get('/', async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM recurring ORDER BY day_of_month, description');
+    const { rows } = await pool.query(
+      'SELECT * FROM recurring WHERE user_id = $1 ORDER BY day_of_month, description',
+      [req.user.id]
+    );
     res.json(rows.map(rowToRecurring));
   } catch (err) {
     next(err);
@@ -19,9 +22,9 @@ router.post('/', async (req, res, next) => {
     if (errors.length) return res.status(400).json({ errors });
 
     const { rows } = await pool.query(
-      `INSERT INTO recurring (description, amount, category, day_of_month)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [value.description, value.amount, value.category, value.dayOfMonth]
+      `INSERT INTO recurring (user_id, description, amount, category, day_of_month)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [req.user.id, value.description, value.amount, value.category, value.dayOfMonth]
     );
     res.status(201).json(rowToRecurring(rows[0]));
   } catch (err) {
@@ -31,7 +34,10 @@ router.post('/', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   try {
-    const { rowCount } = await pool.query('DELETE FROM recurring WHERE id = $1', [req.params.id]);
+    const { rowCount } = await pool.query('DELETE FROM recurring WHERE id = $1 AND user_id = $2', [
+      req.params.id,
+      req.user.id
+    ]);
     if (rowCount === 0) return res.status(404).json({ error: 'Recurring expense not found' });
     res.status(204).end();
   } catch (err) {
@@ -50,7 +56,7 @@ router.post('/apply', async (req, res, next) => {
     }
 
     await client.query('BEGIN');
-    const templates = await client.query('SELECT * FROM recurring');
+    const templates = await client.query('SELECT * FROM recurring WHERE user_id = $1', [req.user.id]);
 
     const created = [];
     let skipped = 0;
@@ -59,8 +65,9 @@ router.post('/apply', async (req, res, next) => {
       const date = `${month}-${String(template.day_of_month).padStart(2, '0')}`;
 
       const existing = await client.query(
-        'SELECT 1 FROM expenses WHERE description = $1 AND category = $2 AND date = $3 LIMIT 1',
-        [template.description, template.category, date]
+        `SELECT 1 FROM expenses
+         WHERE user_id = $1 AND description = $2 AND category = $3 AND date = $4 LIMIT 1`,
+        [req.user.id, template.description, template.category, date]
       );
       if (existing.rowCount > 0) {
         skipped += 1;
@@ -68,9 +75,9 @@ router.post('/apply', async (req, res, next) => {
       }
 
       const inserted = await client.query(
-        `INSERT INTO expenses (description, amount, category, date)
-         VALUES ($1, $2, $3, $4) RETURNING *`,
-        [template.description, Number(template.amount), template.category, date]
+        `INSERT INTO expenses (user_id, description, amount, category, date)
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [req.user.id, template.description, Number(template.amount), template.category, date]
       );
       created.push(rowToExpense(inserted.rows[0]));
     }

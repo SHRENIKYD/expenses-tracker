@@ -22,8 +22,9 @@ router.post('/', async (req, res, next) => {
     }
 
     const { rows } = await pool.query(
-      'INSERT INTO receipts (mime_type, byte_size, data) VALUES ($1, $2, $3) RETURNING id, mime_type, byte_size',
-      [mimeType, data.length, data]
+      `INSERT INTO receipts (user_id, mime_type, byte_size, data)
+       VALUES ($1, $2, $3, $4) RETURNING id, mime_type, byte_size`,
+      [req.user.id, mimeType, data.length, data]
     );
     res.status(201).json({ id: rows[0].id, mimeType: rows[0].mime_type, byteSize: rows[0].byte_size });
   } catch (err) {
@@ -34,7 +35,8 @@ router.post('/', async (req, res, next) => {
 router.get('/usage', async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      'SELECT COUNT(*)::int AS count, COALESCE(SUM(byte_size), 0)::bigint AS bytes FROM receipts'
+      'SELECT COUNT(*)::int AS count, COALESCE(SUM(byte_size), 0)::bigint AS bytes FROM receipts WHERE user_id = $1',
+      [req.user.id]
     );
     res.json({ count: rows[0].count, bytes: Number(rows[0].bytes) });
   } catch (err) {
@@ -44,9 +46,10 @@ router.get('/usage', async (req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT mime_type, data FROM receipts WHERE id = $1', [
-      req.params.id
-    ]);
+    const { rows } = await pool.query(
+      'SELECT mime_type, data FROM receipts WHERE id = $1 AND user_id = $2',
+      [req.params.id, req.user.id]
+    );
     if (rows.length === 0) return res.status(404).json({ error: 'Receipt not found' });
 
     res.setHeader('Content-Type', rows[0].mime_type);

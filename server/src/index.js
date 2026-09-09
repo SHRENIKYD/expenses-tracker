@@ -9,6 +9,8 @@ const summaryRouter = require('./routes/summary');
 const recurringRouter = require('./routes/recurring');
 const receiptsRouter = require('./routes/receipts');
 const settingsRouter = require('./routes/settings');
+const authRouter = require('./routes/auth');
+const { requireUser } = require('./auth');
 
 const app = express();
 
@@ -21,6 +23,10 @@ app.use(
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+app.use('/api/auth', authRouter);
+
+// Everything past this point requires a signed-in user.
+app.use('/api', requireUser);
 app.use('/api/expenses', expensesRouter);
 app.use('/api/budgets', budgetsRouter);
 app.use('/api/summary', summaryRouter);
