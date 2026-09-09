@@ -24,13 +24,30 @@ const NOT_A_TRANSACTION =
 // An account or card, as the bank prints it: "A/c XX3596", "card ending 1234".
 const TAIL = /(?:a\/?c|acct|account|card)\s*(?:no\.?|number|ending|xx+|x+|\*+)?\s*[xX*]*(\d{3,6})\b/i;
 
-const REFERENCE = /\b(?:upi|imps|neft|rtgs|txn|ref(?:erence)?(?:\s*no)?|rrn)[:\s.#-]*([A-Za-z0-9]{6,25})\b/i;
+const REFERENCE = [
+  // "UPI/P2M/129200640073/GANESH KOTARY" — the number between the slashes.
+  /\bUPI\/[A-Z0-9]+\/(\d{6,})/i,
+  /\b(?:upi|imps|neft|rtgs|txn|ref(?:erence)?(?:\s*no)?|rrn)[:\s.#-]*([A-Za-z0-9]{6,25})\b/i
+];
+
+function reference(body) {
+  for (const pattern of REFERENCE) {
+    const found = pattern.exec(body);
+    if (found) return found[1].toUpperCase();
+  }
+  return null;
+}
 
 // The counterparty, in the forms the alerts use. Ordered: the more specific
 // pattern wins, so "to VPA swiggy@ybl" is preferred over a trailing "at".
 const PARTY = [
   /\b(?:to|at|towards)\s+VPA\s+([^\s,.;]+)/i,
   /\bVPA\s+([^\s,.;]+)/i,
+  // Axis and others print the payee as the last field of a UPI reference:
+  // "UPI/P2M/129200640073/GANESH KOTARY".
+  /\bUPI\/[A-Z0-9]+\/\d{6,}\/([^/\n]{2,40})/i,
+  // A card alert puts the merchant after the time: "... 11:13:25 IST M Chinnappa".
+  /\b(?:IST|GMT)\s+([A-Za-z][A-Za-z0-9 .&'-]{1,39})/,
   /\btrf\s+to\s+([A-Za-z0-9 &._-]{2,40})/i,
   /\b(?:to|at|towards|in favour of)\s+([A-Za-z0-9&._-][A-Za-z0-9 &._-]{1,39})/i,
   /\bfrom\s+([A-Za-z0-9&._-][A-Za-z0-9 &._-]{1,39})/i
@@ -38,7 +55,10 @@ const PARTY = [
 
 // A merchant name runs until the message goes back to talking about the
 // transaction: "AMAZON on 09-Sep-26" is a shop called Amazon.
-const AFTER_THE_NAME = /\s+(?:on|dt|dated|at|via|through|ref|txn|upi|imps|neft|rtgs|by|for)\b.*$/i;
+// A merchant name runs until the alert goes back to talking about the account:
+// "GANESH KOTARY Not you? SMS BLOCKUPI ..." is a shop called Ganesh Kotary.
+const AFTER_THE_NAME =
+  /\s+(?:on|dt|dated|at|via|through|ref|txn|upi|imps|neft|rtgs|by|for|not|avl|sms|cust|limit|bal|call|to\s+report)\b.*$/i;
 
 const clean = (value) =>
   String(value)
@@ -83,7 +103,6 @@ export function readMessage({ sender = '', body = '', at = Date.now() } = {}) {
   if (out === income) return null;
 
   const tail = TAIL.exec(text);
-  const reference = REFERENCE.exec(text);
   const party = counterparty(text);
 
   return {
@@ -92,7 +111,7 @@ export function readMessage({ sender = '', body = '', at = Date.now() } = {}) {
     description: party || `${out ? 'Payment' : 'Credit'} from ${clean(sender) || 'bank'}`,
     merchant: party,
     accountTail: tail ? tail[1] : null,
-    reference: reference ? reference[1].toUpperCase() : null,
+    reference: reference(text),
     date: new Date(at).toISOString().slice(0, 10),
     sender: clean(sender),
     // Kept so the confirmation screen can show what it was read from.

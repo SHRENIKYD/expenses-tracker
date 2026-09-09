@@ -80,3 +80,46 @@ test('only a bank-shaped sender is worth reading', () => {
   assert.equal(looksLikeBank('+919876543210'), false);
   assert.equal(looksLikeBank('Amma'), false);
 });
+
+test('the Axis formats give up their merchant and their reference', () => {
+  const card = read(
+    'VM-AXISBK-S',
+    'Spent INR 1000 Axis Bank Card no. XX8697 07-09-26 11:13:25 IST M Chinnappa Avl Limit: INR 465255.92 Not you? SMS BLOCK 8697 to 919951860002'
+  );
+  assert.equal(card.amount, 1000);
+  assert.equal(card.description, 'M Chinnappa');
+  assert.equal(card.accountTail, '8697');
+
+  const upi = read(
+    'AX-AXISBK-S',
+    'INR 55.00 debited A/c no. XX9318 07-09-26, 18:46:44 UPI/P2M/129200640073/GANESH KOTARY Not you? SMS BLOCKUPI Cust ID to 919951860002 Axis Bank'
+  );
+  assert.equal(upi.description, 'GANESH KOTARY');
+  // The number between the slashes, not the number to text for help.
+  assert.equal(upi.reference, '129200640073');
+});
+
+test('a credit alert keeps the payer and the bank’s own reference', () => {
+  const found = read(
+    'AD-HDFCBK',
+    'Credit Alert! Rs.2354.00 credited to HDFC Bank A/c XX0185 on 06-09-26 from VPA vinaykumar2725@oksbi (UPI 624932729021)'
+  );
+
+  assert.equal(found.kind, 'income');
+  assert.equal(found.amount, 2354);
+  assert.equal(found.description, 'vinaykumar2725');
+  assert.equal(found.reference, '624932729021');
+});
+
+test('an alert dealt with once is not offered again', async () => {
+  const { fingerprint } = await import('../src/data/handled.js');
+
+  const suggestion = read('AX-AXISBK-S', 'INR 515.00 debited A/c no. XX9318 to NITHIN WINES');
+  const again = read('AX-AXISBK-S', 'INR 515.00 debited A/c no. XX9318 to NITHIN WINES');
+  const different = read('AX-AXISBK-S', 'INR 516.00 debited A/c no. XX9318 to NITHIN WINES');
+
+  assert.equal(fingerprint(suggestion), fingerprint(again));
+  assert.notEqual(fingerprint(suggestion), fingerprint(different));
+  // A digest, not the message: the words cannot be read back out of it.
+  assert.doesNotMatch(fingerprint(suggestion), /NITHIN|515/i);
+});

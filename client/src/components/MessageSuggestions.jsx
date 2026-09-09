@@ -10,6 +10,9 @@ import {
   recent
 } from '../data/messages.js';
 import { suggestCategory } from '../statement.js';
+import { fingerprint, handled, remember } from '../data/handled.js';
+import { findDuplicate } from '../duplicates.js';
+import { listExpenses } from '../data/index.js';
 
 const SETTING = 'tessera.read-messages';
 
@@ -34,15 +37,33 @@ export default function MessageSuggestions({ onAdd, categories }) {
     const stops = [];
     let live = true;
 
-    // An alert can reach both sources — the SMS itself and the notification
-    // the messaging app posts for it — so everything goes through the same
-    // check and the second copy is dropped.
-    const offer = (suggestion) =>
+    // Three ways an alert is already dealt with: it is on screen, it was added
+    // or dismissed before, or the transaction it describes is in the ledger.
+    // Without all three the same messages come back on every launch.
+    const seen = handled();
+    let recorded = [];
+
+    const offer = (suggestion) => {
+      if (seen.has(fingerprint(suggestion))) return;
+      if (findDuplicate(suggestion, recorded)) return;
       setSuggestions((current) =>
         current.some((entry) => same(entry, suggestion)) ? current : [suggestion, ...current]
       );
+    };
 
     (async () => {
+      // What is already recorded around the days the reader looks back over.
+      const since = new Date(Date.now() - 10 * 86400000).toISOString().slice(0, 10);
+      recorded = (await listExpenses({ from: since })).map((row) => ({
+        id: row.id,
+        kind: row.kind,
+        description: row.description,
+        amount: row.amount,
+        date: row.date,
+        external_ref: row.externalRef
+      }));
+      if (!live) return;
+
       const { granted } = await permission();
       if (granted && live) {
         stops.push(await listen(offer));
@@ -64,8 +85,16 @@ export default function MessageSuggestions({ onAdd, categories }) {
 
   if (suggestions.length === 0 && !error) return null;
 
-  const dismiss = (index) =>
-    setSuggestions((current) => current.filter((_, position) => position !== index));
+  // Dismissing is a decision, so it is remembered: the alert does not come
+  // back on the next launch.
+  const dismiss = (index, forget = true) =>
+    setSuggestions((current) =>
+      current.filter((entry, position) => {
+        if (position !== index) return true;
+        if (forget) remember(entry);
+        return false;
+      })
+    );
 
   async function accept(suggestion, index) {
     setBusy(index);
