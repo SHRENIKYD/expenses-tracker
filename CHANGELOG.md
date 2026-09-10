@@ -50,6 +50,19 @@ move it, not on every change.
   balance, in the brand's green, with search and the period behind icons — about
   208px of chrome instead of 380.
 
+### Fixed
+
+- **Nothing could be saved with encryption off.** Every insert and edit went to
+  a database function through PostgREST, which picks the function by the
+  argument names it is sent — and the client library drops an argument that is
+  undefined. A row the database gives an id to sent no `p_id`, so the call
+  failed with *could not find the function public.create_transaction(…) in the
+  schema cache* instead of writing anything. Adding a transaction, and importing
+  a statement, now send every argument, null included.
+- **Receipts outlived the transactions that carried them.** Deleting every
+  transaction left the files in storage, still counted and still holding the
+  images. They are removed in the same breath.
+
 ## 1.0.0 — 2026-09-09
 
 The first version that stands on its own: a static client and a database, with

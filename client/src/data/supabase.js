@@ -22,7 +22,8 @@ import {
   toContribution,
   toGoal,
   toRecurring,
-  toTransaction
+  toTransaction,
+  toWriteArgs
 } from './rows.js';
 
 // The same functions api.js exposes, answered by Supabase instead of the
@@ -56,25 +57,7 @@ const call = async (name, args = {}) => unwrap(await client().rpc(name, args));
 // create_transaction and update_transaction take the same columns, so the row
 // is shaped once. Everything absent is written as null: an update replaces the
 // whole row, which is what sealing a plaintext row needs.
-const write = (name, row) =>
-  call(name, {
-    p_id: row.id,
-    p_date: row.date,
-    p_account_id: row.account_id ?? null,
-    p_receipt_path: row.receipt_path ?? null,
-    p_secret: row.secret ?? null,
-    p_iv: row.iv ?? null,
-    p_key_version: row.key_version ?? null,
-    p_ref_hash: row.ref_hash ?? null,
-    p_kind: row.kind ?? null,
-    p_description: row.description ?? null,
-    p_amount: row.amount ?? null,
-    p_category: row.category ?? null,
-    p_payment_method: row.payment_method ?? null,
-    p_note: row.note ?? null,
-    p_source: row.source ?? null,
-    p_external_ref: row.external_ref ?? null
-  });
+const write = (name, row) => call(name, toWriteArgs(row));
 
 // A function returning one row answers with a row of nulls when there is none,
 // because SQL has no way to return nothing from a scalar-shaped result.
@@ -392,7 +375,14 @@ export async function updateExpense(id, patch) {
 export const deleteExpense = (id) => call('delete_transaction', { p_id: id });
 
 /** Every transaction, gone. Accounts, budgets, goals and the profile remain. */
-export const deleteAllTransactions = () => call('reset_transactions');
+export async function deleteAllTransactions() {
+  const removed = await call('reset_transactions');
+  // A receipt is a storage object with no foreign key, so deleting the rows
+  // that pointed at it leaves the file behind, still counted and still
+  // holding the image. The bucket is emptied here in the same breath.
+  await deleteAllReceipts();
+  return removed;
+}
 
 /* -------------------------------------------------------------- accounts */
 
@@ -674,6 +664,23 @@ export async function deleteReceipt(id) {
   // a file that is gone.
   const carrying = (await call('list_transactions')).filter((row) => row.receipt_path === id);
   for (const row of carrying) await updateExpense(row.id, { receiptId: null });
+}
+
+// Every receipt this user owns, by its full path in the bucket.
+async function listReceiptPaths() {
+  const folder = await currentUserId();
+  const files = unwrap(
+    await client().storage.from(RECEIPT_BUCKET).list(folder, { limit: 1000 })
+  );
+  return files.map((file) => `${folder}/${file.name}`);
+}
+
+async function deleteAllReceipts() {
+  const paths = await listReceiptPaths();
+  if (paths.length === 0) return 0;
+  const { error } = await client().storage.from(RECEIPT_BUCKET).remove(paths);
+  if (error) throw new Error(error.message);
+  return paths.length;
 }
 
 export async function receiptUsage() {
