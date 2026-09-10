@@ -50,9 +50,18 @@ const INCOME_HINTS = [
   [/refund|reversal|cashback/i, 'refund']
 ];
 
+// The bank that the statement is mostly about, not the first one named in it.
+// A statement mentions other banks in passing — a payee's branch, an IFSC in a
+// narration — and taking the first match printed "HDFC Bank" over an ICICI
+// statement whose own name appeared forty times.
 function detectBank(text) {
-  const found = BANKS.find((bank) => bank.match.test(text));
-  return found ? { code: found.code, name: found.name } : null;
+  let best = null;
+  for (const bank of BANKS) {
+    const pattern = new RegExp(bank.match.source, 'gi');
+    const mentions = (text.match(pattern) || []).length;
+    if (mentions > 0 && (!best || mentions > best.mentions)) best = { bank, mentions };
+  }
+  return best ? { code: best.bank.code, name: best.bank.name } : null;
 }
 
 function parseDate(token) {
@@ -86,13 +95,26 @@ function iso(year, month, day) {
 const MONEY = /-?(?:\d{1,3}(?:,\d{2,3})*|\d+)\.\d{2}/g;
 const toNumber = (token) => Number(token.replace(/,/g, ''));
 
+const DATE_TOKEN = String.raw`\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{1,2}[\s/-][A-Za-z]{3}[a-z]*[\s/-]\d{2,4}`;
+
+// The date that opens a row, past the row number some exports print in front of
+// it, and past the value date when the row carries a value date and a
+// transaction date both. The transaction date is the one that is kept: it is
+// when the money moved.
 function leadingDate(line) {
-  const match = /^\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{1,2}[\s/-][A-Za-z]{3}[a-z]*[\s/-]\d{2,4})/.exec(
-    line
-  );
+  const match = new RegExp(`^\\s*(?:\\d{1,4}[.)]?\\s+)?(${DATE_TOKEN})`).exec(line);
   if (!match) return null;
   const date = parseDate(match[1].trim());
-  return date ? { date, rest: line.slice(match[0].length) } : null;
+  if (!date) return null;
+
+  let rest = line.slice(match[0].length);
+  const second = new RegExp(`^\\s+(${DATE_TOKEN})(?=\\s|$)`).exec(rest);
+  if (second) {
+    const later = parseDate(second[1].trim());
+    if (later) return { date: later, rest: rest.slice(second[0].length) };
+  }
+
+  return { date, rest };
 }
 
 function suggestCategory(description, kind) {
@@ -113,6 +135,8 @@ function extractReference(description) {
 
 function cleanDescription(text) {
   return text
+    // An empty column prints as a dash or a pipe; it is not part of the words.
+    .replace(/^[-|\s]+/, '')
     .replace(/\b(?:Dr|Cr)\b\.?/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -228,7 +252,20 @@ function parseStatement(lines) {
     }
 
     const balance = toNumber(amounts[amounts.length - 1]);
-    const amount = toNumber(amounts[amounts.length - 2]);
+
+    // Withdrawal and deposit in columns of their own, the unused one printed as
+    // 0.00 — which is how ICICI's transaction history exports a row, and which
+    // read as an amount of zero before. Exactly one of the two is the amount,
+    // and which one it is says which way the money went.
+    let column = null;
+    if (amounts.length >= 3) {
+      const out = toNumber(amounts[amounts.length - 3]);
+      const inward = toNumber(amounts[amounts.length - 2]);
+      if (out > 0 && inward === 0) column = { amount: out, kind: 'expense' };
+      else if (inward > 0 && out === 0) column = { amount: inward, kind: 'income' };
+    }
+
+    const amount = column ? column.amount : toNumber(amounts[amounts.length - 2]);
 
     // Record the balance before any later skip, so one unreadable row does not
     // break the running balance that tells later rows which way money moved.
@@ -261,8 +298,10 @@ function parseStatement(lines) {
     // A direction marker may sit in the row or in the narration ("NEFT CR-...").
     // Test the raw text: cleanDescription strips those markers.
     const marked = `${head.rest} ${raw}`;
-    let kind = null;
-    if (/\bCr\b\.?/i.test(marked)) kind = 'income';
+    let kind = column ? column.kind : null;
+    if (kind) {
+      // nothing more to decide: the column the figure sat in already said it
+    } else if (/\bCr\b\.?/i.test(marked)) kind = 'income';
     else if (/\bDr\b\.?/i.test(marked)) kind = 'expense';
     else if (balanceBefore !== null) {
       const delta = balance - balanceBefore;

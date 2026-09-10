@@ -59,6 +59,15 @@ move it, not on every change.
   failed with *could not find the function public.create_transaction(…) in the
   schema cache* instead of writing anything. Adding a transaction, and importing
   a statement, now send every argument, null included.
+- **An ICICI statement read as nothing at all.** Its transaction history export
+  puts a row number in front of the date, a value date and a transaction date
+  side by side, and withdrawal and deposit in columns of their own with `0.00`
+  in the one that does not apply — so every row failed the first test the parser
+  made, and 1,905 lines yielded no transactions. Rows like that are read now,
+  the transaction date is the one kept, and the column the figure sits in says
+  which way the money went. The bank named on the statement is also the one it
+  is mostly about rather than the first one mentioned anywhere in it, which had
+  an ICICI statement labelled HDFC.
 - **A statement import gave up halfway.** Each row was its own request, so a
   252-row statement was 252 round trips from a phone — a minute of them, and any
   one dropping (`TypeError: Failed to fetch`) lost the whole import. Rows now go

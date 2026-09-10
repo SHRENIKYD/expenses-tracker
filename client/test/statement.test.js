@@ -282,3 +282,41 @@ test('a lookup does not grow with the ledger', async () => {
   // three orders of magnitude, not by two.
   assert.ok(huge < quick * 20, `lookups scaled with the ledger: ${quick}ns vs ${huge}ns`);
 });
+
+// ICICI's transaction history export, as pdf.js delivers it: a row number in
+// front of the date, a value date and a transaction date, an empty cheque
+// column, and withdrawal and deposit in columns of their own with 0.00 in the
+// one that does not apply.
+const ICICI = [
+  'Statement of Transactions in Saving Account no. 318301508036 in INR for the period',
+  'ICICI BANK LIMITED, ICICIBANKLTD., HSG-J-KIADB, 203, RAVINDRA ROAD',
+  'S No. Value Date Transaction Date Cheque Number Transaction Remarks Withdrawal Amount (INR) Deposit Amount (INR) Balance (INR)',
+  '1 06/09/2026 07/09/2026 - UPI/129166379807/Payment/SWIGGY 30.00 0.00 12,345.67',
+  '2 07/09/2026 07/09/2026 - MMT/IMPS/629012345678/ACME PAYROLL SALARY 0.00 90,000.00 1,02,345.67',
+  '3 08/09/2026 08/09/2026 - UPI/994137/Payment to merchant 22,819.00 0.00 79,526.67'
+];
+
+test('an ICICI row is read past its number, its second date and its empty columns', () => {
+  const { transactions, skipped } = parseStatement(ICICI);
+
+  assert.equal(skipped.length, 0);
+  assert.deepEqual(
+    transactions.map((row) => [row.date, row.kind, row.amount]),
+    [
+      // The transaction date, not the value date, is the day it moved.
+      ['2026-09-07', 'expense', 30],
+      ['2026-09-07', 'income', 90000],
+      ['2026-09-08', 'expense', 22819]
+    ]
+  );
+  assert.equal(transactions[0].description, 'UPI/129166379807/Payment/SWIGGY');
+  assert.equal(transactions[0].category, 'food');
+  assert.equal(transactions[1].category, 'salary');
+});
+
+test('the bank is the one the statement is about, not the first one it names', () => {
+  // A payee's bank appears in a narration; the account's own bank appears
+  // throughout.
+  const text = ['HDFC BANK payee', ...ICICI, 'ICICI Bank'].join('\n');
+  assert.deepEqual(detectBank(text), { code: 'icici', name: 'ICICI Bank' });
+});
