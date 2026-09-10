@@ -59,6 +59,15 @@ move it, not on every change.
   failed with *could not find the function public.create_transaction(…) in the
   schema cache* instead of writing anything. Adding a transaction, and importing
   a statement, now send every argument, null included.
+- **A statement's rows were being torn apart before the parser saw them.** A PDF
+  reports a table as loose cells, each with its own baseline, and the cells of
+  one row differ by a point or two. Snapping those baselines to a three-point
+  grid split a row in half whenever its cells straddled a boundary — the date on
+  one line, its amounts on another — so a 24-page statement produced 1,905 lines
+  and not one transaction. Cells are grouped by how close they are instead,
+  measured from the top of the row, which has no boundaries to straddle. The
+  grouping is its own module now, tested on hand-built cells and on a real PDF
+  read by pdf.js.
 - **An ICICI statement read as nothing at all.** Its transaction history export
   puts a row number in front of the date, a value date and a transaction date
   side by side, and withdrawal and deposit in columns of their own with `0.00`
@@ -66,8 +75,9 @@ move it, not on every change.
   made, and 1,905 lines yielded no transactions. Rows like that are read now,
   the transaction date is the one kept, and the column the figure sits in says
   which way the money went. The bank named on the statement is also the one it
-  is mostly about rather than the first one mentioned anywhere in it, which had
-  an ICICI statement labelled HDFC.
+  is mostly about, read from the letterhead rather than from the whole file —
+  which had an ICICI statement labelled first HDFC, then YES Bank, after the
+  banks behind its payees' UPI handles outnumbered its own name.
 - **A statement import gave up halfway.** Each row was its own request, so a
   252-row statement was 252 round trips from a phone — a minute of them, and any
   one dropping (`TypeError: Failed to fetch`) lost the whole import. Rows now go

@@ -1,11 +1,12 @@
 // Turning a PDF into lines of text, in the browser.
 //
-// pdf.js reports a table row as a stream of disconnected cells, so items are
-// grouped by their y position and ordered by x: one visual row becomes one
-// line, which is what the parser expects.
+// pdf.js reports a table row as a stream of disconnected cells. Grouping them
+// back into rows is in ./pdf-lines.js, which is pure and therefore testable;
+// this file is the part that needs a browser.
 
 import * as pdfjs from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { groupIntoLines } from './pdf-lines.js';
 
 // Parsing runs off the main thread, so a long statement does not freeze the UI.
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -41,25 +42,16 @@ export async function extractText(buffer, password) {
     const page = await doc.getPage(pageNumber);
     const content = await page.getTextContent();
 
-    const rows = new Map();
-    for (const item of content.items) {
-      if (!item.str || !item.str.trim()) continue;
-      const y = Math.round(item.transform[5]);
-      const key = Math.round(y / 3) * 3;
-      if (!rows.has(key)) rows.set(key, []);
-      rows.get(key).push({ x: item.transform[4], text: item.str });
-    }
-
-    for (const [, cells] of [...rows.entries()].sort((a, b) => b[0] - a[0])) {
-      lines.push(
-        cells
-          .sort((a, b) => a.x - b.x)
-          .map((cell) => cell.text.trim())
-          .join(' ')
-          .replace(/\s+/g, ' ')
-          .trim()
-      );
-    }
+    lines.push(
+      ...groupIntoLines(
+        content.items.map((item) => ({
+          x: item.transform[4],
+          y: item.transform[5],
+          height: item.height,
+          text: item.str
+        }))
+      )
+    );
   }
 
   await doc.destroy();

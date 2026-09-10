@@ -54,11 +54,18 @@ const INCOME_HINTS = [
 // A statement mentions other banks in passing — a payee's branch, an IFSC in a
 // narration — and taking the first match printed "HDFC Bank" over an ICICI
 // statement whose own name appeared forty times.
+// The account's own bank is on the letterhead. Further in, a statement names
+// other banks in passing — a payee's branch, the bank behind a UPI handle — and
+// counting mentions across the whole file crowned whichever of those appeared
+// most. Only the opening is read, and there the most-named bank is the right
+// one.
+const LETTERHEAD = 1500;
+
 function detectBank(text) {
+  const opening = text.slice(0, LETTERHEAD);
   let best = null;
   for (const bank of BANKS) {
-    const pattern = new RegExp(bank.match.source, 'gi');
-    const mentions = (text.match(pattern) || []).length;
+    const mentions = (opening.match(new RegExp(bank.match.source, 'gi')) || []).length;
     if (mentions > 0 && (!best || mentions > best.mentions)) best = { bank, mentions };
   }
   return best ? { code: best.bank.code, name: best.bank.name } : null;
