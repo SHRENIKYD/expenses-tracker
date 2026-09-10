@@ -744,12 +744,23 @@ export async function previewStatement(file, password) {
     );
     // The extracted lines say which of the two it is, and what the rows look
     // like. They stay on this device, in the page that read the file.
+    // The first eight lines of a statement are its letterhead, which says
+    // nothing about why the rows would not read. What does say it is the shape
+    // of the lines that carry a date and the lines that carry money: whether
+    // they are the same line, and what sits between the date and the figures.
+    const filled = lines.filter((line) => line.trim());
+    const dated = filled.filter((line) => /\d{1,2}[/-]\d{1,2}[/-]\d{2,4}/.test(line));
+    const money = filled.filter((line) => /\d[\d,]*\.\d{2}/.test(line));
+
     error.details = {
       bank,
       pages,
       lines: words,
       skipped: skipped.slice(0, 8),
-      sample: lines.filter((line) => line.trim()).slice(0, 8)
+      sample: filled.slice(0, 4),
+      dated: dated.slice(0, 6),
+      money: money.slice(0, 6),
+      counts: { dated: dated.length, money: money.length, both: dated.filter((line) => /\d[\d,]*\.\d{2}/.test(line)).length }
     };
     throw error;
   }

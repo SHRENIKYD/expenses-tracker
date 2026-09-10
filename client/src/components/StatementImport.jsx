@@ -147,8 +147,27 @@ export default function StatementImport({ onImported, accounts = [], categories 
             {details.bank ? `${details.bank.name}, ` : 'Bank not recognised, '}
             {details.pages} page{details.pages === 1 ? '' : 's'}, {details.lines} lines of text.
           </p>
+          {details.counts && (
+            <p className="hint">
+              {details.counts.dated} lines carry a date, {details.counts.money} carry an amount,
+              {' '}
+              {details.counts.both} carry both.
+            </p>
+          )}
           {details.sample?.length > 0 && (
             <pre className="statement-sample">{details.sample.join('\n')}</pre>
+          )}
+          {details.dated?.length > 0 && (
+            <>
+              <p className="hint">Lines with a date</p>
+              <pre className="statement-sample">{details.dated.join('\n')}</pre>
+            </>
+          )}
+          {details.money?.length > 0 && (
+            <>
+              <p className="hint">Lines with an amount</p>
+              <pre className="statement-sample">{details.money.join('\n')}</pre>
+            </>
           )}
           {details.skipped?.length > 0 && (
             <ul className="statement-skipped">
