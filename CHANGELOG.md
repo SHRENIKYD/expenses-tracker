@@ -59,6 +59,12 @@ move it, not on every change.
   failed with *could not find the function public.create_transaction(…) in the
   schema cache* instead of writing anything. Adding a transaction, and importing
   a statement, now send every argument, null included.
+- **A statement import gave up halfway.** Each row was its own request, so a
+  252-row statement was 252 round trips from a phone — a minute of them, and any
+  one dropping (`TypeError: Failed to fetch`) lost the whole import. Rows now go
+  a hundred at a time through `create_transactions`, a dropped connection is
+  retried, and the unique index on the bank reference settles a repeat inside
+  the database rather than by a failed insert.
 - **Receipts outlived the transactions that carried them.** Deleting every
   transaction left the files in storage, still counted and still holding the
   images. They are removed in the same breath.

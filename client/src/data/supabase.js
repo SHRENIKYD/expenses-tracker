@@ -811,6 +811,23 @@ function rowErrors(entry) {
   return errors;
 }
 
+// One statement is sent in a handful of calls, not hundreds.
+const IMPORT_BATCH = 100;
+
+// A dropped connection on a phone is a TypeError with nothing in it to act on,
+// and it is usually over by the next second. Three tries, then it is real.
+async function retrying(work, attempts = 3) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await work();
+    } catch (err) {
+      const transient = err instanceof TypeError || /failed to fetch|network/i.test(err.message);
+      if (!transient || attempt === attempts) throw err;
+      await new Promise((resume) => setTimeout(resume, 400 * attempt));
+    }
+  }
+}
+
 export async function importStatement(transactions, options = {}) {
   const incoming = Array.isArray(transactions) ? transactions : [];
   if (incoming.length === 0) throw new Error('No transactions selected.');
@@ -863,20 +880,41 @@ export async function importStatement(transactions, options = {}) {
 
   if (rows.length === 0) return { imported: 0, duplicates, rejected };
 
-  // Row by row, because one clash must not lose the rest: the unique index on
-  // the blind reference refuses a statement imported twice, and that refusal is
-  // counted rather than thrown.
+  // In batches rather than row by row: a 252-row statement was 252 round trips
+  // from a phone, a minute of them, and any one failing lost the rest. The
+  // unique indexes on the bank reference settle a repeat inside the database,
+  // so a batch counts what it added rather than throwing.
   let imported = 0;
-  for (const row of rows) {
+  for (let start = 0; start < rows.length; start += IMPORT_BATCH) {
+    const batch = rows.slice(start, start + IMPORT_BATCH);
+    let added;
     try {
-      await write('create_transaction', row);
-      imported += 1;
+      added = Number(await retrying(() => call('create_transactions', { p_rows: batch })));
     } catch (err) {
-      if (/duplicate key|23505/.test(err.message)) duplicates += 1;
-      else throw err;
+      // A client can reach a database that has not had 0007 run against it yet.
+      // Slower, but it imports rather than refusing.
+      if (!/could not find the function/i.test(err.message)) throw err;
+      added = await oneAtATime(batch);
     }
+    imported += added;
+    duplicates += batch.length - added;
   }
   return { imported, duplicates, rejected };
+}
+
+// The batch insert's fallback: the same rows, one call each, a repeat counted
+// rather than thrown.
+async function oneAtATime(batch) {
+  let added = 0;
+  for (const row of batch) {
+    try {
+      await retrying(() => write('create_transaction', row));
+      added += 1;
+    } catch (err) {
+      if (!/duplicate key|23505/.test(err.message)) throw err;
+    }
+  }
+  return added;
 }
 
 /* -------------------------------------------------------- merchant rules */

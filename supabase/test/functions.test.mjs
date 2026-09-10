@@ -182,3 +182,35 @@ test('a diagnostic records under the caller and reads back newest first', async 
     assert.equal((await db.query('select * from public.recent_diagnostics()')).rowCount, 0);
   });
 });
+
+test('a statement goes in as one batch, and a repeat of it adds nothing', async () => {
+  const batch = JSON.stringify([
+    { date: '2026-11-01', kind: 'expense', description: 'A', amount: 10, category: 'food', source: 'statement', external_ref: 'R1' },
+    { date: '2026-11-02', kind: 'expense', description: 'B', amount: 26, category: 'other', source: 'statement', external_ref: 'R2' },
+    // The same reference twice inside one batch is the same transaction twice.
+    { date: '2026-11-02', kind: 'expense', description: 'B again', amount: 26, category: 'other', source: 'statement', external_ref: 'R2' },
+    { date: '2026-11-03', secret: 'Y2lwaGVy', iv: 'aXY=', key_version: 1, ref_hash: 'digest', source: 'statement' }
+  ]);
+
+  await asUser(db, alice, async () => {
+    const first = await db.query('select public.create_transactions($1::jsonb) as added', [batch]);
+    assert.equal(first.rows[0].added, 3, 'the repeated reference was inserted');
+
+    const again = await db.query('select public.create_transactions($1::jsonb) as added', [batch]);
+    assert.equal(again.rows[0].added, 0, 'importing the same statement twice added rows');
+
+    const mine = await db.query(
+      'select count(*)::int as count from public.list_transactions($1, $2)',
+      ['2026-11-01', '2026-11-30']
+    );
+    assert.equal(mine.rows[0].count, 3);
+  });
+
+  await asUser(db, bob, async () => {
+    const theirs = await db.query(
+      'select count(*)::int as count from public.list_transactions($1, $2)',
+      ['2026-11-01', '2026-11-30']
+    );
+    assert.equal(theirs.rows[0].count, 0, 'the batch landed under the wrong account');
+  });
+});
