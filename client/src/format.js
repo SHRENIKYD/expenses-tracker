@@ -55,17 +55,26 @@ export const formatPercent = (fraction) =>
 
 export const titleCase = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 
-export const currentMonth = () => new Date().toISOString().slice(0, 7);
+// The date on the calendar where the user is. Stored dates are calendar days,
+// pinned to UTC midnight so arithmetic on them never shifts; but *now* has to
+// be read from the device's own calendar first. Read through UTC, "today" was
+// yesterday in India until 05:30 every morning.
+export const localDay = (at = new Date()) => {
+  const date = at instanceof Date ? at : new Date(at);
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
 
-export const todayIso = () => new Date().toISOString().slice(0, 10);
+export const currentMonth = () => localDay().slice(0, 7);
+
+export const todayIso = () => localDay();
 
 // "Today" / "Yesterday" read better than a date on a phone, but only for the
 // last two days — beyond that the actual date is more useful than "5 days ago".
 export function formatRelativeDay(date) {
-  const today = new Date();
-  const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  const today = new Date(`${todayIso()}T00:00:00Z`).getTime();
   const value = new Date(`${date}T00:00:00Z`).getTime();
-  const days = Math.round((todayUtc - value) / 86400000);
+  const days = Math.round((today - value) / 86400000);
 
   if (days === 0) return 'Today';
   if (days === 1) return 'Yesterday';

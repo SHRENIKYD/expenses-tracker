@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from './Icon.jsx';
-import { formatMoney, formatDay, titleCase } from '../format.js';
+import { formatMoney, formatDay, localDay, titleCase } from '../format.js';
 import {
   available,
   listen,
@@ -36,7 +36,7 @@ export default function MessageSuggestions({ onAdd, categories, ledger = 0 }) {
 
   useEffect(() => {
     if (!available()) return;
-    const since = new Date(Date.now() - 10 * 86400000).toISOString().slice(0, 10);
+    const since = localDay(Date.now() - 10 * 86400000);
     listExpenses({ from: since })
       .then((rows) =>
         (recorded.current = buildIndex(

@@ -4,7 +4,8 @@ import { currentMonth, todayIso } from './format.js';
 // named ways of producing one, so the rest of the app only ever sees {from,to}.
 
 const iso = (date) => date.toISOString().slice(0, 10);
-const shift = (days) => iso(new Date(Date.now() + days * 86400000));
+// Counted from today's date where the user is, in whole calendar days.
+const shift = (days) => iso(new Date(new Date(`${todayIso()}T00:00:00Z`).getTime() + days * 86400000));
 
 export function monthSelection(month) {
   const [year, monthNumber] = month.split('-').map(Number);
@@ -17,12 +18,12 @@ export function monthSelection(month) {
 }
 
 function quarterToDate() {
-  const now = new Date();
-  const startMonth = Math.floor(now.getUTCMonth() / 3) * 3;
+  const [year, month] = todayIso().split('-').map(Number);
+  const startMonth = Math.floor((month - 1) / 3) * 3;
   return {
     mode: 'preset',
     preset: 'quarter',
-    from: iso(new Date(Date.UTC(now.getUTCFullYear(), startMonth, 1))),
+    from: iso(new Date(Date.UTC(year, startMonth, 1))),
     to: todayIso()
   };
 }
@@ -46,7 +47,7 @@ export const PRESETS = [
     build: () => ({
       mode: 'preset',
       preset: 'year',
-      from: `${new Date().getUTCFullYear()}-01-01`,
+      from: `${todayIso().slice(0, 4)}-01-01`,
       to: todayIso()
     })
   }

@@ -1,3 +1,5 @@
+import { currentMonth } from '../format.js';
+
 // Assembling the summary from its parts, kept separate from the network calls
 // so the arithmetic can be tested without a database.
 
@@ -16,7 +18,7 @@ const monthEnd = (month) => {
 
 export function resolvePeriod(query = {}) {
   if (query.from && query.to) return { from: query.from, to: query.to };
-  const month = query.month || new Date().toISOString().slice(0, 7);
+  const month = query.month || currentMonth();
   return { from: `${month}-01`, to: monthEnd(month) };
 }
 

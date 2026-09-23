@@ -9,6 +9,8 @@
 // an amount, a direction word, an account or card tail, and — for anything
 // worth recording — a counterparty.
 
+import { localDay } from './format.js';
+
 const MONEY = /(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{1,2})?)/i;
 
 // Words that decide which way the money went. `debited` and `credited` are the
@@ -112,7 +114,8 @@ export function readMessage({ sender = '', body = '', at = Date.now() } = {}) {
     merchant: party,
     accountTail: tail ? tail[1] : null,
     reference: reference(text),
-    date: new Date(at).toISOString().slice(0, 10),
+    // The day it arrived where the phone is, not in UTC.
+    date: localDay(at),
     sender: clean(sender),
     // Kept so the confirmation screen can show what it was read from.
     body: text.slice(0, 200)

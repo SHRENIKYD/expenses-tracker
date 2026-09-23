@@ -15,6 +15,7 @@ import {
   summaryWindow
 } from './aggregate.js';
 import { makeReporter } from '../diagnostics.js';
+import { todayIso } from '../format.js';
 import {
   fromTransaction,
   toAccount,
@@ -585,7 +586,7 @@ export async function getSummary(period) {
       category: row.category,
       date: row.date
     })),
-    today: new Date().toISOString().slice(0, 10)
+    today: todayIso()
   });
 }
 

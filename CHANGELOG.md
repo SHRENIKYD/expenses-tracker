@@ -52,6 +52,13 @@ move it, not on every change.
 
 ### Fixed
 
+- **"Today" was yesterday until 05:30.** The date it is now was read in UTC, so
+  in India every morning before half past five the add form defaulted to the
+  day before and would not let today be picked, a bank alert that arrived at
+  1 am was filed under the previous day, "Today" and "Yesterday" were
+  misapplied, the presets ended a day early, and on the 1st the dashboard opened
+  on the month just gone. Now is read from the device's own calendar; the
+  arithmetic on stored dates is unchanged.
 - **A reload locked the app.** The dashboard was drawn before the tab had asked
   whether the account has a vault, so it fetched the sealed rows with no key in
   memory to open them — the cached key was restored a moment later, too late.
