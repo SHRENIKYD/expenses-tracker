@@ -52,6 +52,11 @@ move it, not on every change.
 
 ### Fixed
 
+- **A month was compared with the wrong days.** "Versus the period before"
+  counted back as many days as the month has, so September was compared with
+  2–31 August and October with 31 August – 30 September. A whole month is now
+  compared with the whole month before it; other ranges keep the same-length
+  window.
 - **"Forgotten your password?" could not reset a password.** The emailed link
   opened the sign-in page, so the new password was never set. It now opens
   "Set a new password", which for an encrypted account also asks for the

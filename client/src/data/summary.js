@@ -1,4 +1,5 @@
 import { currentMonth } from '../format.js';
+import { previousPeriod } from './aggregate.js';
 
 // Assembling the summary from its parts, kept separate from the network calls
 // so the arithmetic can be tested without a database.
@@ -120,7 +121,7 @@ export function assembleSummary({
   return {
     month,
     range: { from, to, days: totalDays, label: month ? 'month' : 'custom' },
-    previousRange: { from: addDays(from, -totalDays), to: addDays(from, -1) },
+    previousRange: previousPeriod(from, to),
     accounts: byMethod,
     dueSoon,
     income,

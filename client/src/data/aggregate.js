@@ -16,6 +16,23 @@ export function shiftMonth(month, delta) {
 
 const within = (rows, from, to) => rows.filter((row) => row.date >= from && row.date <= to);
 
+const lastOfMonth = (month) => addDays(`${shiftMonth(month, 1)}-01`, -1);
+
+/**
+ * What a range is compared with. A whole calendar month is compared with the
+ * whole month before it; counting back the same number of days instead began
+ * September's comparison on 2 August and reached into August from October.
+ * Any other window is compared with as many days immediately before it.
+ */
+export function previousPeriod(from, to) {
+  const month = from.slice(0, 7);
+  if (from === `${month}-01` && to === lastOfMonth(month)) {
+    const before = shiftMonth(month, -1);
+    return { from: `${before}-01`, to: lastOfMonth(before) };
+  }
+  return { from: addDays(from, -daysBetween(from, to)), to: addDays(from, -1) };
+}
+
 // One row per day of the range, gaps filled, with the running total alongside:
 // the prefix sum the charts are built from.
 export function dailySeries(rows, from, to) {
@@ -46,7 +63,7 @@ export function dailySeries(rows, from, to) {
 // This period and the equally long one before it, in the shape the assembler
 // reads: one row per period and kind.
 export function periodTotals(rows, from, to) {
-  const previousFrom = addDays(from, -daysBetween(from, to));
+  const previousFrom = previousPeriod(from, to).from;
   const buckets = new Map();
 
   for (const row of within(rows, previousFrom, to)) {
@@ -104,7 +121,7 @@ export function monthlyTrend(rows, anchorDay) {
 
 /** The earliest day a summary for this range needs, so one query covers it. */
 export function summaryWindow(from, to) {
-  const previousFrom = addDays(from, -daysBetween(from, to));
+  const previousFrom = previousPeriod(from, to).from;
   const trendStart = `${shiftMonth(to.slice(0, 7), -11)}-01`;
   return previousFrom < trendStart ? previousFrom : trendStart;
 }

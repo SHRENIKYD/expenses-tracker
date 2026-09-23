@@ -123,3 +123,26 @@ test('dates move in whole days, inclusive', () => {
   assert.equal(daysBetween('2026-09-01', '2026-09-30'), 30);
   assert.equal(daysBetween('2026-09-01', '2026-09-01'), 1);
 });
+
+test('a whole month is compared with the whole month before it', async () => {
+  const { previousPeriod } = await import('../src/data/aggregate.js');
+  // Thirty days back from September began on 2 August and left out the 1st;
+  // thirty-one back from October reached into August.
+  assert.deepEqual(previousPeriod('2026-09-01', '2026-09-30'), { from: '2026-08-01', to: '2026-08-31' });
+  assert.deepEqual(previousPeriod('2026-10-01', '2026-10-31'), { from: '2026-09-01', to: '2026-09-30' });
+  assert.deepEqual(previousPeriod('2026-03-01', '2026-03-31'), { from: '2026-02-01', to: '2026-02-28' });
+  assert.deepEqual(previousPeriod('2026-01-01', '2026-01-31'), { from: '2025-12-01', to: '2025-12-31' });
+  // Any other window is compared with the same number of days before it.
+  assert.deepEqual(previousPeriod('2026-08-10', '2026-08-20'), { from: '2026-07-30', to: '2026-08-09' });
+});
+
+test('the period before a month counts every day of that month', async () => {
+  const { periodTotals } = await import('../src/data/aggregate.js');
+  const rows = [
+    { date: '2026-08-01', kind: 'expense', amount: 500 },
+    { date: '2026-08-31', kind: 'expense', amount: 100 },
+    { date: '2026-09-15', kind: 'expense', amount: 50 }
+  ];
+  const previous = periodTotals(rows, '2026-09-01', '2026-09-30').find((row) => row.period === 'previous');
+  assert.equal(previous.total, 600);
+});
