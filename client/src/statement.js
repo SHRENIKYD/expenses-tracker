@@ -140,6 +140,39 @@ function extractReference(description) {
   return bare ? bare[1] : null;
 }
 
+// Reading the other side's name out of a transfer narration.
+//
+// Banks print a transfer as fields joined by slashes or dashes — channel,
+// reference, handle, IFSC, the name, a note — in an order that differs by
+// bank: "UPI-SWIGGY-SWIGGY.STORES@AXISBANK-UTIB0000001-412345678901-PAYMENT"
+// at HDFC, "UPI/402500000040/Payment/SWIGGY" at ICICI. The fields that are
+// never a name are recognisable on their own, so they are dropped and the
+// first field left is the name. Taken as-is, the narration put the merchant
+// last, where the list cut it off.
+const TRANSFER = /\b(?:UPI|IMPS|NEFT|RTGS|MMT)\b/i;
+const NOT_A_NAME = [
+  /^\d+$/, // a reference
+  /^[A-Z]{3,4}0[A-Z0-9]{6}$/i, // an IFSC, or one with its first letter wrapped away
+  /@/, // a UPI handle
+  /x{2,}\d+/i, // a masked account number
+  /^(?=.*\d)[A-Z0-9]{12,}$/i, // a transaction id
+  /^(?:UPI|IMPS|NEFT|RTGS|MMT|NEFT CR|NEFT DR|RTGS CR|RTGS DR|DR|CR|P2M|P2A|P2P|TO TRANSFER|BY TRANSFER|TRANSFER|PAYMENT|PAYMENT FROM PHONE|PAY|SENT|RECEIVED|COLLECT|INB|MOB|BIL)$/i,
+  // IFSC bank codes, which travel on their own in some narrations. Only real
+  // ones: a four-letter merchant such as UBER is not one of them.
+  /^(?:YESB|UTIB|ICIC|HDFC|SBIN|KKBK|PUNB|BARB|IDFB|INDB|AIRP|PYTM|FDRL|CNRB|UBIN|IOBA|CBIN|MAHB|BKID|IDIB|UCBA|PSIB|KARB|SIBL|RATN|AUBL|ESFB|JAKA|TMBL|CIUB|DBSS|SCBL|CITI|HSBC)$/i,
+  /\bBANK\b/i
+];
+
+export function readableName(narration) {
+  const text = String(narration || '').trim();
+  if (!TRANSFER.test(text)) return text;
+  const name = text
+    .split(/\s*[/-]\s*|\s{2,}/)
+    .map((field) => field.trim())
+    .find((field) => field.length > 1 && /[A-Za-z]/.test(field) && !NOT_A_NAME.some((pattern) => pattern.test(field)));
+  return name || text;
+}
+
 function cleanDescription(text) {
   return text
     // An empty column prints as a dash or a pipe; it is not part of the words.
@@ -322,7 +355,10 @@ function parseStatement(lines) {
 
     transactions.push({
       date: head.date,
-      description,
+      description: readableName(description),
+      // The whole of what the bank printed, kept as the row's note: the name
+      // is what a person reads, but nothing the statement said is lost.
+      narration: description,
       amount: Math.round(amount * 100) / 100,
       kind,
       category: suggestCategory(description, kind),

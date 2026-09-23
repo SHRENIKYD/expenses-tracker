@@ -337,6 +337,10 @@ export async function listExpenses(filters = {}) {
 
   // The rest is decided here, because the database cannot read it.
   const term = filters.q ? String(filters.q).toLowerCase() : '';
+  // The search box offers amounts too. A figure is typed the way it is read —
+  // "730", "₹1,200.50" — so it is matched against the amount as a prefix:
+  // "12" finds ₹12 and ₹1,200 alike, the way typing narrows a list.
+  const figure = /^[₹\s]*[\d,]+(?:\.\d{0,2})?\s*$/.test(term) ? term.replace(/[₹,\s]/g, '') : '';
   const matching = rows.filter(
     (row) =>
       (!filters.kind || row.kind === filters.kind) &&
@@ -345,7 +349,8 @@ export async function listExpenses(filters = {}) {
       (!term ||
         row.description.toLowerCase().includes(term) ||
         row.category.toLowerCase().includes(term) ||
-        (row.note || '').toLowerCase().includes(term))
+        (row.note || '').toLowerCase().includes(term) ||
+        (figure !== '' && row.amount.toFixed(2).startsWith(figure)))
   );
 
   const column = ['date', 'amount', 'description', 'category'].includes(filters.sort)
@@ -886,6 +891,8 @@ export async function importStatement(transactions, options = {}) {
         category: entry.category,
         date: entry.date,
         source: 'statement',
+        // The bank's full narration, when the name was read out of it.
+        note: entry.narration && entry.narration !== entry.description ? entry.narration : '',
         externalRef: entry.reference || null,
         // One statement belongs to one account, so the whole batch carries it.
         accountId: options.accountId || null,

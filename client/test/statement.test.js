@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { BANKS, detectBank, parseDate, parseStatement } from '../src/statement.js';
+import { BANKS, detectBank, parseDate, parseStatement, readableName } from '../src/statement.js';
 import { NEAR_DAYS, daysApart, findDuplicate, similarity } from '../src/duplicates.js';
 
 // A statement as pdf.js delivers it once its cells are joined into rows: an
@@ -309,7 +309,7 @@ test('an ICICI row is read past its number, its second date and its empty column
       ['2026-09-08', 'expense', 22819]
     ]
   );
-  assert.equal(transactions[0].description, 'UPI/129166379807/Payment/SWIGGY');
+  assert.equal(transactions[0].description, 'SWIGGY');
   assert.equal(transactions[0].category, 'food');
   assert.equal(transactions[1].category, 'salary');
 });
@@ -319,4 +319,48 @@ test('the bank is the one the statement is about, not the first one it names', (
   // throughout.
   const text = ['HDFC BANK payee', ...ICICI, 'ICICI Bank'].join('\n');
   assert.deepEqual(detectBank(text), { code: 'icici', name: 'ICICI Bank' });
+});
+
+// What a person calls the other side of the transaction, out of the narration
+// the bank prints. Imported rows read as "UPI/402500000040/Pay…" before, the
+// merchant cut off at the end.
+const NAMES = [
+  // HDFC: UPI-<name>-<handle>-<IFSC>-<reference>-<note>
+  ['UPI-SWIGGY-SWIGGY.STORES@AXISBANK-UTIB0000001-412345678901-PAYMENT FROM PHONE', 'SWIGGY'],
+  ['UPI-RAHUL SHARMA-RAHUL@OKICICI-ICIC0001234-412345678901-UPI', 'RAHUL SHARMA'],
+  // ICICI: UPI/<reference>/<note>/<name>, and the newer UPI/<name>/<handle>/...
+  ['UPI/402500000040/Payment/SWIGGY', 'SWIGGY'],
+  ['UPI/SWIGGY/swiggy.stores@axi/Payment/AXIS BANK/424512345678/ICI1a2b3c4d5e6f', 'SWIGGY'],
+  ['MMT/IMPS/629012345678/ACME PAYROLL SALARY', 'ACME PAYROLL SALARY'],
+  // SBI
+  ['TO TRANSFER-UPI/DR/412345678901/SWIGGY/YESB/swiggy@yes/Payment', 'SWIGGY'],
+  ['IMPS/P2A/412345678901/RAHUL SHARMA/SBIN/rahul/xxxx1234', 'RAHUL SHARMA'],
+  // Axis
+  ['UPI/P2M/129200640073/GANESH KOTARY', 'GANESH KOTARY'],
+  // NEFT: the remitter comes first.
+  ['NEFT CR-CITI0000001-ACME PAYROLL-SHRENIK Y D-CITIN52026090112345', 'ACME PAYROLL'],
+  // Four letters is a bank code only when it is one: Uber stays Uber.
+  ['UPI/P2M/412345678901/UBER', 'UBER']
+];
+
+test('a narration yields the name of the other side', () => {
+  for (const [narration, name] of NAMES) assert.equal(readableName(narration), name, narration);
+});
+
+test('a narration with no name in it is kept as it is', () => {
+  // The name was wrapped onto a line of its own; what is left has none.
+  assert.equal(readableName('TIB0000553 - 129166379807 - UPI'), 'TIB0000553 - 129166379807 - UPI');
+  assert.equal(readableName('994137'), '994137');
+  // Not a transfer at all, so nothing to take apart.
+  assert.equal(readableName('ATM WDL-ATM CASH 1234 MG ROAD BANGALORE'), 'ATM WDL-ATM CASH 1234 MG ROAD BANGALORE');
+  assert.equal(readableName('POS 416021XXXXXX1234 AMAZON RETAIL IN'), 'POS 416021XXXXXX1234 AMAZON RETAIL IN');
+});
+
+test('an imported row is named for the merchant and keeps the whole narration as its note', () => {
+  const [swiggy] = parseStatement(ICICI).transactions;
+  assert.equal(swiggy.description, 'SWIGGY');
+  assert.equal(swiggy.narration, 'UPI/129166379807/Payment/SWIGGY');
+  // The category and the reference still come from all of it.
+  assert.equal(swiggy.category, 'food');
+  assert.equal(swiggy.reference, '129166379807');
 });

@@ -52,6 +52,16 @@ move it, not on every change.
 
 ### Fixed
 
+- **Imported rows were named after the bank's narration.** Every row from a
+  statement read "UPI/402500000040/Pay…", the merchant cut off at the end. The
+  name is now read out of the narration — the fields that are never a name
+  (references, IFSC and bank codes, UPI handles, masked account numbers, words
+  like UPI, NEFT and DR) are set aside and the first one left is kept — for the
+  layouts HDFC, ICICI, SBI and Axis print. The full narration is kept as the
+  row's note, so a search by reference still finds it. A narration with no name
+  left in it is kept as it was.
+- **Search by amount found nothing**, though the box offers it. A figure, typed
+  with or without ₹ and commas, now matches amounts.
 - **On a phone the cash-flow chart hid the end of the month.** It kept a 480px
   minimum so its labels would not collide, and scrolled sideways inside a 320px
   card with nothing to show it could — September appeared to stop on the 18th.
