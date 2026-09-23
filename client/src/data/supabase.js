@@ -234,6 +234,13 @@ export async function loadVault(password) {
 export async function protectData(password) {
   if (vault.currentEnvelope()) throw new Error('Your data is already protected.');
 
+  // The key is wrapped with whatever is typed here, and from then on it is what
+  // opens the data. A mistyped confirmation used to be accepted, leaving the
+  // account's real password unable to open anything. It is checked first.
+  const { data } = await client().auth.getUser();
+  const { error } = await client().auth.signInWithPassword({ email: data.user.email, password });
+  if (error) throw new Error('That is not your account password. Nothing has been changed.');
+
   const { vault: envelope, recoveryKey } = await vault.create(password);
   await call('create_vault', {
     p_password: envelope.password,

@@ -52,6 +52,11 @@ move it, not on every change.
 
 ### Fixed
 
+- **Turning encryption on accepted any password.** "Confirm your password" was
+  never checked, and the data key was wrapped with whatever was typed. A typo
+  there left the account's real password unable to open the data, with only
+  the recovery key shown for the typo to get back in. The password is now
+  checked against the account first, and nothing changes if it is wrong.
 - **Report charts drew their labels at the wrong size.** The twelve-month and
   daily charts were drawn in a fixed 420-point box and stretched to the card,
   so a 10px label came out near 18px on a desktop and 23px on a phone, where a
