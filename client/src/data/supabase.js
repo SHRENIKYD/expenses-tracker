@@ -445,7 +445,9 @@ export async function applyRecurring(month) {
   const templates = await call('list_recurring');
   // Which bills are already recorded is decided here: the description and the
   // category it compares are inside the sealed blob.
-  const existing = await listExpenses({ from: `${month}-01`, to: `${month}-31` });
+  // The month's real last day: asking for the 31st of a 30-day month is a
+  // date the database refuses, and the whole call failed with it.
+  const existing = await listExpenses(resolvePeriod({ month }));
 
   const already = new Set(
     existing.map((row) => `${row.description}|${row.category}|${row.date}`)

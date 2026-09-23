@@ -52,6 +52,11 @@ move it, not on every change.
 
 ### Fixed
 
+- **"Add to this month" did nothing for recurring bills** in any month without
+  a 31st. It asked for the ledger up to the 31st, which in September is a date
+  the database refuses, and the call failed before anything was added.
+- **Accounts page**: "1 transactions", a payment method printed as `upi`, and
+  its two links drawn in the browser's default blue and underline.
 - **Editing a transaction failed** whenever it had no account. The edit row's
   "Unassigned" is an empty string, and the encrypted save sent it to the
   database as the account id, which refused it (*invalid input syntax for type

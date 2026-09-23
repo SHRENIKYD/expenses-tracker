@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { money } from '../dashboard.js';
+import { paymentLabel } from '../format.js';
 import { CardsSkeleton } from '../components/Skeleton.jsx';
 export default function Accounts() {
   const { accounts, summary, loading, handlers, setFilters } = useOutletContext();
@@ -63,7 +64,8 @@ export default function Accounts() {
             </h2>
             <strong className="account-balance">{money(account.balance)}</strong>
             <p className="hint">
-              Opening balance {money(account.openingBalance)} · {account.transactions} transactions
+              Opening balance {money(account.openingBalance)} · {account.transactions}{' '}
+              {account.transactions === 1 ? 'transaction' : 'transactions'}
             </p>
             <div className="button-row">
               <Link className="link" to="/add">
@@ -94,7 +96,7 @@ export default function Accounts() {
       {!accounts.length && !loading && (
         <p className="empty">Add your bank, card, or cash account to track its balance.</p>
       )}
-      {summary?.accounts?.length > 0 && <section className="card"><h2>This month by payment method</h2><div className="portfolio-grid">{summary.accounts.map(method => <div key={method.method}><h3>{method.method.replace('_', ' ')}</h3><p>Income {money(method.income)} · Expenses {money(method.expenses)}</p><Link className="link" to="/transactions" onClick={() => setFilters({q:'',category:'',kind:'',from:'',to:'',paymentMethod:method.method === 'unassigned' ? '' : method.method})}>View transactions</Link></div>)}</div></section>}
+      {summary?.accounts?.length > 0 && <section className="card"><h2>This month by payment method</h2><div className="portfolio-grid">{summary.accounts.map(method => <div key={method.method}><h3>{method.method === 'unassigned' ? 'Not set' : paymentLabel(method.method)}</h3><p>Income {money(method.income)} · Expenses {money(method.expenses)}</p><Link className="link" to="/transactions" onClick={() => setFilters({q:'',category:'',kind:'',from:'',to:'',paymentMethod:method.method === 'unassigned' ? '' : method.method})}>View transactions</Link></div>)}</div></section>}
     </>
   );
 }

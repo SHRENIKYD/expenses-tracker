@@ -165,12 +165,19 @@ button.secondary {
   font-weight: 550;
 }
 
-button.link {
+button.link,
+a.link {
   background: none;
   border: none;
   color: var(--accent);
   padding: 2px 4px;
   font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+a.link:hover {
+  text-decoration: underline;
 }
 
 button.link.danger {
