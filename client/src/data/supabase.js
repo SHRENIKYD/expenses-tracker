@@ -32,6 +32,12 @@ import {
 // the policies decide, and a query for someone else's row simply returns
 // nothing.
 
+// Whether this page was opened from a password-reset email. Read before the
+// client is made, because the client consumes the link's fragment as it
+// starts. The link signs the tab in for one purpose: choosing a new password.
+let recovering =
+  typeof window !== 'undefined' && /(?:^#|&)type=recovery(?:&|$)/.test(window.location.hash);
+
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -303,22 +309,72 @@ export const logout = async () => {
 export const requestPasswordReset = async (email) =>
   unwrap(await client().auth.resetPasswordForEmail(email));
 
-export const changePassword = async (currentPassword, newPassword) => {
-  const { data } = await client().auth.getUser();
-  // Re-authenticating first means a borrowed session cannot change the password.
-  unwrap(await client().auth.signInWithPassword({ email: data.user.email, password: currentPassword }));
-
-  // The data key is rewrapped, not replaced: no row is touched, and a password
-  // change cannot lose anything. It is written before the password changes, so
-  // a failure here leaves the old password still opening the vault.
-  if (vault.isUnlocked()) {
+// The account's password and the one the data key is wrapped with have to
+// move together, or one of them opens nothing. The key is rewrapped first —
+// rewrapped, not replaced, so no row is touched — and if the account then
+// refuses the new password (too short, reused, found in a breach), the old
+// wrapping is put back, so the old password still opens both.
+async function setPassword(newPassword) {
+  const previous = vault.isUnlocked() ? vault.currentEnvelope() : null;
+  if (previous) {
     const envelope = await vault.rewrap(newPassword);
     await call('rewrap_vault', { p_password: envelope.password });
   }
 
-  unwrap(await client().auth.updateUser({ password: newPassword }));
+  const { error } = await client().auth.updateUser({ password: newPassword });
+  if (error) {
+    if (previous) {
+      vault.restore(previous);
+      await call('rewrap_vault', { p_password: previous.password });
+    }
+    throw new Error(error.message);
+  }
+}
+
+export const changePassword = async (currentPassword, newPassword) => {
+  const { data } = await client().auth.getUser();
+  // Re-authenticating first means a borrowed session cannot change the password.
+  unwrap(await client().auth.signInWithPassword({ email: data.user.email, password: currentPassword }));
+  await setPassword(newPassword);
   return { changed: true };
 };
+
+/* ------------------------------------------------------- password reset */
+
+// The emailed link signs this tab in with a session good only for setting a
+// new password. The old one is forgotten, and it was what opened the data key,
+// so the recovery key stands in for it once: it opens the vault, and the key
+// is then rewrapped with the new password, which opens it from then on.
+export const recoveryPending = () => recovering;
+
+export async function recoveryDetails() {
+  const { data } = await client().auth.getSession();
+  if (!data.session) return { valid: false, needsKey: false };
+  const stored = one(await call('get_vault'));
+  return { valid: true, needsKey: Boolean(stored), email: data.session.user.email };
+}
+
+export async function completeRecovery({ newPassword, recoveryKey }) {
+  const { data } = await client().auth.getSession();
+  if (!data.session) throw new Error('This reset link has expired. Ask for a new one from the sign-in page.');
+
+  const stored = one(await call('get_vault'));
+  if (stored) {
+    await vault.adopt({ keyVersion: stored.key_version, password: stored.password, recovery: stored.recovery });
+    try {
+      await vault.unlockWithKey(recoveryKey);
+    } catch {
+      throw new Error('That recovery key does not open this account’s data. Check it and try again.');
+    }
+  }
+
+  await setPassword(newPassword);
+  recovering = false;
+  if (typeof window !== 'undefined') window.history.replaceState(null, '', window.location.pathname);
+
+  const profile = one(await call('get_profile'));
+  return session({ session: data.session, user: data.session.user }, profile || {});
+}
 
 /** A fresh recovery key, replacing the old one. Shown once. */
 export async function reissueRecoveryKey() {

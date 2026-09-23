@@ -52,6 +52,18 @@ move it, not on every change.
 
 ### Fixed
 
+- **"Forgotten your password?" could not reset a password.** The emailed link
+  opened the sign-in page, so the new password was never set. It now opens
+  "Set a new password", which for an encrypted account also asks for the
+  recovery key — the forgotten password was what opened the data — and rewraps
+  the key with the new password, so from then on the new password alone opens
+  everything. A wrong key is refused and changes nothing; an expired link says
+  so.
+- **A rejected new password locked the data.** Changing the password rewrapped
+  the data key before the account accepted the new password; when Supabase
+  refused it (too weak, reused, breached), the current password still signed in
+  but no longer opened anything. The old wrapping is now put back when that
+  happens.
 - **"Sept 26" read as a date.** Months are now named with the whole year —
   "Sept 2026" — and the twelve-month trend's axis, which is short of room,
   writes "Sept ’26".

@@ -117,6 +117,11 @@ export async function create(password) {
   return { vault: created.vault, recoveryKey: created.recoveryKey };
 }
 
+/** Put back an envelope replaced by rewrap, when the change it was for failed. */
+export function restore(previous) {
+  envelope = previous;
+}
+
 export async function rewrap(password) {
   requireKey();
   envelope = await rewrapPassword(envelope, dataKey, password);

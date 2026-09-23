@@ -4,6 +4,7 @@ import AppShell from './components/AppShell.jsx';
 import SignIn from './components/SignIn.jsx';
 import Unlock from './components/Unlock.jsx';
 import BrandMark from './components/BrandMark.jsx';
+import ResetPassword from './components/ResetPassword.jsx';
 import Goals from './pages/SavingsGoals.jsx';
 import Overview from './pages/Overview.jsx';
 import Transactions from './pages/Transactions.jsx';
@@ -19,6 +20,7 @@ import {
   login,
   logout,
   onLockChange,
+  recoveryPending,
   register,
   setUnauthorisedHandler,
   unlockVault,
@@ -54,6 +56,9 @@ function Workspace({ session, onSignOut }) {
 
 export default function App() {
   const [session, setSession] = useState(() => readSession());
+  // Opened from a password-reset email: nothing else is shown until the new
+  // password is set, because the link's session exists for that alone.
+  const [recovering, setRecovering] = useState(recoveryPending);
 
   const [lock, setLock] = useState(vaultState);
   // Whether this tab has asked the database about the vault yet. Until it has,
@@ -101,6 +106,23 @@ export default function App() {
     }
     clearSession();
     setSession(null);
+  }
+
+  if (recovering) {
+    return (
+      <ResetPassword
+        onDone={(result) => {
+          writeSession(result);
+          setRecovering(false);
+          setSession(result);
+        }}
+        onCancel={async () => {
+          await logout().catch(() => {});
+          window.history.replaceState(null, '', window.location.pathname);
+          setRecovering(false);
+        }}
+      />
+    );
   }
 
   if (!session) {
