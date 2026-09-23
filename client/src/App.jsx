@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import AppShell from './components/AppShell.jsx';
 import SignIn from './components/SignIn.jsx';
 import Unlock from './components/Unlock.jsx';
+import BrandMark from './components/BrandMark.jsx';
 import Goals from './pages/SavingsGoals.jsx';
 import Overview from './pages/Overview.jsx';
 import Transactions from './pages/Transactions.jsx';
@@ -55,6 +56,12 @@ export default function App() {
   const [session, setSession] = useState(() => readSession());
 
   const [lock, setLock] = useState(vaultState);
+  // Whether this tab has asked the database about the vault yet. Until it has,
+  // nothing is known: before the answer, "no vault" and "vault not read yet"
+  // look the same, and treating the second as the first let the workspace
+  // fetch sealed rows with no key to open them — every row reported locked,
+  // the categories never loaded, and the unlock screen arrived afterwards.
+  const [vaultKnown, setVaultKnown] = useState(false);
 
   useEffect(() => {
     setUnauthorisedHandler(() => setSession(null));
@@ -64,8 +71,19 @@ export default function App() {
   // A restored session has no key with it: the vault row is fetched so the tab
   // knows whether it is locked, and a key cached for this tab is adopted.
   useEffect(() => {
-    if (!session) return;
-    loadVault().then(setLock).catch(() => setLock(vaultState()));
+    if (!session) {
+      setVaultKnown(false);
+      return undefined;
+    }
+    let current = true;
+    setVaultKnown(false);
+    loadVault()
+      .then((state) => current && setLock(state))
+      .catch(() => current && setLock(vaultState()))
+      .finally(() => current && setVaultKnown(true));
+    return () => {
+      current = false;
+    };
   }, [session]);
 
   async function handleAuth(mode, payload) {
@@ -87,6 +105,17 @@ export default function App() {
 
   if (!session) {
     return <SignIn onSubmit={handleAuth} onAuthenticated={setSession} />;
+  }
+
+  if (!vaultKnown) {
+    return (
+      <div className="signin" aria-busy="true">
+        <div className="signin-card">
+          <BrandMark size={40} />
+          <p className="hint">Opening your ledger…</p>
+        </div>
+      </div>
+    );
   }
 
   if (lock.exists && !lock.unlocked) {

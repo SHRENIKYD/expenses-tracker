@@ -52,6 +52,13 @@ move it, not on every change.
 
 ### Fixed
 
+- **A reload locked the app.** The dashboard was drawn before the tab had asked
+  whether the account has a vault, so it fetched the sealed rows with no key in
+  memory to open them — the cached key was restored a moment later, too late.
+  Every row was reported locked, the add form offered one category and no
+  payment methods, and each launch filed a diagnostic per row. The tab now
+  waits for the vault's answer, and a new tab asks for the password before any
+  row is fetched.
 - **Nothing could be saved with encryption off.** Every insert and edit went to
   a database function through PostgREST, which picks the function by the
   argument names it is sent — and the client library drops an argument that is
