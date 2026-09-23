@@ -11,11 +11,15 @@ const rupeesCompact = new Intl.NumberFormat('en-IN', {
   maximumFractionDigits: 0
 });
 
+// "Sept 26" read as the 26th of September. The year is written out wherever a
+// month is named; only a chart axis, with twelve of them side by side, is short
+// of room, and there the apostrophe says it is a year: "Sept ’26".
 const monthLabel = new Intl.DateTimeFormat('en-IN', {
   month: 'short',
-  year: '2-digit',
+  year: 'numeric',
   timeZone: 'UTC'
 });
+const monthShort = new Intl.DateTimeFormat('en-IN', { month: 'short', timeZone: 'UTC' });
 const monthLong = new Intl.DateTimeFormat('en-IN', {
   month: 'long',
   year: 'numeric',
@@ -38,6 +42,8 @@ export const formatMoneyTrim = (value) =>
 
 export const formatMoneyShort = (value) => rupeesCompact.format(value);
 export const formatMonth = (month) => monthLabel.format(new Date(`${month}-01T00:00:00Z`));
+export const formatMonthAxis = (month) =>
+  `${monthShort.format(new Date(`${month}-01T00:00:00Z`))} ’${month.slice(2, 4)}`;
 export const formatMonthLong = (month) => monthLong.format(new Date(`${month}-01T00:00:00Z`));
 export const formatDay = (date) => dayLabel.format(new Date(`${date}T00:00:00Z`));
 

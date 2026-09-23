@@ -20,7 +20,7 @@ test('short form drops the decimals', () => {
 
 test('dates render in UTC, so a date-only value never slips a day', () => {
   assert.match(strip(formatDay('2026-09-01')), /01 Sep/);
-  assert.match(strip(formatMonth('2026-01')), /Jan 26/);
+  assert.match(strip(formatMonth('2026-01')), /Jan 2026/);
 });
 
 test('percent carries an explicit sign for increases', () => {
@@ -53,4 +53,12 @@ test('payment methods get readable labels', async () => {
   assert.equal(paymentLabel('upi'), 'UPI');
   assert.equal(paymentLabel('bank_transfer'), 'Bank transfer');
   assert.equal(paymentLabel(null), null);
+});
+
+test('a month is named with its whole year, except on a crowded chart axis', async () => {
+  const { formatMonth, formatMonthAxis } = await import('../src/format.js');
+  // "Sept 26" read as the 26th of September.
+  assert.equal(formatMonth('2026-09'), 'Sept 2026');
+  assert.equal(formatMonthAxis('2026-09'), 'Sept ’26');
+  assert.equal(formatMonthAxis('2027-01'), 'Jan ’27');
 });

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { formatMoney, formatMoneyShort, formatMonth } from '../format.js';
+import { formatMoney, formatMoneyShort, formatMonth, formatMonthAxis } from '../format.js';
 import { buildArea } from './areaPath.js';
 
 const WIDTH = 420;
@@ -50,7 +50,7 @@ export default function TrendChart({ trend }) {
             />
             {index % 2 === (all.length - 1) % 2 && (
               <text x={index * step} y={HEIGHT - 4} textAnchor="middle" className="chart-tick">
-                {formatMonth(point.month)}
+                {formatMonthAxis(point.month)}
               </text>
             )}
           </g>

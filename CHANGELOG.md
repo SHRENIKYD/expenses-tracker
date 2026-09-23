@@ -52,6 +52,9 @@ move it, not on every change.
 
 ### Fixed
 
+- **"Sept 26" read as a date.** Months are now named with the whole year —
+  "Sept 2026" — and the twelve-month trend's axis, which is short of room,
+  writes "Sept ’26".
 - **Imported rows were named after the bank's narration.** Every row from a
   statement read "UPI/402500000040/Pay…", the merchant cut off at the end. The
   name is now read out of the narration — the fields that are never a name
