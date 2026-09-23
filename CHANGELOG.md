@@ -52,6 +52,13 @@ move it, not on every change.
 
 ### Fixed
 
+- **Editing a transaction failed** whenever it had no account. The edit row's
+  "Unassigned" is an empty string, and the encrypted save sent it to the
+  database as the account id, which refused it (*invalid input syntax for type
+  uuid*). Nothing could be edited unless it belonged to an account.
+- **Undo after a delete dropped the receipt**, and a statement row's bank
+  reference with it. The restored row now carries everything the deleted one
+  did.
 - **The transactions total added income to spending.** A ₹90,000 salary and a
   ₹1,650 bill totalled ₹91,650. The footer is now the net, signed, and its cells
   line up with the six columns above it.

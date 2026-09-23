@@ -61,3 +61,11 @@ test('a sealed row carries its own id and its blob, and no plaintext', () => {
   assert.equal(args.p_description, null);
   assert.equal(args.p_amount, null);
 });
+
+test('a form\'s empty "Unassigned" reaches the database as null, not as an invalid uuid', () => {
+  // Editing an unassigned row sent account_id "" and the update failed with
+  // "invalid input syntax for type uuid".
+  const args = toWriteArgs({ id: '11111111-1111-1111-1111-111111111111', date: '2026-09-10', account_id: '', receipt_path: '' });
+  assert.equal(args.p_account_id, null);
+  assert.equal(args.p_receipt_path, null);
+});

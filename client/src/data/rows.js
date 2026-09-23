@@ -52,8 +52,9 @@ export function fromTransaction(input) {
 export const toWriteArgs = (row) => ({
   p_id: row.id ?? null,
   p_date: row.date ?? null,
-  p_account_id: row.account_id ?? null,
-  p_receipt_path: row.receipt_path ?? null,
+  // An empty string is a form's "none", and a uuid column refuses it.
+  p_account_id: row.account_id || null,
+  p_receipt_path: row.receipt_path || null,
   p_secret: row.secret ?? null,
   p_iv: row.iv ?? null,
   p_key_version: row.key_version ?? null,

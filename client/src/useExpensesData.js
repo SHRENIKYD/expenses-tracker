@@ -252,7 +252,13 @@ export default function useExpensesData() {
           date: expense.date,
           paymentMethod: expense.paymentMethod,
           note: expense.note,
-          accountId: expense.accountId
+          accountId: expense.accountId,
+          // Everything the row carried, not only what the form shows: without
+          // these the restored row lost its receipt, and a statement row lost
+          // the bank reference that stops it being imported a second time.
+          receiptId: expense.receiptId,
+          source: expense.source,
+          externalRef: expense.externalRef
         });
         await refresh();
         return true;

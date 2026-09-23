@@ -127,8 +127,10 @@ async function forStorage(entry) {
   return {
     id: sealed.id,
     date: entry.date,
-    account_id: entry.accountId ?? null,
-    receipt_path: entry.receiptId ?? null,
+    // A form's "none" is an empty string, which a uuid column refuses; the
+    // unsealed path already folded it to null, and this one has to as well.
+    account_id: entry.accountId || null,
+    receipt_path: entry.receiptId || null,
     secret: sealed.secret,
     iv: sealed.iv,
     key_version: sealed.key_version,
