@@ -364,3 +364,26 @@ test('an imported row is named for the merchant and keeps the whole narration as
   assert.equal(swiggy.category, 'food');
   assert.equal(swiggy.reference, '129166379807');
 });
+
+// The account a statement is for, as the last digits of its number: the same
+// digits an alert prints, so both find the same account.
+test('the account number is read off the statement, as its last four digits', async () => {
+  const { detectAccount } = await import('../src/statement.js');
+  const cases = [
+    ['Statement of Transactions in Saving Account no. 318301508036 in INR for the period', '8036'],
+    ['Account No : 50100123456789', '6789'],
+    ['A/C No: XXXXXXXX1234 Branch: MG Road', '1234'],
+    ['Account Number 000012345678 IFSC HDFC0000001', '5678'],
+    ['Card No: 4375 XXXX XXXX 9012', '9012'],
+    ['Statement of account for the period 01/08/2026 to 31/08/2026', null]
+  ];
+  for (const [text, tail] of cases) assert.equal(detectAccount(text)?.tail ?? null, tail, text);
+  assert.equal(detectAccount('Card No: 4375 XXXX XXXX 9012').kind, 'card');
+});
+
+test('the balance before a statement\'s first row is its opening balance', async () => {
+  const { openingBalance } = await import('../src/statement.js');
+  const { transactions } = parseStatement(ICICI);
+  // First row: 30.00 out, leaving 12,345.67.
+  assert.equal(openingBalance(transactions), 12375.67);
+});

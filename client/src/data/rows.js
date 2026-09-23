@@ -72,6 +72,8 @@ export const toWriteArgs = (row) => ({
 export const toAccount = (row) => ({
   id: row.id,
   name: row.name,
+  bankCode: row.bank_code || null,
+  numberTail: row.number_tail || null,
   openingBalance: Number(row.opening_balance),
   balance: Number(row.balance ?? row.opening_balance),
   transactions: Number(row.transactions ?? 0)

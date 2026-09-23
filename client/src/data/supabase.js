@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { assembleSummary, resolvePeriod } from './summary.js';
-import { detectBank, parseStatement } from '../statement.js';
+import { detectAccount, detectBank, openingBalance, parseStatement } from '../statement.js';
 import { NEAR_DAYS, buildIndex } from '../duplicates.js';
 import { merchantKey } from '../merchant.js';
 import { csvToExpenses, toCsv } from '../csv.js';
@@ -478,6 +478,58 @@ export const createAccount = async ({ name, openingBalance }) =>
     )
   );
 
+// What an account found on a statement or in an alert is called when it is new.
+const accountName = ({ bank, tail, kind }) =>
+  `${bank.name}${kind === 'card' ? ' card' : ''} ••${tail}`;
+
+// An account made by hand is taken to be this one when its name carries the
+// same last digits, so it is adopted rather than doubled.
+const namesTail = (name, tail) => new RegExp(`(^|\\D)${tail}(\\D|$)`).test(name);
+
+/**
+ * The account a statement or an alert is about: found by its bank and the last
+ * digits of its number, and made the first time it is seen. The database does
+ * both in one step, so two imports at once still make one account.
+ */
+export async function ensureAccount({ bank, tail, kind = 'account', openingBalance: opening = 0 }) {
+  const name = accountName({ bank, tail, kind });
+  try {
+    return toAccount(
+      one(
+        await call('ensure_account', {
+          p_bank_code: bank.code,
+          p_number_tail: tail,
+          p_name: name,
+          p_opening_balance: opening
+        })
+      )
+    );
+  } catch (err) {
+    // A database that has not had 0008 run yet: find it by name instead.
+    if (!/could not find the function/i.test(err.message)) throw err;
+    const existing = (await call('list_accounts')).find((row) => namesTail(row.name, tail));
+    if (existing) return toAccount(existing);
+    return toAccount(one(await call('create_account', { p_name: name, p_opening_balance: opening })));
+  }
+}
+
+/** Which account a statement belongs to, and whether it exists yet. */
+async function statementAccount(bank, detected, transactions) {
+  if (!bank || !detected) return null;
+  const accounts = await call('list_accounts');
+  const existing =
+    accounts.find((row) => row.bank_code === bank.code && row.number_tail === detected.tail) ||
+    accounts.find((row) => !row.number_tail && namesTail(row.name, detected.tail));
+  return {
+    bank,
+    tail: detected.tail,
+    kind: detected.kind,
+    openingBalance: openingBalance(transactions),
+    name: existing ? existing.name : accountName({ bank, ...detected }),
+    existingId: existing ? existing.id : null
+  };
+}
+
 export const removeAccount = async (id) => {
   await call('delete_account', { p_id: id });
 };
@@ -842,9 +894,10 @@ export async function previewStatement(file, password) {
     throw error;
   }
 
-  const [existing, rules] = await Promise.all([
+  const [existing, rules, account] = await Promise.all([
     neighbours(transactions.map((entry) => entry.date)),
-    listMerchantRules()
+    listMerchantRules(),
+    statementAccount(bank, detectAccount(text), transactions)
   ]);
 
   // Built once for the whole statement rather than rebuilt per row: a hundred
@@ -867,6 +920,7 @@ export async function previewStatement(file, password) {
 
   return {
     bank,
+    account,
     pages,
     count: rows.length,
     duplicates: rows.filter((row) => row.duplicate).length,
@@ -937,6 +991,13 @@ export async function importStatement(transactions, options = {}) {
 
   const recorded = buildIndex(await neighbours(accepted.map((entry) => entry.date)));
 
+  // "This statement's account": found, or made now with the balance the
+  // statement opened on.
+  const accountId =
+    options.accountId === 'statement' && options.account
+      ? (await ensureAccount(options.account)).id
+      : options.accountId || null;
+
   let duplicates = 0;
   const rows = [];
   for (const entry of accepted) {
@@ -958,7 +1019,7 @@ export async function importStatement(transactions, options = {}) {
         note: entry.narration && entry.narration !== entry.description ? entry.narration : '',
         externalRef: entry.reference || null,
         // One statement belongs to one account, so the whole batch carries it.
-        accountId: options.accountId || null,
+        accountId,
         paymentMethod: options.paymentMethod || null
       }))
     });

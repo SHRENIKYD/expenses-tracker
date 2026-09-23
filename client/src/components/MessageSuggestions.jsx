@@ -12,7 +12,17 @@ import {
 import { suggestCategory } from '../statement.js';
 import { fingerprint, handled, remember } from '../data/handled.js';
 import { buildIndex } from '../duplicates.js';
-import { listExpenses } from '../data/index.js';
+import { ensureAccount, listExpenses } from '../data/index.js';
+
+// The account an alert is about, when it says both the bank and the digits.
+const alertAccount = (suggestion) =>
+  suggestion.bank && suggestion.accountTail
+    ? {
+        bank: suggestion.bank,
+        tail: suggestion.accountTail,
+        kind: /\bcard\b/i.test(suggestion.body || '') ? 'card' : 'account'
+      }
+    : null;
 
 const SETTING = 'tessera.read-messages';
 
@@ -115,7 +125,12 @@ export default function MessageSuggestions({ onAdd, categories, ledger = 0 }) {
     setBusy(index);
     setError('');
     try {
+      // Filed under the account it names, which is made the first time an
+      // alert or a statement mentions it.
+      const account = alertAccount(suggestion);
+      const accountId = account ? (await ensureAccount(account)).id : null;
       await onAdd({
+        accountId,
         kind: suggestion.kind,
         description: suggestion.description,
         amount: suggestion.amount,
@@ -158,7 +173,11 @@ export default function MessageSuggestions({ onAdd, categories, ledger = 0 }) {
             <p className="suggestion-meta">
               {formatDay(suggestion.date)} ·{' '}
               {titleCase(suggestCategory(suggestion.description, suggestion.kind))}
-              {suggestion.accountTail ? ` · ⋯${suggestion.accountTail}` : ''}
+              {suggestion.bank
+                ? ` · ${suggestion.bank.name}${suggestion.accountTail ? ` ••${suggestion.accountTail}` : ''}`
+                : suggestion.accountTail
+                  ? ` · ••${suggestion.accountTail}`
+                  : ''}
             </p>
             {/* The words it was read from, so a wrong reading is obvious. */}
             <p className="suggestion-source">{suggestion.body}</p>

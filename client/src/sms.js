@@ -10,6 +10,31 @@
 // worth recording — a counterparty.
 
 import { localDay } from './format.js';
+import { BANKS, detectBank } from './statement.js';
+
+// Indian bank alerts come from a registered sender id — "AD-HDFCBK": a
+// two-letter operator and circle, then six letters naming the sender. The six
+// letters say which bank, which is how an alert knows whose account it is about.
+const SENDERS = [
+  ['hdfc', /^HDFC/],
+  ['icici', /^ICICI/],
+  ['sbi', /^(?:SBI|SBM|CBSSBI)/],
+  ['axis', /^AXIS/],
+  ['kotak', /^KOTAK|^KMB/],
+  ['yes', /^YES/],
+  ['idfc', /^IDFC/],
+  ['indusind', /^INDUS/],
+  ['pnb', /^PNB/],
+  ['bob', /^BOB|^BARODA/]
+];
+
+export function bankFromSender(sender) {
+  const id = String(sender || '').toUpperCase().split('-').pop().trim();
+  const found = SENDERS.find(([, pattern]) => pattern.test(id));
+  if (!found) return null;
+  const bank = BANKS.find((entry) => entry.code === found[0]);
+  return { code: bank.code, name: bank.name };
+}
 
 const MONEY = /(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{1,2})?)/i;
 
@@ -113,6 +138,8 @@ export function readMessage({ sender = '', body = '', at = Date.now() } = {}) {
     description: party || `${out ? 'Payment' : 'Credit'} from ${clean(sender) || 'bank'}`,
     merchant: party,
     accountTail: tail ? tail[1] : null,
+    // The sender says which bank; failing that, the bank the text names.
+    bank: bankFromSender(sender) || detectBank(text),
     reference: reference(text),
     // The day it arrived where the phone is, not in UTC.
     date: localDay(at),

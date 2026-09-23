@@ -34,6 +34,9 @@ export default function StatementImport({ onImported, accounts = [], categories 
     try {
       const data = await previewStatement(selected, withPassword);
       setPreview(data);
+      // A statement that names its account goes to that account unless told
+      // otherwise: found if it exists, made on import if it does not.
+      setDestination((current) => ({ ...current, accountId: data.account ? 'statement' : '' }));
       // Rows that already exist start unticked, so importing twice is a no-op.
       setChosen(new Set(data.transactions.map((_, i) => i).filter((i) => !data.transactions[i].duplicate)));
       setNeedsPassword(false);
@@ -76,9 +79,12 @@ export default function StatementImport({ onImported, accounts = [], categories 
     setError('');
     try {
       const rows = preview.transactions.filter((_, index) => chosen.has(index));
-      const outcome = await importStatement(rows, destination);
+      const outcome = await importStatement(rows, { ...destination, account: preview.account });
       setResult(
         `Imported ${outcome.imported}` +
+          (destination.accountId === 'statement' && preview.account
+            ? ` to ${preview.account.name}`
+            : '') +
           (outcome.duplicates ? `, skipped ${outcome.duplicates} already recorded` : '')
       );
       setPreview(null);
@@ -185,7 +191,8 @@ export default function StatementImport({ onImported, accounts = [], categories 
       {preview && (
         <>
           <p className="hint">
-            {preview.bank ? <strong>{preview.bank.name}</strong> : 'Bank not recognised'} ·{' '}
+            {preview.bank ? <strong>{preview.bank.name}</strong> : 'Bank not recognised'}
+            {preview.account ? ` ••${preview.account.tail}` : ''} ·{' '}
             {preview.count} transactions found · {preview.duplicates} already recorded
             {preview.skipped.length > 0 && ` · ${preview.skipped.length} rows could not be read`}
           </p>
@@ -201,12 +208,21 @@ export default function StatementImport({ onImported, accounts = [], categories 
                 value={destination.accountId}
                 onChange={(event) => setDestination({ ...destination, accountId: event.target.value })}
               >
-                <option value="">Leave unassigned</option>
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name}
+                {preview.account && (
+                  <option value="statement">
+                    {preview.account.existingId
+                      ? `${preview.account.name} — this statement's account`
+                      : `${preview.account.name} — new, from this statement`}
                   </option>
-                ))}
+                )}
+                <option value="">Leave unassigned</option>
+                {accounts
+                  .filter((account) => account.id !== preview.account?.existingId)
+                  .map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name}
+                    </option>
+                  ))}
               </select>
             </label>
             <label>

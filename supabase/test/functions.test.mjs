@@ -214,3 +214,40 @@ test('a statement goes in as one batch, and a repeat of it adds nothing', async 
     assert.equal(theirs.rows[0].count, 0, 'the batch landed under the wrong account');
   });
 });
+
+test('a statement or an alert finds its account, and makes it only once', async () => {
+  await asUser(db, alice, async () => {
+    const first = await db.query(
+      `select id, name, opening_balance from public.ensure_account('icici', '8036', 'ICICI Bank ••8036', 12000)`
+    );
+    const again = await db.query(
+      `select id, opening_balance from public.ensure_account('icici', '8036', 'ICICI Bank ••8036', 99999)`
+    );
+    assert.equal(again.rows[0].id, first.rows[0].id, 'the same bank and number made a second account');
+    assert.equal(Number(again.rows[0].opening_balance), 12000, 'a later import moved the opening balance');
+
+    const other = await db.query(`select id from public.ensure_account('hdfc', '8036', 'HDFC Bank ••8036')`);
+    assert.notEqual(other.rows[0].id, first.rows[0].id, 'the same digits at another bank are another account');
+
+    // One made by hand, named with its digits, is adopted rather than doubled.
+    const manual = await db.query(`select id from public.create_account('Salary a/c 3596', 500)`);
+    const adopted = await db.query(`select id, name from public.ensure_account('axis', '3596', 'Axis Bank ••3596')`);
+    assert.equal(adopted.rows[0].id, manual.rows[0].id);
+    assert.equal(adopted.rows[0].name, 'Salary a/c 3596', 'the name chosen by hand was replaced');
+
+    // "13596" is not "3596".
+    await db.query(`select public.create_account('Old 13596', 0)`);
+    const distinct = await db.query(`select id from public.ensure_account('sbi', '3596', 'SBI ••3596')`);
+    assert.notEqual(distinct.rows[0].id, manual.rows[0].id);
+
+    const { rows } = await db.query(`select count(*)::int as n from public.accounts where number_tail is not null`);
+    assert.equal(rows[0].n, 4);
+  });
+
+  await asUser(db, bob, async () => {
+    const { rows } = await db.query(`select id from public.ensure_account('icici', '8036', 'ICICI Bank ••8036')`);
+    const mine = await db.query(`select count(*)::int as n from public.accounts`);
+    assert.equal(mine.rows[0].n, 1, 'another account holder shares the first one');
+    assert.ok(rows[0].id);
+  });
+});

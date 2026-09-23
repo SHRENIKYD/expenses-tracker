@@ -71,6 +71,36 @@ function detectBank(text) {
   return best ? { code: best.bank.code, name: best.bank.name } : null;
 }
 
+// Which account the statement is for, as the last four digits of its number —
+// the same digits a bank's alerts print, so a statement and an alert for the
+// same account find the same one. Read from the letterhead, where the account's
+// own number is; further in, narrations are full of other people's.
+const CARD_NUMBER = /\bcard\s*(?:no\.?|number)?\s*[:.-]?\s*((?:[0-9Xx*]{4}[\s-]?){3}\d{4})/i;
+const ACCOUNT_NUMBER = /\b(?:a\/c|acct|account)\s*(?:no\.?|number|num)?\s*[:.-]?\s*([0-9Xx*][0-9Xx*\s-]{2,24}\d)/i;
+
+function detectAccount(text) {
+  const opening = String(text).slice(0, LETTERHEAD);
+  for (const [pattern, kind] of [[CARD_NUMBER, 'card'], [ACCOUNT_NUMBER, 'account']]) {
+    const found = pattern.exec(opening);
+    const digits = found?.[1].replace(/\D/g, '') ?? '';
+    if (digits.length >= 4) return { kind, tail: digits.slice(-4) };
+  }
+  return null;
+}
+
+// What the account held before the statement's first transaction: the first
+// row's balance with that row undone. A new account opened with it matches the
+// statement's closing balance once the rows are in. Statements run oldest
+// first or newest first, so the first row is whichever end is earlier.
+function openingBalance(transactions) {
+  const withBalance = transactions.filter((row) => Number.isFinite(row.balance));
+  if (withBalance.length === 0) return 0;
+  const descending = withBalance[0].date > withBalance[withBalance.length - 1].date;
+  const first = descending ? withBalance[withBalance.length - 1] : withBalance[0];
+  const before = first.balance + (first.kind === 'income' ? -first.amount : first.amount);
+  return Math.round(before * 100) / 100;
+}
+
 function parseDate(token) {
   let match = /^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/.exec(token);
   if (match) {
@@ -370,4 +400,13 @@ function parseStatement(lines) {
   return { transactions, skipped };
 }
 
-export { detectBank, parseStatement, parseDate, suggestCategory, extractReference, BANKS };
+export {
+  detectAccount,
+  detectBank,
+  openingBalance,
+  parseStatement,
+  parseDate,
+  suggestCategory,
+  extractReference,
+  BANKS
+};

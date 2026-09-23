@@ -36,6 +36,16 @@ move it, not on every change.
 
 ### Added
 
+- **Accounts that make themselves.** A statement names its bank and account
+  number, and an import now goes to that account by default — found if it
+  exists, created the first time it is seen, with the balance the statement
+  opened on, so its balance matches the statement's close. A bank alert does
+  the same from its sender ("AD-HDFCBK") and the digits it prints ("a/c
+  **3596"), and each suggestion says which account it is for. An account is
+  its bank and last four digits, held unique by the database, so the same one
+  is never made twice; one you made by hand whose name has those digits is
+  used rather than doubled. Needs `0008_account_identity.sql`; until it is run,
+  accounts are matched by name.
 - **Bank messages on Android.** Alerts are read on the device and offered as
   transactions to confirm; nothing is recorded automatically, and the message is
   shown beside the reading so a misreading is obvious. Off by default. Two

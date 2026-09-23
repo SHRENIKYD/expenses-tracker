@@ -123,3 +123,24 @@ test('an alert dealt with once is not offered again', async () => {
   // A digest, not the message: the words cannot be read back out of it.
   assert.doesNotMatch(fingerprint(suggestion), /NITHIN|515/i);
 });
+
+test('an alert says which bank sent it, from its sender', async () => {
+  const { bankFromSender } = await import('../src/sms.js');
+  const cases = [
+    ['AD-HDFCBK', 'hdfc'], ['VM-ICICIB', 'icici'], ['JD-SBIINB', 'sbi'], ['AX-AXISBK', 'axis'],
+    ['BZ-KOTAKB', 'kotak'], ['VK-YESBNK', 'yes'], ['JM-IDFCFB', 'idfc'], ['TX-INDUSB', 'indusind'],
+    ['AD-PNBSMS', 'pnb'], ['VM-BOBTXN', 'bob'], ['AD-SWIGGY', null], ['+919876543210', null]
+  ];
+  for (const [sender, code] of cases) assert.equal(bankFromSender(sender)?.code ?? null, code, sender);
+});
+
+test('an alert carries its bank and the account it names', async () => {
+  const { readMessage } = await import('../src/sms.js');
+  const alert = readMessage({
+    sender: 'AD-HDFCBK',
+    body: 'Rs.450.00 debited from a/c **3596 on 09-09-26 to VPA swiggy@icici. UPI Ref 402512345678',
+    at: Date.UTC(2026, 8, 9, 8)
+  });
+  assert.equal(alert.bank.code, 'hdfc');
+  assert.equal(alert.accountTail, '3596');
+});
