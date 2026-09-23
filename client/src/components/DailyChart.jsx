@@ -1,10 +1,14 @@
 import { useState } from 'react';
+import useElementWidth from '../useElementWidth.js';
 import { formatMoney, formatMoneyShort } from '../format.js';
 import { buildArea } from './areaPath.js';
 
-const WIDTH = 420;
-const HEIGHT = 110;
-const FLOOR = 92;
+// Drawn at the card's own width (see useElementWidth), with room either side
+// for the first and last labels, which are centred on their points.
+const INITIAL_WIDTH = 420;
+const INSET = 22;
+const HEIGHT = 150;
+const FLOOR = 132;
 
 function daysInMonth(month) {
   const [year, monthNumber] = month.split('-').map(Number);
@@ -13,6 +17,9 @@ function daysInMonth(month) {
 
 export default function DailyChart({ month, daily }) {
   const [hovered, setHovered] = useState(null);
+  const [box, measured] = useElementWidth(INITIAL_WIDTH);
+  const outer = Math.max(240, measured);
+  const WIDTH = outer - INSET * 2;
 
   const totals = new Map(daily.map((entry) => [entry.date, entry.total]));
   const days = Array.from({ length: daysInMonth(month) }, (_, index) => {
@@ -24,8 +31,15 @@ export default function DailyChart({ month, daily }) {
   const active = hovered === null ? null : days[hovered];
 
   return (
-    <div className="chart area">
-      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Spending for each day of the selected month">
+    <div className="chart area" ref={box}>
+      <svg
+        viewBox={`0 0 ${outer} ${HEIGHT}`}
+        width={outer}
+        height={HEIGHT}
+        role="img"
+        aria-label="Spending for each day of the selected month"
+      >
+        <g transform={`translate(${INSET},0)`}>
         <path d={area} className="area-fill" />
         <path d={line} className="area-line" />
         <line x1="0" y1={FLOOR} x2={WIDTH} y2={FLOOR} className="chart-axis" />
@@ -61,6 +75,7 @@ export default function DailyChart({ month, daily }) {
             )}
           </g>
         ))}
+        </g>
       </svg>
 
       <div className="chart-tip" role="status">

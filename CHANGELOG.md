@@ -52,6 +52,11 @@ move it, not on every change.
 
 ### Fixed
 
+- **Report charts drew their labels at the wrong size.** The twelve-month and
+  daily charts were drawn in a fixed 420-point box and stretched to the card,
+  so a 10px label came out near 18px on a desktop and 23px on a phone, where a
+  leftover rule also made them scroll sideways. They now draw at the card's own
+  width.
 - **A month was compared with the wrong days.** "Versus the period before"
   counted back as many days as the month has, so September was compared with
   2–31 August and October with 31 August – 30 September. A whole month is now

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import useElementWidth from '../useElementWidth.js';
 
 // The drawing is laid out in CSS pixels — one viewBox unit per pixel — so the
 // chart fills whatever width the card gives it. Scaling a fixed-width viewBox
@@ -46,26 +46,8 @@ function barPath(x, y, width, height, radius = 4) {
   return `M${x},${y + height} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + width - r},${y} Q${x + width},${y} ${x + width},${y + r} L${x + width},${y + height} Z`;
 }
 
-function useContainerWidth() {
-  const ref = useRef(null);
-  const [width, setWidth] = useState(MIN_WIDTH);
-
-  useEffect(() => {
-    const node = ref.current;
-    if (!node || typeof ResizeObserver === 'undefined') return undefined;
-
-    const observer = new ResizeObserver(([entry]) => {
-      setWidth(Math.round(entry.contentRect.width));
-    });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-
-  return [ref, width];
-}
-
 export default function CashFlowChart({ series, monthLabel, progress = null }) {
-  const [box, available] = useContainerWidth();
+  const [box, available] = useElementWidth(MIN_WIDTH);
   const compact = available > 0 && available < MIN_WIDTH && series.length <= COMPACT_MAX_BUCKETS;
   const WIDTH = compact ? available : Math.max(MIN_WIDTH, available);
   const AXIS_X = compact ? COMPACT_AXIS_X : FULL_AXIS_X;

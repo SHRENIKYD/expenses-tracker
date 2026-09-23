@@ -1,13 +1,20 @@
 import { useState } from 'react';
+import useElementWidth from '../useElementWidth.js';
 import { formatMoney, formatMoneyShort, formatMonth, formatMonthAxis } from '../format.js';
 import { buildArea } from './areaPath.js';
 
-const WIDTH = 420;
-const HEIGHT = 150;
-const FLOOR = 128;
+// Drawn at the card's own width (see useElementWidth), with room either side
+// for the first and last labels, which are centred on their points.
+const INITIAL_WIDTH = 420;
+const INSET = 22;
+const HEIGHT = 190;
+const FLOOR = 168;
 
 export default function TrendChart({ trend }) {
   const [hovered, setHovered] = useState(null);
+  const [box, measured] = useElementWidth(INITIAL_WIDTH);
+  const outer = Math.max(240, measured);
+  const WIDTH = outer - INSET * 2;
 
   const all = trend.map((point, index) => ({ ...point, index, value: point.total }));
   const firstWithData = all.findIndex((point) => point.value > 0);
@@ -24,8 +31,15 @@ export default function TrendChart({ trend }) {
   const activeCoord = active ? coordFor(active.index) : null;
 
   return (
-    <div className="chart area">
-      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Total spending for each of the last twelve months">
+    <div className="chart area" ref={box}>
+      <svg
+        viewBox={`0 0 ${outer} ${HEIGHT}`}
+        width={outer}
+        height={HEIGHT}
+        role="img"
+        aria-label="Total spending for each of the last twelve months"
+      >
+        <g transform={`translate(${INSET},0)`}>
         <path d={area} className="area-fill" />
         <path d={line} className="area-line" />
         <line x1="0" y1={FLOOR} x2={WIDTH} y2={FLOOR} className="chart-axis" />
@@ -55,6 +69,7 @@ export default function TrendChart({ trend }) {
             )}
           </g>
         ))}
+        </g>
       </svg>
 
       <div className="chart-tip" role="status">

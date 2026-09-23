@@ -314,10 +314,10 @@ th.numeric .sort {
   height: 320px;
 }
 
-/* the area charts are drawn in a 420-wide box; letting them fill a 1200px card
-   scales their labels up with it, so they keep to a readable width */
+/* The area charts draw at their card's width, one viewBox unit per pixel, so
+   they fill the card without their labels growing with it. */
 .chart.area {
-  max-width: 760px;
+  max-width: none;
 }
 
 .chart.area svg {
@@ -2932,16 +2932,6 @@ tr.is-duplicate {
   /* The four tiles duplicate the hero and budget summary above them on a phone. */
   .kpi-row {
     display: none;
-  }
-
-  /* The weekly bars need room to stay legible, so the chart scrolls sideways
-     inside its own card rather than shrinking to an unreadable width. */
-  .chart {
-    overflow-x: auto;
-  }
-
-  .chart svg {
-    min-width: 520px;
   }
 
   .page-header {
