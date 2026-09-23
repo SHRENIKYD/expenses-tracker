@@ -4,13 +4,27 @@ import { useEffect, useRef, useState } from 'react';
 // chart fills whatever width the card gives it. Scaling a fixed-width viewBox
 // instead would either letterbox the drawing (dead space either side) or blow
 // the labels up with the card.
-// Narrower than this and the week labels collide, so the card scrolls instead.
+// Narrower than this and the full labels ("13 Sept / to 18 Sept", "1,00,000")
+// collide. A phone is narrower, so there a handful of buckets switch to compact
+// labels and fit the card; scrolling hid the month's last two weeks off to the
+// side with nothing to say they were there. A long series still scrolls.
 const MIN_WIDTH = 480;
+const COMPACT_AXIS_X = 40;
+const COMPACT_MAX_BUCKETS = 8;
+// Spelled out rather than left to Intl: engines disagree on en-IN's compact
+// thousand — Node writes "90K", Chromium "90T", which reads as trillion.
+function compactNumber(value) {
+  const round = (n) => String(Math.round(n * 10) / 10);
+  if (value >= 1e7) return `${round(value / 1e7)}Cr`;
+  if (value >= 1e5) return `${round(value / 1e5)}L`;
+  if (value >= 1e3) return `${round(value / 1e3)}K`;
+  return String(Math.round(value));
+}
 const HEIGHT = 320;
 const TOP = 34;
 const FLOOR = 262;
 // wide enough for a seven-figure tick such as 1,00,000
-const AXIS_X = 72;
+const FULL_AXIS_X = 72;
 const MAX_BAR = 52;
 const GAP = 6;
 
@@ -41,7 +55,7 @@ function useContainerWidth() {
     if (!node || typeof ResizeObserver === 'undefined') return undefined;
 
     const observer = new ResizeObserver(([entry]) => {
-      setWidth(Math.max(MIN_WIDTH, Math.round(entry.contentRect.width)));
+      setWidth(Math.round(entry.contentRect.width));
     });
     observer.observe(node);
     return () => observer.disconnect();
@@ -51,7 +65,12 @@ function useContainerWidth() {
 }
 
 export default function CashFlowChart({ series, monthLabel, progress = null }) {
-  const [box, WIDTH] = useContainerWidth();
+  const [box, available] = useContainerWidth();
+  const compact = available > 0 && available < MIN_WIDTH && series.length <= COMPACT_MAX_BUCKETS;
+  const WIDTH = compact ? available : Math.max(MIN_WIDTH, available);
+  const AXIS_X = compact ? COMPACT_AXIS_X : FULL_AXIS_X;
+  const figure = (value) =>
+    compact ? compactNumber(value) : Math.round(value).toLocaleString('en-IN');
   const peak = Math.max(...series.flatMap((group) => [group.income, group.expenses]), 0);
   const max = niceMax(peak);
   const plot = FLOOR - TOP;
@@ -85,7 +104,7 @@ export default function CashFlowChart({ series, monthLabel, progress = null }) {
               className={line.value === 0 ? 'chart-axis' : 'chart-grid'}
             />
             <text x={AXIS_X - 12} y={line.y + 4} textAnchor="end" className="chart-tick">
-              {Math.round(line.value).toLocaleString('en-IN')}
+              {figure(line.value)}
             </text>
           </g>
         ))}
@@ -114,7 +133,7 @@ export default function CashFlowChart({ series, monthLabel, progress = null }) {
                 <>
                   <path d={barPath(incomeX, y(group.income), BAR, FLOOR - y(group.income))} className="bar-income" />
                   <text x={incomeX + BAR / 2} y={y(group.income) - 10} textAnchor="middle" className="bar-label">
-                    {Math.round(group.income).toLocaleString('en-IN')}
+                    {figure(group.income)}
                   </text>
                 </>
               )}
@@ -122,15 +141,15 @@ export default function CashFlowChart({ series, monthLabel, progress = null }) {
                 <>
                   <path d={barPath(expenseX, y(group.expenses), BAR, FLOOR - y(group.expenses))} className="bar-expense" />
                   <text x={expenseX + BAR / 2} y={y(group.expenses) - 10} textAnchor="middle" className="bar-label">
-                    {Math.round(group.expenses).toLocaleString('en-IN')}
+                    {figure(group.expenses)}
                   </text>
                 </>
               )}
               <text x={centre} y={FLOOR + 26} textAnchor="middle" className="bar-period">
-                {group.label}
+                {compact ? group.compactLabel ?? group.label : group.label}
               </text>
               <text x={centre} y={FLOOR + 45} textAnchor="middle" className="bar-range">
-                {group.range}
+                {compact ? group.compactRange ?? group.range : group.range}
               </text>
             </g>
           );

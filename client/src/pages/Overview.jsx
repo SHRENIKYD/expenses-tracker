@@ -39,12 +39,20 @@ function bucketedSeries(daily, count) {
     index: bucket.index,
     label: bucket.days === 1 ? shortDay(bucket.from) : `${shortDay(bucket.from)}`,
     range: bucket.days === 1 ? '' : `to ${shortDay(bucket.to)}`,
+    // What fits under a bar on a phone: the days, and the month beneath them.
+    compactLabel:
+      bucket.days === 1 ? dayOf(bucket.from) : `${dayOf(bucket.from)}–${dayOf(bucket.to)}`,
+    compactRange:
+      bucket.from.slice(0, 7) === bucket.to.slice(0, 7)
+        ? shortMonth(bucket.from.slice(0, 7))
+        : `${shortMonth(bucket.from.slice(0, 7))}–${shortMonth(bucket.to.slice(0, 7))}`,
     income: bucket.income,
     expenses: bucket.expenses
   }));
 }
 
-const shortDay = (date) => `${Number(date.slice(8))} ${shortMonth(date.slice(0, 7))}`;
+const dayOf = (date) => String(Number(date.slice(8)));
+const shortDay = (date) => `${dayOf(date)} ${shortMonth(date.slice(0, 7))}`;
 
 function dailySeries(daily) {
   return daily.map((day, index) => ({

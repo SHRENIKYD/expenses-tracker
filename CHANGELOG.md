@@ -52,6 +52,11 @@ move it, not on every change.
 
 ### Fixed
 
+- **On a phone the cash-flow chart hid the end of the month.** It kept a 480px
+  minimum so its labels would not collide, and scrolled sideways inside a 320px
+  card with nothing to show it could — September appeared to stop on the 18th.
+  With a handful of bars it now fits the card, labelled "13–18 / Sept" with
+  ticks in K and L; the thirty-bar daily view still scrolls.
 - **"Export everything" exported only the period on screen.** It shared the
   Transactions page's export, filters and all. Worse, it was the export offered
   as the safety net before "Delete all", which removes every month — so
