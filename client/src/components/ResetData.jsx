@@ -44,8 +44,8 @@ export default function ResetData({ count, onExport, onDone }) {
     <div className="setting-detail">
       <p className="hint">
         This deletes every transaction on your account — {count} of them — and cannot be undone.
-        Accounts, budgets, savings goals and your settings are kept. Receipts stay in storage; the
-        rows that pointed at them are what go.
+        Their receipts are deleted with them. Accounts, budgets, savings goals and your settings
+        are kept.
       </p>
 
       <div className="button-row">

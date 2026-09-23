@@ -302,6 +302,10 @@ export default function useExpensesData() {
         return outcome;
       }),
     exportCsv: () => guard(() => exportCsv({ ...queryFilters, sort, order })),
+    // Every date, no filter: what Settings promises, and what has to be saved
+    // before "Delete all" — the filtered export covered only the period on
+    // screen, while the delete removes every month.
+    exportAll: () => guard(() => exportCsv({ sort: 'date', order: 'asc' })),
     sortBy(key) {
       if (sort === key) setOrder(order === 'asc' ? 'desc' : 'asc');
       else {

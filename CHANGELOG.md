@@ -52,6 +52,18 @@ move it, not on every change.
 
 ### Fixed
 
+- **"Export everything" exported only the period on screen.** It shared the
+  Transactions page's export, filters and all. Worse, it was the export offered
+  as the safety net before "Delete all", which removes every month — so
+  following the app's own advice could lose everything outside the current one.
+  Both now export every transaction.
+- **"Delete all" understated what it deletes.** It showed the selected period's
+  count ("1 in the selected period") while deleting across all dates. It now
+  shows the total.
+- **The receipts count went stale.** Settings read it once on arrival, so after
+  deleting everything it still said "1 file". It is re-read after a delete, says
+  "None stored" when there are none, and gives small files in KB rather than
+  "0.00 MB".
 - **"Add to this month" did nothing for recurring bills** in any month without
   a 31st. It asked for the ledger up to the 31st, which in September is a date
   the database refuses, and the call failed before anything was added.

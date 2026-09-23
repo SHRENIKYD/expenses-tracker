@@ -6,7 +6,12 @@ import EncryptionCard from '../components/EncryptionCard.jsx';
 import MessagesCard from '../components/MessagesCard.jsx';
 import ResetData from '../components/ResetData.jsx';
 import { formatMoney } from '../format.js';
-import { receiptUsage, vaultState } from '../data/index.js';
+import { countTransactions, receiptUsage, vaultState } from '../data/index.js';
+
+// A receipt is a photo or a scan: most are well under a megabyte, where
+// "0.00 MB" says nothing.
+const size = (bytes) =>
+  bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 
 const build = import.meta.env.VITE_APP_VERSION || 'dev';
 
@@ -17,11 +22,14 @@ const build = import.meta.env.VITE_APP_VERSION || 'dev';
 // and opens where it stands. The one destructive thing is last, in red, behind
 // a word that has to be typed.
 export default function SettingsPage() {
-  const { settings, session, handlers, onSignOut, summary } = useOutletContext();
+  const { settings, session, handlers, onSignOut } = useOutletContext();
   const [open, setOpen] = useState(null);
   const [form, setForm] = useState({ displayName: '', monthlyBudget: '' });
   const [saved, setSaved] = useState('');
   const [usage, setUsage] = useState(null);
+  // Everything "Delete all" will remove. The period's count was shown here
+  // before, which understated it whenever other months held anything.
+  const [total, setTotal] = useState(null);
   const [lock, setLock] = useState(vaultState);
 
   useEffect(() => {
@@ -31,8 +39,15 @@ export default function SettingsPage() {
     });
   }, [settings.displayName, settings.monthlyBudget]);
 
-  useEffect(() => {
+  // Read on arrival, and again after anything that changes them: the row
+  // notes are state, and a stale one said "1 file" after every receipt had gone.
+  function measure() {
     receiptUsage().then(setUsage).catch(() => setUsage(null));
+    countTransactions().then(setTotal).catch(() => setTotal(null));
+  }
+
+  useEffect(() => {
+    measure();
     setLock(vaultState());
   }, []);
 
@@ -46,7 +61,6 @@ export default function SettingsPage() {
     if (result) setSaved('Saved');
   }
 
-  const count = summary?.count ?? 0;
 
   const SECTIONS = [
     {
@@ -124,14 +138,16 @@ export default function SettingsPage() {
           icon: 'export',
           title: 'Export everything',
           note: 'A CSV of every transaction',
-          action: handlers.exportCsv
+          action: handlers.exportAll
         },
         {
           id: 'receipts',
           icon: 'camera',
           title: 'Receipts',
           note: usage
-            ? `${usage.count} file${usage.count === 1 ? '' : 's'} · ${(usage.bytes / 1024 / 1024).toFixed(2)} MB`
+            ? usage.count
+              ? `${usage.count} file${usage.count === 1 ? '' : 's'} · ${size(usage.bytes)}`
+              : 'None stored'
             : '—',
           detail: (
             <p className="hint setting-detail">
@@ -144,10 +160,17 @@ export default function SettingsPage() {
           id: 'reset',
           icon: 'close',
           title: 'Delete all transactions',
-          note: `${count} in the selected period · keeps accounts, budgets and goals`,
+          note: `${total ?? '…'} in all · keeps accounts, budgets and goals`,
           danger: true,
           detail: (
-            <ResetData count={count} onExport={handlers.exportCsv} onDone={handlers.refresh} />
+            <ResetData
+              count={total ?? 0}
+              onExport={handlers.exportAll}
+              onDone={async () => {
+                await handlers.refresh();
+                measure();
+              }}
+            />
           )
         }
       ]

@@ -377,6 +377,10 @@ export async function updateExpense(id, patch) {
 
 export const deleteExpense = (id) => call('delete_transaction', { p_id: id });
 
+/** How many transactions there are in all, across every date. Counted from
+ * the rows as stored, so nothing has to be decrypted to say it. */
+export const countTransactions = async () => (await call('list_transactions')).length;
+
 /** Every transaction, gone. Accounts, budgets, goals and the profile remain. */
 export async function deleteAllTransactions() {
   const removed = await call('reset_transactions');
