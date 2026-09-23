@@ -7,7 +7,7 @@ import BrandMark from './BrandMark.jsx';
 import RangePicker from './RangePicker.jsx';
 import GlobalSearch from './GlobalSearch.jsx';
 import PhoneHeader from './PhoneHeader.jsx';
-import { formatDayFull, formatMonth, formatToday } from '../format.js';
+import { formatDayFull, formatMonth, formatRelativeDay, formatToday } from '../format.js';
 import { rangeLabel } from '../range.js';
 
 const NAV = [
@@ -256,7 +256,7 @@ export default function AppShell({ context }) {
                     )}
                     {bills.slice(0, 3).map((bill) => (
                       <NavLink key={bill.id} to="/budgets" onClick={() => setAlertsOpen(false)}>
-                        {bill.description} · {money(bill.amount)} · {bill.date}
+                        {bill.description} · {money(bill.amount)} · {formatRelativeDay(bill.date)}
                       </NavLink>
                     ))}
                     {!pressure && !bills.length && (

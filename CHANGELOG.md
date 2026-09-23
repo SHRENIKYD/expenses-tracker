@@ -52,6 +52,8 @@ move it, not on every change.
 
 ### Fixed
 
+- **The bell printed a bill's date as `2026-09-26`.** It reads like every other
+  date now: "Today", "Yesterday", or "26 Sept".
 - **Turning encryption on accepted any password.** "Confirm your password" was
   never checked, and the data key was wrapped with whatever was typed. A typo
   there left the account's real password unable to open the data, with only
