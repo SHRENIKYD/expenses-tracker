@@ -52,6 +52,9 @@ move it, not on every change.
 
 ### Fixed
 
+- **The transactions total added income to spending.** A ₹90,000 salary and a
+  ₹1,650 bill totalled ₹91,650. The footer is now the net, signed, and its cells
+  line up with the six columns above it.
 - **"Today" was yesterday until 05:30.** The date it is now was read in UTC, so
   in India every morning before half past five the add form defaulted to the
   day before and would not let today be picked, a bank alert that arrived at

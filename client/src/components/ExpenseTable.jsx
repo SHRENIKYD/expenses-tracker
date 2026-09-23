@@ -69,6 +69,12 @@ export default function ExpenseTable({
 
   const start = (page - 1) * PAGE_SIZE;
   const visible = expenses.slice(start, start + PAGE_SIZE);
+  // Money in less money out. Adding the two, as the footer did, reported a
+  // salary and a bill as ninety-one thousand rupees of something.
+  const net = expenses.reduce(
+    (sum, expense) => sum + (expense.kind === 'income' ? expense.amount : -expense.amount),
+    0
+  );
 
   return (
     <div className="table-scroll">
@@ -234,11 +240,14 @@ export default function ExpenseTable({
         </tbody>
         <tfoot>
           <tr>
-            <td colSpan="4">Total of {expenses.length} matching</td>
+            <td colSpan="4">Net of {expenses.length} matching</td>
             <td className="numeric">
-              {formatMoney(expenses.reduce((sum, expense) => sum + expense.amount, 0))}
+              <span className={net >= 0 ? 'amount-in' : 'amount-out'}>
+                {net >= 0 ? '+' : '−'}
+                {formatMoney(Math.abs(net))}
+              </span>
             </td>
-            <td colSpan="2" />
+            <td />
           </tr>
         </tfoot>
       </table>
